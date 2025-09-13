@@ -7,12 +7,116 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('cvModal');
     const closeModal = document.querySelector('.close');
     const downloadBtn = document.getElementById('downloadCV');
+    const langToggle = document.getElementById('langToggle');
     
     let currentQuestion = 0;
     const totalQuestions = 11; // 0-10
     const formData = {};
+    let currentLanguage = 'en';
     
     const questions = document.querySelectorAll('.question-container');
+    
+    // Language translations
+    const translations = {
+        en: {
+            'start-title': "Let's start with your personal information",
+            'fullname-label': "What's your full name?",
+            'fullname-placeholder': "Enter your full name",
+            'email-label': "What's your email address?",
+            'email-placeholder': "your.email@example.com",
+            'phone-label': "What's your phone number?",
+            'phone-placeholder': "+1 (555) 123-4567",
+            'location-label': "Where are you located?",
+            'location-placeholder': "City, Country",
+            'jobtitle-label': "What's your current job title or desired position?",
+            'jobtitle-placeholder': "Software Developer, Marketing Manager, etc.",
+            'summary-label': "Tell us about yourself in a few sentences",
+            'summary-placeholder': "A brief professional summary highlighting your key strengths and experience...",
+            'experience-label': "Describe your work experience",
+            'experience-placeholder': "List your previous jobs, responsibilities, and achievements. Use bullet points if you like...",
+            'education-label': "What's your educational background?",
+            'education-placeholder': "Degree, Institution, Year of graduation, relevant coursework...",
+            'skills-label': "What are your key skills?",
+            'skills-placeholder': "List your technical skills, soft skills, languages, certifications...",
+            'achievements-label': "Any notable achievements or projects?",
+            'achievements-placeholder': "Awards, successful projects, publications, volunteer work...",
+            'complete-title': "Perfect! Your CV is ready",
+            'complete-description': "We've gathered all the information needed to create your professional CV.",
+            'submit-btn': "Submit CV",
+            'prev-btn': "← Previous",
+            'next-btn': "Continue →",
+            'download-btn': "Download PDF",
+            'lang-toggle': "🇳🇱 Nederlands",
+            'cv-section-summary': "Professional Summary",
+            'cv-section-experience': "Work Experience", 
+            'cv-section-education': "Education",
+            'cv-section-skills': "Skills",
+            'cv-section-achievements': "Achievements & Projects",
+            'success-title': "✅ CV Submitted Successfully!",
+            'success-message': "Thank you for submitting your CV. It has been sent and you'll hear back soon.",
+            'success-button': "Submit Another CV",
+            'error-title': "❌ Submission Failed",
+            'error-button': "Try Again",
+            'submitting': "Submitting..."
+        },
+        nl: {
+            'start-title': "Laten we beginnen met je persoonlijke gegevens",
+            'fullname-label': "Wat is je volledige naam?",
+            'fullname-placeholder': "Voer je volledige naam in",
+            'email-label': "Wat is je e-mailadres?",
+            'email-placeholder': "jouw.email@voorbeeld.nl",
+            'phone-label': "Wat is je telefoonnummer?",
+            'phone-placeholder': "+31 6 12345678",
+            'location-label': "Waar woon je?",
+            'location-placeholder': "Stad, Land",
+            'jobtitle-label': "Wat is je huidige functietitel of gewenste positie?",
+            'jobtitle-placeholder': "Software Ontwikkelaar, Marketing Manager, etc.",
+            'summary-label': "Vertel ons over jezelf in een paar zinnen",
+            'summary-placeholder': "Een korte professionele samenvatting waarin je belangrijkste kwaliteiten en ervaring worden benadrukt...",
+            'experience-label': "Beschrijf je werkervaring",
+            'experience-placeholder': "Vermeld je eerdere banen, verantwoordelijkheden en prestaties. Gebruik puntjes als je wilt...",
+            'education-label': "Wat is je onderwijsachtergrond?",
+            'education-placeholder': "Diploma, Instelling, Jaar van afstuderen, relevante vakken...",
+            'skills-label': "Wat zijn je belangrijkste vaardigheden?",
+            'skills-placeholder': "Vermeld je technische vaardigheden, sociale vaardigheden, talen, certificeringen...",
+            'achievements-label': "Heb je opmerkelijke prestaties of projecten?",
+            'achievements-placeholder': "Prijzen, succesvolle projecten, publicaties, vrijwilligerswerk...",
+            'complete-title': "Perfect! Je CV is klaar",
+            'complete-description': "We hebben alle informatie verzameld die nodig is om je professionele CV te maken.",
+            'submit-btn': "CV Versturen",
+            'prev-btn': "← Vorige",
+            'next-btn': "Doorgaan →",
+            'download-btn': "PDF Downloaden",
+            'lang-toggle': "🇬🇧 English",
+            'cv-section-summary': "Professionele Samenvatting",
+            'cv-section-experience': "Werkervaring", 
+            'cv-section-education': "Onderwijs",
+            'cv-section-skills': "Vaardigheden",
+            'cv-section-achievements': "Prestaties & Projecten",
+            'success-title': "✅ CV Succesvol Verzonden!",
+            'success-message': "Bedankt voor het versturen van je CV. Het is verzonden en je hoort snel iets terug.",
+            'success-button': "Nog een CV Versturen",
+            'error-title': "❌ Versturen Mislukt",
+            'error-button': "Opnieuw Proberen",
+            'submitting': "Versturen..."
+        }
+    };
+    
+    // Language toggle functionality
+    langToggle.addEventListener('click', function() {
+        currentLanguage = currentLanguage === 'en' ? 'nl' : 'en';
+        updateLanguage();
+        localStorage.setItem('preferredLanguage', currentLanguage);
+    });
+    
+    // Load saved language preference
+    const savedLanguage = localStorage.getItem('preferredLanguage');
+    if (savedLanguage && translations[savedLanguage]) {
+        currentLanguage = savedLanguage;
+    }
+    
+    // Initialize language
+    updateLanguage();
     
     // Show first question
     showQuestion(0);
@@ -167,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function generateCV() {
         const cvPreview = document.getElementById('cvPreview');
+        const t = translations[currentLanguage];
         
         const cvHTML = `
             <div class="cv-header">
@@ -181,35 +286,35 @@ document.addEventListener('DOMContentLoaded', function() {
             
             ${formData.summary ? `
                 <div class="cv-section">
-                    <div class="cv-section-title">Professional Summary</div>
+                    <div class="cv-section-title">${t['cv-section-summary']}</div>
                     <div class="cv-content">${formData.summary}</div>
                 </div>
             ` : ''}
             
             ${formData.experience ? `
                 <div class="cv-section">
-                    <div class="cv-section-title">Work Experience</div>
+                    <div class="cv-section-title">${t['cv-section-experience']}</div>
                     <div class="cv-content">${formData.experience}</div>
                 </div>
             ` : ''}
             
             ${formData.education ? `
                 <div class="cv-section">
-                    <div class="cv-section-title">Education</div>
+                    <div class="cv-section-title">${t['cv-section-education']}</div>
                     <div class="cv-content">${formData.education}</div>
                 </div>
             ` : ''}
             
             ${formData.skills ? `
                 <div class="cv-section">
-                    <div class="cv-section-title">Skills</div>
+                    <div class="cv-section-title">${t['cv-section-skills']}</div>
                     <div class="cv-content">${formData.skills}</div>
                 </div>
             ` : ''}
             
             ${formData.achievements ? `
                 <div class="cv-section">
-                    <div class="cv-section-title">Achievements & Projects</div>
+                    <div class="cv-section-title">${t['cv-section-achievements']}</div>
                     <div class="cv-content">${formData.achievements}</div>
                 </div>
             ` : ''}
@@ -221,7 +326,8 @@ document.addEventListener('DOMContentLoaded', function() {
     async function submitCV() {
         try {
             // Show loading state
-            generateBtn.textContent = 'Submitting...';
+            const t = translations[currentLanguage];
+            generateBtn.textContent = t['submitting'];
             generateBtn.disabled = true;
             
             const response = await fetch('/submit-cv', {
@@ -244,29 +350,32 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Submission error:', error);
             showErrorMessage('Failed to submit CV. Please check your connection and try again.');
         } finally {
-            generateBtn.textContent = 'Submit CV';
+            const t = translations[currentLanguage];
+            generateBtn.textContent = t['submit-btn'];
             generateBtn.disabled = false;
         }
     }
     
     function showSuccessMessage() {
         const currentQuestionElement = questions[currentQuestion];
+        const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
             <div class="question completed">
-                <h2>✅ CV Submitted Successfully!</h2>
-                <p>Thank you for submitting your CV. It has been sent and you'll hear back soon.</p>
-                <button type="button" onclick="window.location.reload()" class="generate-btn">Submit Another CV</button>
+                <h2>${t['success-title']}</h2>
+                <p>${t['success-message']}</p>
+                <button type="button" onclick="window.location.reload()" class="generate-btn">${t['success-button']}</button>
             </div>
         `;
     }
     
     function showErrorMessage(message) {
         const currentQuestionElement = questions[currentQuestion];
+        const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
             <div class="question">
-                <h2>❌ Submission Failed</h2>
+                <h2>${t['error-title']}</h2>
                 <p style="color: #e53e3e; margin-bottom: 20px;">${message}</p>
-                <button type="button" onclick="generateBtn.click()" class="generate-btn">Try Again</button>
+                <button type="button" onclick="generateBtn.click()" class="generate-btn">${t['error-button']}</button>
             </div>
         `;
     }
@@ -348,6 +457,33 @@ document.addEventListener('DOMContentLoaded', function() {
             printWindow.print();
             printWindow.close();
         }, 250);
+    }
+    
+    // Language update function
+    function updateLanguage() {
+        const currentTranslations = translations[currentLanguage];
+        
+        // Update all elements with data-text attributes
+        document.querySelectorAll('[data-text]').forEach(element => {
+            const key = element.getAttribute('data-text');
+            if (currentTranslations[key]) {
+                element.textContent = currentTranslations[key];
+            }
+        });
+        
+        // Update all elements with data-placeholder attributes
+        document.querySelectorAll('[data-placeholder]').forEach(element => {
+            const key = element.getAttribute('data-placeholder');
+            if (currentTranslations[key]) {
+                element.placeholder = currentTranslations[key];
+            }
+        });
+        
+        // Update language toggle button
+        langToggle.textContent = currentTranslations['lang-toggle'];
+        
+        // Update document language attribute
+        document.documentElement.lang = currentLanguage;
     }
     
     // Initialize

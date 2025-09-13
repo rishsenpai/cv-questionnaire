@@ -8,94 +8,98 @@
 </head>
 <body>
     <div class="container">
+        <div class="language-toggle">
+            <button id="langToggle" class="lang-btn">🇳🇱 Nederlands</button>
+        </div>
+        
         <div class="progress-bar">
             <div class="progress" id="progress"></div>
         </div>
         
         <form id="questionnaire">
             <div class="question-container" data-question="0">
-                <h2>Let's start with your personal information</h2>
+                <h2 data-text="start-title">Let's start with your personal information</h2>
                 <div class="question">
-                    <label for="fullName">What's your full name?</label>
-                    <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required>
+                    <label for="fullName" data-text="fullname-label">What's your full name?</label>
+                    <input type="text" id="fullName" name="fullName" data-placeholder="fullname-placeholder" placeholder="Enter your full name" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="1" style="display: none;">
                 <div class="question">
-                    <label for="email">What's your email address?</label>
-                    <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+                    <label for="email" data-text="email-label">What's your email address?</label>
+                    <input type="email" id="email" name="email" data-placeholder="email-placeholder" placeholder="your.email@example.com" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="2" style="display: none;">
                 <div class="question">
-                    <label for="phone">What's your phone number?</label>
-                    <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567" required>
+                    <label for="phone" data-text="phone-label">What's your phone number?</label>
+                    <input type="tel" id="phone" name="phone" data-placeholder="phone-placeholder" placeholder="+1 (555) 123-4567" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="3" style="display: none;">
                 <div class="question">
-                    <label for="location">Where are you located?</label>
-                    <input type="text" id="location" name="location" placeholder="City, Country" required>
+                    <label for="location" data-text="location-label">Where are you located?</label>
+                    <input type="text" id="location" name="location" data-placeholder="location-placeholder" placeholder="City, Country" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="4" style="display: none;">
                 <div class="question">
-                    <label for="jobTitle">What's your current job title or desired position?</label>
-                    <input type="text" id="jobTitle" name="jobTitle" placeholder="Software Developer, Marketing Manager, etc." required>
+                    <label for="jobTitle" data-text="jobtitle-label">What's your current job title or desired position?</label>
+                    <input type="text" id="jobTitle" name="jobTitle" data-placeholder="jobtitle-placeholder" placeholder="Software Developer, Marketing Manager, etc." required>
                 </div>
             </div>
 
             <div class="question-container" data-question="5" style="display: none;">
                 <div class="question">
-                    <label for="summary">Tell us about yourself in a few sentences</label>
-                    <textarea id="summary" name="summary" placeholder="A brief professional summary highlighting your key strengths and experience..." rows="4" required></textarea>
+                    <label for="summary" data-text="summary-label">Tell us about yourself in a few sentences</label>
+                    <textarea id="summary" name="summary" data-placeholder="summary-placeholder" placeholder="A brief professional summary highlighting your key strengths and experience..." rows="4" required></textarea>
                 </div>
             </div>
 
             <div class="question-container" data-question="6" style="display: none;">
                 <div class="question">
-                    <label for="experience">Describe your work experience</label>
-                    <textarea id="experience" name="experience" placeholder="List your previous jobs, responsibilities, and achievements. Use bullet points if you like..." rows="6" required></textarea>
+                    <label for="experience" data-text="experience-label">Describe your work experience</label>
+                    <textarea id="experience" name="experience" data-placeholder="experience-placeholder" placeholder="List your previous jobs, responsibilities, and achievements. Use bullet points if you like..." rows="6" required></textarea>
                 </div>
             </div>
 
             <div class="question-container" data-question="7" style="display: none;">
                 <div class="question">
-                    <label for="education">What's your educational background?</label>
-                    <textarea id="education" name="education" placeholder="Degree, Institution, Year of graduation, relevant coursework..." rows="4" required></textarea>
+                    <label for="education" data-text="education-label">What's your educational background?</label>
+                    <textarea id="education" name="education" data-placeholder="education-placeholder" placeholder="Degree, Institution, Year of graduation, relevant coursework..." rows="4" required></textarea>
                 </div>
             </div>
 
             <div class="question-container" data-question="8" style="display: none;">
                 <div class="question">
-                    <label for="skills">What are your key skills?</label>
-                    <textarea id="skills" name="skills" placeholder="List your technical skills, soft skills, languages, certifications..." rows="4" required></textarea>
+                    <label for="skills" data-text="skills-label">What are your key skills?</label>
+                    <textarea id="skills" name="skills" data-placeholder="skills-placeholder" placeholder="List your technical skills, soft skills, languages, certifications..." rows="4" required></textarea>
                 </div>
             </div>
 
             <div class="question-container" data-question="9" style="display: none;">
                 <div class="question">
-                    <label for="achievements">Any notable achievements or projects?</label>
-                    <textarea id="achievements" name="achievements" placeholder="Awards, successful projects, publications, volunteer work..." rows="4"></textarea>
+                    <label for="achievements" data-text="achievements-label">Any notable achievements or projects?</label>
+                    <textarea id="achievements" name="achievements" data-placeholder="achievements-placeholder" placeholder="Awards, successful projects, publications, volunteer work..." rows="4"></textarea>
                 </div>
             </div>
 
             <div class="question-container" data-question="10" style="display: none;">
                 <div class="question completed">
-                    <h2>Perfect! Your CV is ready</h2>
-                    <p>We've gathered all the information needed to create your professional CV.</p>
-                    <button type="button" id="generateCV" class="generate-btn">Submit CV</button>
+                    <h2 data-text="complete-title">Perfect! Your CV is ready</h2>
+                    <p data-text="complete-description">We've gathered all the information needed to create your professional CV.</p>
+                    <button type="button" id="generateCV" class="generate-btn" data-text="submit-btn">Submit CV</button>
                 </div>
             </div>
         </form>
 
         <div class="navigation">
-            <button type="button" id="prevBtn" style="display: none;">← Previous</button>
-            <button type="button" id="nextBtn">Continue →</button>
+            <button type="button" id="prevBtn" style="display: none;" data-text="prev-btn">← Previous</button>
+            <button type="button" id="nextBtn" data-text="next-btn">Continue →</button>
         </div>
     </div>
 
@@ -103,7 +107,7 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <div id="cvPreview"></div>
-            <button id="downloadCV" class="download-btn">Download PDF</button>
+            <button id="downloadCV" class="download-btn" data-text="download-btn">Download PDF</button>
         </div>
     </div>
 
