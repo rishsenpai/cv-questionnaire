@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Builder Questionnaire</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+        
+        <form id="questionnaire">
+            <div class="question-container" data-question="0">
+                <h2>Let's start with your personal information</h2>
+                <div class="question">
+                    <label for="fullName">What's your full name?</label>
+                    <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="1" style="display: none;">
+                <div class="question">
+                    <label for="email">What's your email address?</label>
+                    <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="2" style="display: none;">
+                <div class="question">
+                    <label for="phone">What's your phone number?</label>
+                    <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567" required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="3" style="display: none;">
+                <div class="question">
+                    <label for="location">Where are you located?</label>
+                    <input type="text" id="location" name="location" placeholder="City, Country" required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="4" style="display: none;">
+                <div class="question">
+                    <label for="jobTitle">What's your current job title or desired position?</label>
+                    <input type="text" id="jobTitle" name="jobTitle" placeholder="Software Developer, Marketing Manager, etc." required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="5" style="display: none;">
+                <div class="question">
+                    <label for="summary">Tell us about yourself in a few sentences</label>
+                    <textarea id="summary" name="summary" placeholder="A brief professional summary highlighting your key strengths and experience..." rows="4" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="6" style="display: none;">
+                <div class="question">
+                    <label for="experience">Describe your work experience</label>
+                    <textarea id="experience" name="experience" placeholder="List your previous jobs, responsibilities, and achievements. Use bullet points if you like..." rows="6" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="7" style="display: none;">
+                <div class="question">
+                    <label for="education">What's your educational background?</label>
+                    <textarea id="education" name="education" placeholder="Degree, Institution, Year of graduation, relevant coursework..." rows="4" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="8" style="display: none;">
+                <div class="question">
+                    <label for="skills">What are your key skills?</label>
+                    <textarea id="skills" name="skills" placeholder="List your technical skills, soft skills, languages, certifications..." rows="4" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="9" style="display: none;">
+                <div class="question">
+                    <label for="achievements">Any notable achievements or projects?</label>
+                    <textarea id="achievements" name="achievements" placeholder="Awards, successful projects, publications, volunteer work..." rows="4"></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="10" style="display: none;">
+                <div class="question completed">
+                    <h2>Perfect! Your CV is ready</h2>
+                    <p>We've gathered all the information needed to create your professional CV.</p>
+                    <button type="button" id="generateCV" class="generate-btn">Submit CV</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="navigation">
+            <button type="button" id="prevBtn" style="display: none;">← Previous</button>
+            <button type="button" id="nextBtn">Continue →</button>
+        </div>
+    </div>
+
+    <div id="cvModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="cvPreview"></div>
+            <button id="downloadCV" class="download-btn">Download PDF</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
