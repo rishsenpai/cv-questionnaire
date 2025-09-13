@@ -278,9 +278,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="cv-name">${formData.fullName || 'Your Name'}</div>
                 <div class="cv-title">${formData.jobTitle || 'Professional Title'}</div>
                 <div class="cv-contact">
-                    ${formData.email || 'email@example.com'} • 
-                    ${formData.phone || 'Phone Number'} • 
-                    ${formData.location || 'Location'}
+                    <span>${formData.email || 'email@example.com'}</span>
+                    <span>${formData.phone || 'Phone Number'}</span>
+                    <span>${formData.location || 'Location'}</span>
                 </div>
             </div>
             
@@ -392,55 +392,109 @@ document.addEventListener('DOMContentLoaded', function() {
                 <title>CV - ${formData.fullName || 'Professional CV'}</title>
                 <style>
                     body {
-                        font-family: 'Times New Roman', serif;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                         line-height: 1.6;
-                        color: #333;
+                        color: #2d3748;
                         max-width: 800px;
                         margin: 0 auto;
-                        padding: 20px;
+                        padding: 30px;
+                        background: white;
                     }
                     .cv-header {
                         text-align: center;
-                        margin-bottom: 30px;
-                        padding-bottom: 20px;
-                        border-bottom: 2px solid #333;
+                        margin-bottom: 40px;
+                        padding: 25px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border-radius: 8px;
                     }
                     .cv-name {
-                        font-size: 28px;
-                        font-weight: bold;
-                        margin-bottom: 10px;
-                        color: #2d3748;
+                        font-size: 32px;
+                        font-weight: 700;
+                        margin-bottom: 8px;
+                        color: white;
                     }
                     .cv-title {
-                        font-size: 16px;
-                        color: #667eea;
+                        font-size: 18px;
+                        color: rgba(255, 255, 255, 0.95);
                         margin-bottom: 15px;
-                        font-style: italic;
+                        font-weight: 500;
                     }
                     .cv-contact {
-                        font-size: 12px;
-                        color: #4a5568;
+                        font-size: 14px;
+                        color: rgba(255, 255, 255, 0.9);
+                        display: flex;
+                        justify-content: center;
+                        gap: 15px;
+                        flex-wrap: wrap;
+                    }
+                    .cv-contact span {
+                        background: rgba(255, 255, 255, 0.2);
+                        padding: 4px 8px;
+                        border-radius: 12px;
                     }
                     .cv-section {
-                        margin-bottom: 25px;
+                        margin-bottom: 30px;
+                        padding: 20px;
+                        background: #f8fafc;
+                        border-radius: 8px;
+                        border-left: 4px solid #667eea;
                         page-break-inside: avoid;
                     }
                     .cv-section-title {
-                        font-size: 16px;
-                        font-weight: bold;
-                        color: #2d3748;
-                        margin-bottom: 10px;
-                        padding-bottom: 5px;
-                        border-bottom: 1px solid #e2e8f0;
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: #1a202c;
+                        margin-bottom: 12px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        position: relative;
+                        padding-left: 15px;
+                    }
+                    .cv-section-title::before {
+                        content: '•';
+                        color: #667eea;
+                        font-size: 20px;
+                        position: absolute;
+                        left: 0;
+                        top: -2px;
                     }
                     .cv-content {
-                        font-size: 12px;
+                        font-size: 14px;
                         white-space: pre-line;
+                        color: #4a5568;
+                        line-height: 1.7;
+                        padding-left: 15px;
                     }
                     @media print {
-                        body { margin: 0; padding: 15px; }
-                        .cv-header { margin-bottom: 20px; padding-bottom: 15px; }
-                        .cv-section { margin-bottom: 15px; }
+                        body { 
+                            margin: 0; 
+                            padding: 20px; 
+                            font-size: 12px;
+                        }
+                        .cv-header { 
+                            margin-bottom: 25px; 
+                            padding: 20px;
+                            background: #667eea !important;
+                            -webkit-print-color-adjust: exact;
+                            color-adjust: exact;
+                        }
+                        .cv-section { 
+                            margin-bottom: 20px; 
+                            padding: 15px;
+                            background: #f8fafc !important;
+                            -webkit-print-color-adjust: exact;
+                            color-adjust: exact;
+                        }
+                        .cv-section-title {
+                            font-size: 16px;
+                        }
+                        .cv-content {
+                            font-size: 12px;
+                        }
+                        .cv-contact {
+                            flex-direction: row;
+                        }
                     }
                 </style>
             </head>
