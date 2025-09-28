@@ -22,35 +22,35 @@
                 <h2 data-text="start-title">Let's start with your personal information</h2>
                 <div class="question">
                     <label for="fullName" data-text="fullname-label">What's your full name?</label>
-                    <input type="text" id="fullName" name="fullName" data-placeholder="fullname-placeholder" placeholder="Enter your full name" required>
+                    <input type="text" id="fullName" name="fullName" data-placeholder="fullname-placeholder" placeholder="Enter your full name" pattern="^[a-zA-ZÀ-ÿ\s'-]{2,50}$" title="Naam mag alleen letters, spaties, apostrofes en koppeltekens bevatten (2-50 karakters)" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="1" style="display: none;">
                 <div class="question">
                     <label for="email" data-text="email-label">What's your email address?</label>
-                    <input type="email" id="email" name="email" data-placeholder="email-placeholder" placeholder="your.email@example.com" required>
+                    <input type="email" id="email" name="email" data-placeholder="email-placeholder" placeholder="your.email@example.com" pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" title="Voer een geldig e-mailadres in" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="2" style="display: none;">
                 <div class="question">
                     <label for="phone" data-text="phone-label">What's your phone number?</label>
-                    <input type="tel" id="phone" name="phone" data-placeholder="phone-placeholder" placeholder="+1 (555) 123-4567" required>
+                    <input type="tel" id="phone" name="phone" data-placeholder="phone-placeholder" placeholder="+1 (555) 123-4567" pattern="^[\+]?[0-9\s\-\(\)]{1,50}$" title="Voer een geldig telefoonnummer in (1-50 cijfers, +, spaties, - en haakjes toegestaan)" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="3" style="display: none;">
                 <div class="question">
                     <label for="location" data-text="location-label">Where are you located?</label>
-                    <input type="text" id="location" name="location" data-placeholder="location-placeholder" placeholder="City, Country" required>
+                    <input type="text" id="location" name="location" data-placeholder="location-placeholder" placeholder="City, Country" pattern="^[a-zA-ZÀ-ÿ\s,'-]{2,100}$" title="Locatie mag alleen letters, spaties, komma's, apostrofes en koppeltekens bevatten (2-100 karakters)" required>
                 </div>
             </div>
 
             <div class="question-container" data-question="4" style="display: none;">
                 <div class="question">
                     <label for="birthDate" data-text="birthdate-label">Wat is je geboortedatum?</label>
-                    <input type="date" id="birthDate" name="birthDate" required>
+                    <input type="text" id="birthDate" name="birthDate" placeholder="dd/mm/yyyy" pattern="^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])/(19|20)\d{2}$" title="Voer een geldige geboortedatum in (dd/mm/yyyy), tussen 1900-2099" required>
                 </div>
             </div>
 
@@ -104,6 +104,34 @@
             </div>
 
             <div class="question-container" data-question="12" style="display: none;">
+                <div class="question">
+                    <label for="targetJob" data-text="targetjob-label">Wat is de functie die je zoekt?</label>
+                    <input type="text" id="targetJob" name="targetJob" data-placeholder="targetjob-placeholder" placeholder="Bijvoorbeeld: Frontend Developer, Marketing Manager..." data-exclude-from-cv="true" required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="13" style="display: none;">
+                <div class="question">
+                    <label for="availability" data-text="availability-label">Per wanneer ben je beschikbaar en hoeveel uur per week?</label>
+                    <textarea id="availability" name="availability" data-placeholder="availability-placeholder" placeholder="Bijvoorbeeld: Per direct beschikbaar, 40 uur per week..." rows="3" data-exclude-from-cv="true" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="14" style="display: none;">
+                <div class="question">
+                    <label for="salaryIndication" data-text="salary-label">Salarisindicatie?</label>
+                    <input type="text" id="salaryIndication" name="salaryIndication" data-placeholder="salary-placeholder" placeholder="Bijvoorbeeld: €3000-4000 per maand, €50.000-60.000 per jaar..." data-exclude-from-cv="true">
+                </div>
+            </div>
+
+            <div class="question-container" data-question="15" style="display: none;">
+                <div class="question">
+                    <label for="preferredSector" data-text="sector-label">In welke sector wil je werken?</label>
+                    <input type="text" id="preferredSector" name="preferredSector" data-placeholder="sector-placeholder" placeholder="Bijvoorbeeld: IT, Marketing, Financiën, Zorg..." data-exclude-from-cv="true" required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="16" style="display: none;">
                 <div class="question completed">
                     <h2 data-text="complete-title">Perfect! Your CV is ready</h2>
                     <p data-text="complete-description">We've gathered all the information needed to create your professional CV.</p>

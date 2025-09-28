@@ -11,12 +11,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const demoBtn = document.getElementById('demoBtn');
     
     let currentQuestion = 0;
-    const totalQuestions = 13; // 0-12
+    const totalQuestions = 17; // 0-16
     const formData = {};
     let currentLanguage = 'en';
     
     const questions = document.querySelectorAll('.question-container');
-    
+
+    // Format date to dd-mm-yyyy for CV display
+    function formatDate(dateString) {
+        // If in dd/mm/yyyy format, convert to dd-mm-yyyy
+        if (dateString.includes('/')) {
+            return dateString.replace(/\//g, '-');
+        }
+        // Parse YYYY-MM-DD format if coming from date input
+        const [year, month, day] = dateString.split('-');
+        return `${day}-${month}-${year}`;
+    }
+
     // Language translations
     const translations = {
         en: {
@@ -44,6 +55,14 @@ document.addEventListener('DOMContentLoaded', function() {
             'skills-placeholder': "List your technical skills, soft skills, languages, certifications...",
             'achievements-label': "Any notable achievements or projects?",
             'achievements-placeholder': "Awards, successful projects, publications, volunteer work...",
+            'targetjob-label': "What position are you looking for?",
+            'targetjob-placeholder': "For example: Frontend Developer, Marketing Manager...",
+            'availability-label': "When are you available and how many hours per week?",
+            'availability-placeholder': "For example: Available immediately, 40 hours per week...",
+            'salary-label': "Salary indication?",
+            'salary-placeholder': "For example: €3000-4000 per month, €50,000-60,000 per year...",
+            'sector-label': "In which sector do you want to work?",
+            'sector-placeholder': "For example: IT, Marketing, Finance, Healthcare...",
             'complete-title': "Perfect! Your CV is ready",
             'complete-description': "We've gathered all the information needed to create your professional CV.",
             'submit-btn': "Submit CV",
@@ -84,11 +103,19 @@ document.addEventListener('DOMContentLoaded', function() {
             'experience-label': "Beschrijf je werkervaring met periodes",
             'experience-placeholder': "Vermeld per functie: Functietitel, Bedrijfsnaam, Periode (van-tot), Taken en verantwoordelijkheden. Bijvoorbeeld:\n\n• Software Developer bij TechBedrijf\n  Januari 2020 - Heden\n  - Ontwikkelen van webapplicaties\n  - Samenwerken met design team...",
             'education-label': "Wat is je onderwijsachtergrond?",
-            'education-placeholder': "Vermeld per opleiding: Naam opleiding, Instelling, Periode, Diploma behaald (ja/nee). Bijvoorbeeld:\n\n• Bachelor Informatica\n  Universiteit van Amsterdam\n  2016-2020\n  Diploma behaald: Ja\n\n• HBO Bedrijfskunde\n  Hogeschool van Amsterdam\n  2014-2016\n  Diploma behaald: Nee (niet afgemaakt)..."
+            'education-placeholder': "Vermeld per opleiding: Naam opleiding, Instelling, Periode, Diploma behaald (ja/nee). Bijvoorbeeld:\n\n• Bachelor Informatica\n  Universiteit van Amsterdam\n  2016-2020\n  Diploma behaald: Ja\n\n• HBO Bedrijfskunde\n  Hogeschool van Amsterdam\n  2014-2016\n  Diploma behaald: Nee (niet afgemaakt)...",
             'skills-label': "Wat zijn je belangrijkste vaardigheden?",
             'skills-placeholder': "Vermeld je technische vaardigheden, sociale vaardigheden, talen, certificeringen...",
             'achievements-label': "Heb je opmerkelijke prestaties of projecten?",
             'achievements-placeholder': "Prijzen, succesvolle projecten, publicaties, vrijwilligerswerk...",
+            'targetjob-label': "Wat is de functie die je zoekt?",
+            'targetjob-placeholder': "Bijvoorbeeld: Frontend Developer, Marketing Manager...",
+            'availability-label': "Per wanneer ben je beschikbaar en hoeveel uur per week?",
+            'availability-placeholder': "Bijvoorbeeld: Per direct beschikbaar, 40 uur per week...",
+            'salary-label': "Salarisindicatie?",
+            'salary-placeholder': "Bijvoorbeeld: €3000-4000 per maand, €50.000-60.000 per jaar...",
+            'sector-label': "In welke sector wil je werken?",
+            'sector-placeholder': "Bijvoorbeeld: IT, Marketing, Financiën, Zorg...",
             'complete-title': "Perfect! Je CV is klaar",
             'complete-description': "We hebben alle informatie verzameld die nodig is om je professionele CV te maken.",
             'submit-btn': "CV Versturen",
@@ -118,28 +145,36 @@ document.addEventListener('DOMContentLoaded', function() {
             email: "sarah.johnson@email.com",
             phone: "+1 (555) 123-4567",
             location: "San Francisco, CA",
-            birthDate: "1990-03-15",
+            birthDate: "15/03/1990",
             languages: "English (native)\nSpanish (fluent speaking and writing)\nFrench (conversational speaking, basic writing)",
             jobTitle: "Senior Software Engineer",
             summary: "Experienced software engineer with 8+ years in full-stack development, specializing in React, Node.js, and cloud architecture. Passionate about creating scalable solutions and mentoring junior developers.",
             experience: "• Senior Software Engineer at TechCorp\n  March 2020 - Present\n  - Led development of microservices architecture serving 1M+ users\n  - Improved application performance by 40% through optimization\n  - Mentored team of 5 junior developers\n\n• Software Engineer at StartupXYZ\n  June 2018 - February 2020\n  - Built responsive web applications using React and Redux\n  - Collaborated with cross-functional teams in Agile environment\n  - Implemented CI/CD pipelines reducing deployment time by 60%",
             education: "• Master of Science in Computer Science\n  Stanford University\n  2016-2018\n  Diploma obtained: Yes\n  GPA: 3.8/4.0\n\n• Bachelor of Science in Software Engineering\n  UC Berkeley\n  2012-2016\n  Diploma obtained: Yes\n  Summa Cum Laude, Dean's List",
             skills: "Technical Skills:\n• Frontend: React, Vue.js, TypeScript, HTML/CSS, Tailwind\n• Backend: Node.js, Python, Java, PostgreSQL, MongoDB\n• Cloud: AWS, Docker, Kubernetes, Terraform\n• Tools: Git, Jenkins, Jira, Figma\n\nSoft Skills:\n• Team Leadership & Mentoring\n• Agile/Scrum Methodologies\n• Problem Solving & Critical Thinking\n• Technical Communication",
-            achievements: "• Led migration of legacy monolith to microservices, reducing system downtime by 75%\n• Open source contributor to popular React library with 10k+ GitHub stars\n• Speaker at TechConf 2023: 'Building Scalable React Applications'\n• Recipient of 'Innovation Award' at TechCorp for implementing ML-based recommendation system\n• Volunteer coding instructor at local community center"
+            achievements: "• Led migration of legacy monolith to microservices, reducing system downtime by 75%\n• Open source contributor to popular React library with 10k+ GitHub stars\n• Speaker at TechConf 2023: 'Building Scalable React Applications'\n• Recipient of 'Innovation Award' at TechCorp for implementing ML-based recommendation system\n• Volunteer coding instructor at local community center",
+            targetJob: "Senior Frontend Developer",
+            availability: "Available immediately, 40 hours per week",
+            salaryIndication: "$90,000-$110,000 per year",
+            preferredSector: "Technology, Fintech"
         },
         nl: {
             fullName: "Anna de Vries",
             email: "anna.devries@email.nl",
             phone: "+31 6 12345678",
             location: "Amsterdam, Nederland",
-            birthDate: "1990-03-15",
+            birthDate: "15/03/1990",
             languages: "Nederlands (moedertaal)\nEngels (vloeiend mondeling en schriftelijk)\nDuits (conversatie mondeling, basis schriftelijk)",
             jobTitle: "Senior Software Ontwikkelaar",
             summary: "Ervaren software ontwikkelaar met 8+ jaar ervaring in full-stack development, gespecialiseerd in React, Node.js en cloud architectuur. Gepassioneerd over het creëren van schaalbare oplossingen en het begeleiden van junior ontwikkelaars.",
             experience: "• Senior Software Ontwikkelaar bij TechBedrijf\n  Maart 2020 - Heden\n  - Leidde ontwikkeling van microservices architectuur voor 1M+ gebruikers\n  - Verbeterde applicatie prestaties met 40% door optimalisatie\n  - Begeleidde team van 5 junior ontwikkelaars\n\n• Software Ontwikkelaar bij StartupXYZ\n  Juni 2018 - Februari 2020\n  - Bouwde responsieve webapplicaties met React en Redux\n  - Werkte samen met multidisciplinaire teams in Agile omgeving\n  - Implementeerde CI/CD pipelines met 60% snellere deployments",
-            education: "• Master of Science in Informatica\n  Universiteit van Amsterdam\n  2016-2018\n  Diploma behaald: Ja\n  Gemiddeld: 8.5/10\n\n• Bachelor of Science in Software Engineering\n  TU Delft\n  2012-2016\n  Diploma behaald: Ja\n  Cum Laude, Dean's List"
+            education: "• Master of Science in Informatica\n  Universiteit van Amsterdam\n  2016-2018\n  Diploma behaald: Ja\n  Gemiddeld: 8.5/10\n\n• Bachelor of Science in Software Engineering\n  TU Delft\n  2012-2016\n  Diploma behaald: Ja\n  Cum Laude, Dean's List",
             skills: "Technische Vaardigheden:\n• Frontend: React, Vue.js, TypeScript, HTML/CSS, Tailwind\n• Backend: Node.js, Python, Java, PostgreSQL, MongoDB\n• Cloud: AWS, Docker, Kubernetes, Terraform\n• Tools: Git, Jenkins, Jira, Figma\n\nSociale Vaardigheden:\n• Teamleiderschap & Mentoring\n• Agile/Scrum Methodologieën\n• Probleemoplossing & Kritisch Denken\n• Technische Communicatie",
-            achievements: "• Leidde migratie van legacy monoliet naar microservices, 75% minder downtime\n• Open source contributor aan populaire React library met 10k+ GitHub stars\n• Spreker op TechConf 2023: 'Schaalbare React Applicaties Bouwen'\n• Ontvanger van 'Innovatie Award' bij TechBedrijf voor ML-based aanbevelingssysteem\n• Vrijwillige programmeer instructeur bij lokaal buurthuis"
+            achievements: "• Leidde migratie van legacy monoliet naar microservices, 75% minder downtime\n• Open source contributor aan populaire React library met 10k+ GitHub stars\n• Spreker op TechConf 2023: 'Schaalbare React Applicaties Bouwen'\n• Ontvanger van 'Innovatie Award' bij TechBedrijf voor ML-based aanbevelingssysteem\n• Vrijwillige programmeer instructeur bij lokaal buurthuis",
+            targetJob: "Senior Frontend Developer",
+            availability: "Per direct beschikbaar, 40 uur per week",
+            salaryIndication: "€65.000-€80.000 per jaar",
+            preferredSector: "Technologie, Fintech"
         }
     };
 
@@ -160,6 +195,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const input = document.querySelector(`[name="${key}"]`);
             if (input) {
                 input.value = demo[key];
+                // Mark if this field should be excluded from CV
+                if (input.getAttribute('data-exclude-from-cv') === 'true') {
+                    formData[key + '_excludeFromCV'] = true;
+                }
             }
         });
         
@@ -222,7 +261,240 @@ document.addEventListener('DOMContentLoaded', function() {
     // Real-time validation
     form.addEventListener('input', function(e) {
         updateNextButton();
+
+        // Real-time validation feedback
+        const input = e.target;
+        if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
+            // Apply date masking for birthDate field
+            if (input.name === 'birthDate') {
+                applyDateMask(input);
+            }
+
+            // Debounce validation to avoid too frequent checks
+            // Only validate if field has been interacted with
+            if (input.dataset.hasBeenTouched) {
+                clearTimeout(input.validationTimeout);
+                input.validationTimeout = setTimeout(() => {
+                    validateInputRealTime(input);
+                }, 500);
+            }
+        }
     });
+
+    // Handle keydown for date field to support backspace
+    form.addEventListener('keydown', function(e) {
+        const input = e.target;
+        if (input.name === 'birthDate') {
+            handleDateKeydown(e, input);
+        }
+    });
+
+    // Handle focus to initialize date template
+    form.addEventListener('focus', function(e) {
+        const input = e.target;
+        if (input.name === 'birthDate') {
+            if (!input.value || input.value === 'dd/mm/yyyy') {
+                input.value = 'dd/mm/yyyy';
+                input.setSelectionRange(0, 0);
+            }
+            updateDateInputColor(input);
+        }
+    }, true);
+
+    // Mark fields as touched when user starts typing
+    form.addEventListener('keydown', function(e) {
+        const input = e.target;
+        if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
+            input.dataset.hasBeenTouched = 'true';
+        }
+    });
+
+    function handleDateKeydown(e, input) {
+        const key = e.key;
+        const cursorPos = input.selectionStart;
+        let value = input.value;
+
+        // Initialize with template if empty
+        if (!value || value === 'dd/mm/yyyy') {
+            value = 'dd/mm/yyyy';
+            input.value = value;
+        }
+
+        // Only allow digits and navigation keys
+        if (!/[\d]/.test(key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(key)) {
+            e.preventDefault();
+            return;
+        }
+
+        if (key === 'Backspace') {
+            e.preventDefault();
+            let newPos = cursorPos - 1;
+
+            // Skip over slashes when going backwards
+            if (newPos >= 0 && value[newPos] === '/') {
+                newPos--;
+            }
+
+            if (newPos >= 0 && /\d/.test(value[newPos])) {
+                // Replace digit with appropriate template character
+                let templateChar = 'd';
+                if (newPos === 3 || newPos === 4) templateChar = 'm';
+                if (newPos >= 6) templateChar = 'y';
+
+                const newValue = value.substring(0, newPos) + templateChar + value.substring(newPos + 1);
+                input.value = newValue;
+                input.setSelectionRange(newPos, newPos);
+                updateDateInputColor(input);
+                updateNextButton();
+            }
+            return;
+        }
+
+        if (key === 'Delete') {
+            e.preventDefault();
+            let pos = cursorPos;
+
+            // Skip over slashes when going forward
+            if (pos < value.length && value[pos] === '/') {
+                pos++;
+            }
+
+            if (pos < value.length && value[pos] !== '/' && /\d/.test(value[pos])) {
+                // Replace digit with appropriate template character
+                let templateChar = 'd';
+                if (pos === 3 || pos === 4) templateChar = 'm';
+                if (pos >= 6) templateChar = 'y';
+
+                const newValue = value.substring(0, pos) + templateChar + value.substring(pos + 1);
+                input.value = newValue;
+                input.setSelectionRange(cursorPos, cursorPos);
+                updateDateInputColor(input);
+                updateNextButton();
+            }
+            return;
+        }
+
+        // Handle digit input
+        if (/\d/.test(key)) {
+            e.preventDefault();
+            let pos = cursorPos;
+
+            // Skip over slashes
+            if (pos < value.length && value[pos] === '/') {
+                pos++;
+            }
+
+            // Only place digit if we're on a template character or digit position
+            if (pos < value.length && (value[pos] === 'd' || value[pos] === 'm' || value[pos] === 'y' || /\d/.test(value[pos]))) {
+                const newValue = value.substring(0, pos) + key + value.substring(pos + 1);
+                input.value = newValue;
+
+                // Move cursor to next position
+                let newPos = pos + 1;
+                if (newPos < newValue.length && newValue[newPos] === '/') {
+                    newPos++;
+                }
+                input.setSelectionRange(newPos, newPos);
+                updateDateInputColor(input);
+                updateNextButton();
+            }
+        }
+    }
+
+    function updateDateInputColor(input) {
+        // Check if any digits have been entered
+        const hasDigits = /\d/.test(input.value);
+
+        if (hasDigits) {
+            input.classList.remove('template-mode');
+            input.classList.add('typing-mode');
+        } else {
+            input.classList.remove('typing-mode');
+            input.classList.add('template-mode');
+        }
+    }
+
+    function applyDateMask(input) {
+        // This function is now mostly handled by handleDateKeydown
+        // But we keep it for initial setup
+        if (!input.value || input.value === 'dd/mm/yyyy') {
+            input.value = 'dd/mm/yyyy';
+        }
+    }
+
+    function validateInputRealTime(input) {
+        const value = input.value.trim();
+
+        // Only validate if field has content
+        if (!value) {
+            input.classList.remove('error');
+            const existingError = input.parentNode.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            return;
+        }
+
+        // Use same validation logic as main validation
+        switch (input.name) {
+            case 'fullName':
+                if (!/^[a-zA-ZÀ-ÿ\s'-]{2,50}$/.test(value)) {
+                    showValidationError(input, 'Naam mag alleen letters, spaties, apostrofes en koppeltekens bevatten (2-50 karakters)');
+                } else {
+                    showValidationSuccess(input);
+                }
+                break;
+
+            case 'location':
+                if (!/^[a-zA-ZÀ-ÿ\s,'-]{2,100}$/.test(value)) {
+                    showValidationError(input, 'Locatie mag alleen letters, spaties, komma\'s, apostrofes en koppeltekens bevatten (2-100 karakters)');
+                } else {
+                    showValidationSuccess(input);
+                }
+                break;
+
+            case 'email':
+                if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
+                    showValidationError(input, 'Voer een geldig e-mailadres in');
+                } else {
+                    showValidationSuccess(input);
+                }
+                break;
+
+            case 'phone':
+                if (!/^[\+]?[0-9\s\-\(\)]{1,50}$/.test(value)) {
+                    showValidationError(input, 'Voer een geldig telefoonnummer in (1-50 cijfers)');
+                } else {
+                    showValidationSuccess(input);
+                }
+                break;
+
+            case 'birthDate':
+                // Don't validate if incomplete (contains template characters)
+                if (value.includes('d') || value.includes('m') || value.includes('y')) {
+                    // Just remove error messages for incomplete dates
+                    showValidationSuccess(input);
+                    return;
+                }
+                if (!/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(19|20)\d{2}$/.test(value)) {
+                    showValidationError(input, 'Voer een geldige geboortedatum in (dd/mm/yyyy)');
+                } else {
+                    // Check if date is realistic
+                    const [day, month, year] = value.split('/');
+                    const birthDate = new Date(year, month - 1, day);
+                    const today = new Date();
+                    const age = today.getFullYear() - birthDate.getFullYear();
+                    if (birthDate > today) {
+                        showValidationError(input, 'Geboortedatum kan niet in de toekomst liggen');
+                    } else if (age > 120) {
+                        showValidationError(input, 'Geboortedatum lijkt niet realistisch');
+                    } else {
+                        showValidationSuccess(input);
+                    }
+                }
+                break;
+        }
+    }
     
     // Generate CV button
     generateBtn.addEventListener('click', function() {
@@ -266,34 +538,127 @@ document.addEventListener('DOMContentLoaded', function() {
     function validateCurrentQuestion() {
         const currentQuestionElement = questions[currentQuestion];
         const input = currentQuestionElement.querySelector('input, textarea');
-        
+
         if (!input) return true; // No input to validate (final screen)
-        
-        if (input.hasAttribute('required') && !input.value.trim()) {
-            input.classList.add('error');
-            input.focus();
-            return false;
-        }
-        
-        if (input.type === 'email' && input.value.trim()) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(input.value.trim())) {
-                input.classList.add('error');
-                input.focus();
+
+        // Clear previous validation states
+        input.classList.remove('error');
+
+        const value = input.value.trim();
+
+        // Required field validation
+        if (input.hasAttribute('required')) {
+            // Special handling for date field
+            if (input.name === 'birthDate') {
+                const isCompleteDate = /^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/.test(value);
+                if (!isCompleteDate) {
+                    showValidationError(input, 'Dit veld is verplicht');
+                    return false;
+                }
+            }
+            // Regular handling for other fields
+            else if (input.name !== 'birthDate' && !value) {
+                showValidationError(input, 'Dit veld is verplicht');
                 return false;
             }
         }
-        
-        input.classList.remove('error');
+
+        // Specific validation based on input type/name
+        switch (input.name) {
+            case 'fullName':
+                if (!/^[a-zA-ZÀ-ÿ\s'-]{2,50}$/.test(value)) {
+                    showValidationError(input, 'Naam mag alleen letters, spaties, apostrofes en koppeltekens bevatten (2-50 karakters)');
+                    return false;
+                }
+                break;
+
+            case 'location':
+                if (!/^[a-zA-ZÀ-ÿ\s,'-]{2,100}$/.test(value)) {
+                    showValidationError(input, 'Locatie mag alleen letters, spaties, komma\'s, apostrofes en koppeltekens bevatten (2-100 karakters)');
+                    return false;
+                }
+                break;
+
+            case 'email':
+                if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
+                    showValidationError(input, 'Voer een geldig e-mailadres in');
+                    return false;
+                }
+                break;
+
+            case 'phone':
+                if (!/^[\+]?[0-9\s\-\(\)]{1,50}$/.test(value)) {
+                    showValidationError(input, 'Voer een geldig telefoonnummer in (1-50 cijfers)');
+                    return false;
+                }
+                break;
+
+            case 'birthDate':
+                // Check if the format contains template characters (incomplete)
+                if (value.includes('d') || value.includes('m') || value.includes('y')) {
+                    showValidationError(input, 'Vul de volledige geboortedatum in');
+                    return false;
+                }
+                if (!/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(19|20)\d{2}$/.test(value)) {
+                    showValidationError(input, 'Voer een geldige geboortedatum in (dd/mm/yyyy)');
+                    return false;
+                }
+                // Check if date is realistic (not in future, not too old)
+                const [day, month, year] = value.split('/');
+                const birthDate = new Date(year, month - 1, day);
+                const today = new Date();
+                const age = today.getFullYear() - birthDate.getFullYear();
+                if (birthDate > today) {
+                    showValidationError(input, 'Geboortedatum kan niet in de toekomst liggen');
+                    return false;
+                }
+                if (age > 120) {
+                    showValidationError(input, 'Geboortedatum lijkt niet realistisch');
+                    return false;
+                }
+                break;
+        }
+
+        showValidationSuccess(input);
         return true;
+    }
+
+    function showValidationError(input, message) {
+        input.classList.add('error');
+
+        // Remove existing error message
+        const existingError = input.parentNode.querySelector('.error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+
+        // Add new error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message show';
+        errorDiv.textContent = message;
+        input.parentNode.appendChild(errorDiv);
+
+        input.focus();
+    }
+
+    function showValidationSuccess(input) {
+        // Remove any error messages
+        const existingError = input.parentNode.querySelector('.error-message');
+        if (existingError) {
+            existingError.remove();
+        }
     }
     
     function saveCurrentAnswer() {
         const currentQuestionElement = questions[currentQuestion];
         const input = currentQuestionElement.querySelector('input, textarea');
-        
+
         if (input && input.name) {
             formData[input.name] = input.value.trim();
+            // Mark if this field should be excluded from CV
+            if (input.getAttribute('data-exclude-from-cv') === 'true') {
+                formData[input.name + '_excludeFromCV'] = true;
+            }
         }
     }
     
@@ -322,12 +687,27 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateNextButton() {
         const currentQuestionElement = questions[currentQuestion];
         const input = currentQuestionElement.querySelector('input, textarea');
-        
+
         if (input && input.hasAttribute('required')) {
-            if (input.value.trim()) {
-                nextBtn.disabled = false;
-            } else {
-                nextBtn.disabled = true;
+            const value = input.value.trim();
+
+            // Special handling for date field
+            if (input.name === 'birthDate') {
+                // Check if it's a complete date (dd/mm/yyyy format with only digits and slashes)
+                const isCompleteDate = /^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/.test(value);
+                if (isCompleteDate) {
+                    nextBtn.disabled = false;
+                } else {
+                    nextBtn.disabled = true;
+                }
+            }
+            // Regular handling for other fields
+            else {
+                if (value) {
+                    nextBtn.disabled = false;
+                } else {
+                    nextBtn.disabled = true;
+                }
             }
         } else {
             nextBtn.disabled = false;
@@ -346,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span>${formData.email || 'email@example.com'}</span>
                     <span>${formData.phone || 'Phone Number'}</span>
                     <span>${formData.location || 'Location'}</span>
-                    ${formData.birthDate ? `<span>Born: ${new Date(formData.birthDate).toLocaleDateString()}</span>` : ''}
+                    ${formData.birthDate ? `<span>Born: ${formatDate(formData.birthDate)}</span>` : ''}
                 </div>
             </div>
             

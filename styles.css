@@ -488,3 +488,82 @@ body {
 .question-container.slide-in {
     animation: slideIn 0.4s ease forwards;
 }
+
+/* Validation Styles - Only show invalid state when field has been touched */
+input:invalid:not(:placeholder-shown), textarea:invalid:not(:placeholder-shown) {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+/* Show invalid state for touched fields even when empty */
+input:invalid[data-has-been-touched="true"], textarea:invalid[data-has-been-touched="true"] {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+input:valid, textarea:valid {
+    border-color: #38a169;
+    box-shadow: 0 0 0 3px rgba(56, 161, 105, 0.1);
+}
+
+.error-message {
+    color: #e53e3e;
+    font-size: 14px;
+    margin-top: 8px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.success-message {
+    color: #38a169;
+    font-size: 14px;
+    margin-top: 8px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.success-message.show {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced focus states for better accessibility */
+input:focus, textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Pattern matching feedback - only for touched fields */
+input:not(:placeholder-shown):invalid[data-has-been-touched="true"] {
+    border-color: #e53e3e;
+    background-color: rgba(229, 62, 62, 0.05);
+}
+
+input:not(:placeholder-shown):valid[data-has-been-touched="true"] {
+    border-color: #38a169;
+    background-color: rgba(56, 161, 105, 0.05);
+}
+
+/* Date input template styling */
+input[name="birthDate"].template-mode {
+    color: #a0aec0; /* Light gray for template text */
+}
+
+input[name="birthDate"].typing-mode {
+    color: #2d3748; /* Normal dark color when typing */
+}

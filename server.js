@@ -2,6 +2,7 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
+const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = require('docx');
 require('dotenv').config();
 
 const app = express();
@@ -129,6 +130,137 @@ function generateCVHTML(formData) {
     `;
 }
 
+// Generate Word document
+function generateWordCV(formData) {
+    const sections = [];
+
+    // Header with personal info
+    sections.push(
+        new Paragraph({
+            children: [
+                new TextRun({
+                    text: formData.fullName || 'Applicant Name',
+                    bold: true,
+                    size: 32,
+                    color: "2d3748"
+                })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+        })
+    );
+
+    sections.push(
+        new Paragraph({
+            children: [
+                new TextRun({
+                    text: formData.jobTitle || 'Professional Title',
+                    italics: true,
+                    size: 24,
+                    color: "667eea"
+                })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+        })
+    );
+
+    // Contact information
+    const contactInfo = [];
+    if (formData.email) contactInfo.push(formData.email);
+    if (formData.phone) contactInfo.push(formData.phone);
+    if (formData.location) contactInfo.push(formData.location);
+    if (formData.birthDate) contactInfo.push(`Born: ${formData.birthDate.replace(/\//g, '-')}`);
+
+    sections.push(
+        new Paragraph({
+            children: [
+                new TextRun({
+                    text: contactInfo.join(' • '),
+                    size: 20,
+                    color: "4a5568"
+                })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 }
+        })
+    );
+
+    // Add sections for each CV field
+    const cvSections = [
+        { field: 'summary', title: 'Professional Summary' },
+        { field: 'languages', title: 'Languages' },
+        { field: 'experience', title: 'Work Experience' },
+        { field: 'education', title: 'Education' },
+        { field: 'skills', title: 'Skills' },
+        { field: 'achievements', title: 'Achievements & Projects' }
+    ];
+
+    cvSections.forEach(section => {
+        if (formData[section.field] && formData[section.field].trim()) {
+            // Section title
+            sections.push(
+                new Paragraph({
+                    children: [
+                        new TextRun({
+                            text: section.title.toUpperCase(),
+                            bold: true,
+                            size: 24,
+                            color: "1a202c"
+                        })
+                    ],
+                    heading: HeadingLevel.HEADING_2,
+                    spacing: { before: 400, after: 200 }
+                })
+            );
+
+            // Section content
+            const contentLines = formData[section.field].split('\n');
+            contentLines.forEach(line => {
+                if (line.trim()) {
+                    sections.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: line,
+                                    size: 20,
+                                    color: "4a5568"
+                                })
+                            ],
+                            spacing: { after: 100 }
+                        })
+                    );
+                }
+            });
+        }
+    });
+
+    // Footer
+    sections.push(
+        new Paragraph({
+            children: [
+                new TextRun({
+                    text: `CV submitted on: ${new Date().toLocaleDateString()}`,
+                    size: 18,
+                    color: "666666",
+                    italics: true
+                })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 600 }
+        })
+    );
+
+    const doc = new Document({
+        sections: [{
+            properties: {},
+            children: sections
+        }]
+    });
+
+    return doc;
+}
+
 // Submit CV endpoint
 app.post('/submit-cv', async (req, res) => {
     try {
@@ -144,14 +276,25 @@ app.post('/submit-cv', async (req, res) => {
         
         // Generate CV HTML
         const cvHTML = generateCVHTML(formData);
-        
+
+        // Generate Word document
+        const wordDoc = generateWordCV(formData);
+        const wordBuffer = await Packer.toBuffer(wordDoc);
+
         // Email options
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: process.env.RECIPIENT_EMAIL,
             subject: `New CV Submission: ${formData.fullName}`,
             html: cvHTML,
-            replyTo: formData.email
+            replyTo: formData.email,
+            attachments: [
+                {
+                    filename: `CV_${formData.fullName?.replace(/\s+/g, '_') || 'Applicant'}.docx`,
+                    content: wordBuffer,
+                    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                }
+            ]
         };
         
         // Send email
