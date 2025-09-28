@@ -81,7 +81,19 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Submission Failed",
             'error-button': "Try Again",
             'submitting': "Submitting...",
-            'demo-btn': "🎯 Demo"
+            'demo-btn': "🎯 Demo",
+            'feedback-btn': "💬 Feedback",
+            'feedback-title': "Share Your Feedback",
+            'feedback-description': "Help us improve the CV questionnaire by sharing your thoughts.",
+            'feedback-name-label': "Your Name (Optional)",
+            'feedback-name-placeholder': "Enter your name",
+            'feedback-email-label': "Your Email (Optional)",
+            'feedback-email-placeholder': "your.email@example.com",
+            'feedback-rating-label': "How would you rate your experience?",
+            'feedback-message-label': "Your Feedback",
+            'feedback-message-placeholder': "Tell us what you think about the questionnaire, what could be improved, or what you liked...",
+            'feedback-cancel': "Cancel",
+            'feedback-submit': "Send Feedback"
         },
         nl: {
             'start-title': "Laten we beginnen met je persoonlijke gegevens",
@@ -134,7 +146,19 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Versturen Mislukt",
             'error-button': "Opnieuw Proberen",
             'submitting': "Versturen...",
-            'demo-btn': "🎯 Demo"
+            'demo-btn': "🎯 Demo",
+            'feedback-btn': "💬 Feedback",
+            'feedback-title': "Deel je Feedback",
+            'feedback-description': "Help ons de CV vragenlijst te verbeteren door je mening te delen.",
+            'feedback-name-label': "Je Naam (Optioneel)",
+            'feedback-name-placeholder': "Voer je naam in",
+            'feedback-email-label': "Je Email (Optioneel)",
+            'feedback-email-placeholder': "je.email@voorbeeld.nl",
+            'feedback-rating-label': "Hoe zou je je ervaring beoordelen?",
+            'feedback-message-label': "Je Feedback",
+            'feedback-message-placeholder': "Vertel ons wat je van de vragenlijst vindt, wat er verbeterd kan worden, of wat je leuk vond...",
+            'feedback-cancel': "Annuleren",
+            'feedback-submit': "Feedback Versturen"
         }
     };
     
@@ -993,6 +1017,122 @@ document.addEventListener('DOMContentLoaded', function() {
         document.documentElement.lang = currentLanguage;
     }
     
+    // Feedback functionality
+    const feedbackBtn = document.getElementById('feedbackBtn');
+    const feedbackModal = document.getElementById('feedbackModal');
+    const closeFeedback = document.querySelector('.close-feedback');
+    const cancelFeedback = document.getElementById('cancelFeedback');
+    const feedbackForm = document.getElementById('feedbackForm');
+    const stars = document.querySelectorAll('.star');
+    let selectedRating = 0;
+
+    // Show feedback modal
+    feedbackBtn.addEventListener('click', () => {
+        feedbackModal.style.display = 'block';
+    });
+
+    // Close feedback modal
+    function closeFeedbackModal() {
+        feedbackModal.style.display = 'none';
+        feedbackForm.reset();
+        selectedRating = 0;
+        stars.forEach(star => star.classList.remove('active'));
+        document.getElementById('feedbackRating').value = '';
+    }
+
+    closeFeedback.addEventListener('click', closeFeedbackModal);
+    cancelFeedback.addEventListener('click', closeFeedbackModal);
+
+    // Star rating functionality
+    stars.forEach(star => {
+        star.addEventListener('click', () => {
+            selectedRating = parseInt(star.getAttribute('data-rating'));
+            document.getElementById('feedbackRating').value = selectedRating;
+
+            stars.forEach((s, index) => {
+                if (index < selectedRating) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        });
+
+        star.addEventListener('mouseover', () => {
+            const rating = parseInt(star.getAttribute('data-rating'));
+            stars.forEach((s, index) => {
+                if (index < rating) {
+                    s.style.color = '#ffd700';
+                } else {
+                    s.style.color = '#e2e8f0';
+                }
+            });
+        });
+    });
+
+    // Reset star colors on mouse leave
+    document.querySelector('.rating-stars').addEventListener('mouseleave', () => {
+        stars.forEach((s, index) => {
+            if (index < selectedRating) {
+                s.style.color = '#ffd700';
+            } else {
+                s.style.color = '#e2e8f0';
+            }
+        });
+    });
+
+    // Submit feedback
+    feedbackForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submitFeedback');
+        const originalText = submitBtn.textContent;
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = currentLanguage === 'en' ? 'Sending...' : 'Versturen...';
+
+            const feedbackData = {
+                feedbackName: document.getElementById('feedbackName').value,
+                feedbackEmail: document.getElementById('feedbackEmail').value,
+                feedbackRating: document.getElementById('feedbackRating').value,
+                feedbackMessage: document.getElementById('feedbackMessage').value
+            };
+
+            const response = await fetch('/submit-feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(feedbackData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Show success message
+                const t = translations[currentLanguage];
+                alert(currentLanguage === 'en' ? 'Thank you for your feedback!' : 'Bedankt voor je feedback!');
+                closeFeedbackModal();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+            alert(currentLanguage === 'en' ? 'Failed to submit feedback. Please try again.' : 'Kon feedback niet versturen. Probeer opnieuw.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    });
+
+    // Close modal when clicking outside
+    feedbackModal.addEventListener('click', (e) => {
+        if (e.target === feedbackModal) {
+            closeFeedbackModal();
+        }
+    });
+
     // Initialize
     updateNavigation();
     updateProgress();

@@ -321,6 +321,140 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Submit feedback endpoint
+app.post('/submit-feedback', async (req, res) => {
+    try {
+        const feedbackData = req.body;
+
+        // Validate required fields
+        if (!feedbackData.feedbackMessage) {
+            return res.status(400).json({
+                success: false,
+                message: 'Feedback message is required'
+            });
+        }
+
+        // Generate feedback email HTML
+        const feedbackHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                .feedback-header {
+                    background: linear-gradient(135deg, #2ec4b6, #26a69a);
+                    color: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .feedback-content {
+                    background: #f8fafc;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                }
+                .feedback-field {
+                    margin-bottom: 15px;
+                }
+                .feedback-label {
+                    font-weight: bold;
+                    color: #2d3748;
+                    margin-bottom: 5px;
+                }
+                .feedback-value {
+                    color: #4a5568;
+                    background: white;
+                    padding: 10px;
+                    border-radius: 4px;
+                    border-left: 4px solid #2ec4b6;
+                }
+                .rating-stars {
+                    font-size: 18px;
+                    color: #ffd700;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="feedback-header">
+                <h2>💬 New Feedback Received</h2>
+                <p>CV Questionnaire User Feedback</p>
+            </div>
+
+            <div class="feedback-content">
+                ${feedbackData.feedbackName ? `
+                    <div class="feedback-field">
+                        <div class="feedback-label">Name:</div>
+                        <div class="feedback-value">${feedbackData.feedbackName}</div>
+                    </div>
+                ` : ''}
+
+                ${feedbackData.feedbackEmail ? `
+                    <div class="feedback-field">
+                        <div class="feedback-label">Email:</div>
+                        <div class="feedback-value">${feedbackData.feedbackEmail}</div>
+                    </div>
+                ` : ''}
+
+                ${feedbackData.feedbackRating ? `
+                    <div class="feedback-field">
+                        <div class="feedback-label">Rating:</div>
+                        <div class="feedback-value">
+                            <span class="rating-stars">${'★'.repeat(parseInt(feedbackData.feedbackRating))}${'☆'.repeat(5 - parseInt(feedbackData.feedbackRating))}</span>
+                            (${feedbackData.feedbackRating}/5 stars)
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="feedback-field">
+                    <div class="feedback-label">Feedback Message:</div>
+                    <div class="feedback-value">${feedbackData.feedbackMessage.replace(/\n/g, '<br>')}</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #666; text-align: center;">
+                <p>Feedback submitted on: ${new Date().toLocaleString()}</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        // Email options for feedback
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: process.env.RECIPIENT_EMAIL,
+            subject: `CV Questionnaire Feedback ${feedbackData.feedbackRating ? `(${feedbackData.feedbackRating}★)` : ''}`,
+            html: feedbackHTML,
+            replyTo: feedbackData.feedbackEmail || process.env.EMAIL_USER
+        };
+
+        // Send feedback email
+        await transporter.sendMail(mailOptions);
+
+        console.log(`Feedback received ${feedbackData.feedbackName ? `from ${feedbackData.feedbackName}` : 'anonymously'}`);
+
+        res.json({
+            success: true,
+            message: 'Feedback submitted successfully!'
+        });
+
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit feedback. Please try again.'
+        });
+    }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });

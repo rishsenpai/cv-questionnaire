@@ -11,6 +11,7 @@
         <div class="language-toggle">
             <button id="langToggle" class="lang-btn">🇳🇱 Nederlands</button>
             <button id="demoBtn" class="demo-btn" data-text="demo-btn">🎯 Demo</button>
+            <button id="feedbackBtn" class="feedback-btn" data-text="feedback-btn">💬 Feedback</button>
         </div>
         
         <div class="progress-bar">
@@ -151,6 +152,43 @@
             <span class="close">&times;</span>
             <div id="cvPreview"></div>
             <button id="downloadCV" class="download-btn" data-text="download-btn">Download PDF</button>
+        </div>
+    </div>
+
+    <div id="feedbackModal" class="modal" style="display: none;">
+        <div class="modal-content feedback-modal">
+            <span class="close-feedback">&times;</span>
+            <h2 data-text="feedback-title">Share Your Feedback</h2>
+            <p data-text="feedback-description">Help us improve the CV questionnaire by sharing your thoughts.</p>
+            <form id="feedbackForm">
+                <div class="feedback-field">
+                    <label for="feedbackName" data-text="feedback-name-label">Your Name (Optional)</label>
+                    <input type="text" id="feedbackName" name="feedbackName" data-placeholder="feedback-name-placeholder" placeholder="Enter your name">
+                </div>
+                <div class="feedback-field">
+                    <label for="feedbackEmail" data-text="feedback-email-label">Your Email (Optional)</label>
+                    <input type="email" id="feedbackEmail" name="feedbackEmail" data-placeholder="feedback-email-placeholder" placeholder="your.email@example.com">
+                </div>
+                <div class="feedback-field">
+                    <label for="feedbackRating" data-text="feedback-rating-label">How would you rate your experience?</label>
+                    <div class="rating-stars" id="ratingStars">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                    </div>
+                    <input type="hidden" id="feedbackRating" name="feedbackRating" value="">
+                </div>
+                <div class="feedback-field">
+                    <label for="feedbackMessage" data-text="feedback-message-label">Your Feedback</label>
+                    <textarea id="feedbackMessage" name="feedbackMessage" data-placeholder="feedback-message-placeholder" placeholder="Tell us what you think about the questionnaire, what could be improved, or what you liked..." rows="5" required></textarea>
+                </div>
+                <div class="feedback-buttons">
+                    <button type="button" id="cancelFeedback" class="cancel-feedback-btn" data-text="feedback-cancel">Cancel</button>
+                    <button type="submit" id="submitFeedback" class="submit-feedback-btn" data-text="feedback-submit">Send Feedback</button>
+                </div>
+            </form>
         </div>
     </div>
 
