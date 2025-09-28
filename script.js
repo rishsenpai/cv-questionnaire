@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const demoBtn = document.getElementById('demoBtn');
     
     let currentQuestion = 0;
-    const totalQuestions = 11; // 0-10
+    const totalQuestions = 13; // 0-12
     const formData = {};
     let currentLanguage = 'en';
     
@@ -29,14 +29,17 @@ document.addEventListener('DOMContentLoaded', function() {
             'phone-placeholder': "+1 (555) 123-4567",
             'location-label': "Where are you located?",
             'location-placeholder': "City, Country",
+            'birthdate-label': "What's your date of birth?",
+            'languages-label': "Which languages do you speak and how well?",
+            'languages-placeholder': "For example: Dutch (native), English (fluent speaking and writing), German (basic speaking)...",
             'jobtitle-label': "What's your current job title or desired position?",
             'jobtitle-placeholder': "Software Developer, Marketing Manager, etc.",
             'summary-label': "Tell us about yourself in a few sentences",
             'summary-placeholder': "A brief professional summary highlighting your key strengths and experience...",
-            'experience-label': "Describe your work experience",
-            'experience-placeholder': "List your previous jobs, responsibilities, and achievements. Use bullet points if you like...",
+            'experience-label': "Describe your work experience with periods",
+            'experience-placeholder': "List for each position: Job title, Company name, Period (from-to), Tasks and responsibilities. For example:\n\n• Software Developer at TechCompany\n  January 2020 - Present\n  - Developing web applications\n  - Collaborating with design team...",
             'education-label': "What's your educational background?",
-            'education-placeholder': "Degree, Institution, Year of graduation, relevant coursework...",
+            'education-placeholder': "List for each education: Education name, Institution, Period, Diploma obtained (yes/no). For example:\n\n• Bachelor Computer Science\n  University of Amsterdam\n  2016-2020\n  Diploma obtained: Yes\n\n• HBO Business Administration\n  Amsterdam University of Applied Sciences\n  2014-2016\n  Diploma obtained: No (not completed)...",
             'skills-label': "What are your key skills?",
             'skills-placeholder': "List your technical skills, soft skills, languages, certifications...",
             'achievements-label': "Any notable achievements or projects?",
@@ -71,14 +74,17 @@ document.addEventListener('DOMContentLoaded', function() {
             'phone-placeholder': "+31 6 12345678",
             'location-label': "Waar woon je?",
             'location-placeholder': "Stad, Land",
+            'birthdate-label': "Wat is je geboortedatum?",
+            'languages-label': "Welke talen spreek je en hoe goed?",
+            'languages-placeholder': "Bijvoorbeeld: Nederlands (moedertaal), Engels (vloeiend mondeling en schriftelijk), Duits (basis mondeling)...",
             'jobtitle-label': "Wat is je huidige functietitel of gewenste positie?",
             'jobtitle-placeholder': "Software Ontwikkelaar, Marketing Manager, etc.",
             'summary-label': "Vertel ons over jezelf in een paar zinnen",
             'summary-placeholder': "Een korte professionele samenvatting waarin je belangrijkste kwaliteiten en ervaring worden benadrukt...",
-            'experience-label': "Beschrijf je werkervaring",
-            'experience-placeholder': "Vermeld je eerdere banen, verantwoordelijkheden en prestaties. Gebruik puntjes als je wilt...",
+            'experience-label': "Beschrijf je werkervaring met periodes",
+            'experience-placeholder': "Vermeld per functie: Functietitel, Bedrijfsnaam, Periode (van-tot), Taken en verantwoordelijkheden. Bijvoorbeeld:\n\n• Software Developer bij TechBedrijf\n  Januari 2020 - Heden\n  - Ontwikkelen van webapplicaties\n  - Samenwerken met design team...",
             'education-label': "Wat is je onderwijsachtergrond?",
-            'education-placeholder': "Diploma, Instelling, Jaar van afstuderen, relevante vakken...",
+            'education-placeholder': "Vermeld per opleiding: Naam opleiding, Instelling, Periode, Diploma behaald (ja/nee). Bijvoorbeeld:\n\n• Bachelor Informatica\n  Universiteit van Amsterdam\n  2016-2020\n  Diploma behaald: Ja\n\n• HBO Bedrijfskunde\n  Hogeschool van Amsterdam\n  2014-2016\n  Diploma behaald: Nee (niet afgemaakt)..."
             'skills-label': "Wat zijn je belangrijkste vaardigheden?",
             'skills-placeholder': "Vermeld je technische vaardigheden, sociale vaardigheden, talen, certificeringen...",
             'achievements-label': "Heb je opmerkelijke prestaties of projecten?",
@@ -109,25 +115,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const demoData = {
         en: {
             fullName: "Sarah Johnson",
-            email: "sarah.johnson@email.com", 
+            email: "sarah.johnson@email.com",
             phone: "+1 (555) 123-4567",
             location: "San Francisco, CA",
+            birthDate: "1990-03-15",
+            languages: "English (native)\nSpanish (fluent speaking and writing)\nFrench (conversational speaking, basic writing)",
             jobTitle: "Senior Software Engineer",
             summary: "Experienced software engineer with 8+ years in full-stack development, specializing in React, Node.js, and cloud architecture. Passionate about creating scalable solutions and mentoring junior developers.",
-            experience: "• Senior Software Engineer at TechCorp (2020-Present)\n  - Led development of microservices architecture serving 1M+ users\n  - Improved application performance by 40% through optimization\n  - Mentored team of 5 junior developers\n\n• Software Engineer at StartupXYZ (2018-2020)\n  - Built responsive web applications using React and Redux\n  - Collaborated with cross-functional teams in Agile environment\n  - Implemented CI/CD pipelines reducing deployment time by 60%",
-            education: "• Master of Science in Computer Science\n  Stanford University, 2018\n  GPA: 3.8/4.0\n\n• Bachelor of Science in Software Engineering\n  UC Berkeley, 2016\n  Summa Cum Laude, Dean's List",
+            experience: "• Senior Software Engineer at TechCorp\n  March 2020 - Present\n  - Led development of microservices architecture serving 1M+ users\n  - Improved application performance by 40% through optimization\n  - Mentored team of 5 junior developers\n\n• Software Engineer at StartupXYZ\n  June 2018 - February 2020\n  - Built responsive web applications using React and Redux\n  - Collaborated with cross-functional teams in Agile environment\n  - Implemented CI/CD pipelines reducing deployment time by 60%",
+            education: "• Master of Science in Computer Science\n  Stanford University\n  2016-2018\n  Diploma obtained: Yes\n  GPA: 3.8/4.0\n\n• Bachelor of Science in Software Engineering\n  UC Berkeley\n  2012-2016\n  Diploma obtained: Yes\n  Summa Cum Laude, Dean's List",
             skills: "Technical Skills:\n• Frontend: React, Vue.js, TypeScript, HTML/CSS, Tailwind\n• Backend: Node.js, Python, Java, PostgreSQL, MongoDB\n• Cloud: AWS, Docker, Kubernetes, Terraform\n• Tools: Git, Jenkins, Jira, Figma\n\nSoft Skills:\n• Team Leadership & Mentoring\n• Agile/Scrum Methodologies\n• Problem Solving & Critical Thinking\n• Technical Communication",
             achievements: "• Led migration of legacy monolith to microservices, reducing system downtime by 75%\n• Open source contributor to popular React library with 10k+ GitHub stars\n• Speaker at TechConf 2023: 'Building Scalable React Applications'\n• Recipient of 'Innovation Award' at TechCorp for implementing ML-based recommendation system\n• Volunteer coding instructor at local community center"
         },
         nl: {
             fullName: "Anna de Vries",
             email: "anna.devries@email.nl",
-            phone: "+31 6 12345678", 
+            phone: "+31 6 12345678",
             location: "Amsterdam, Nederland",
+            birthDate: "1990-03-15",
+            languages: "Nederlands (moedertaal)\nEngels (vloeiend mondeling en schriftelijk)\nDuits (conversatie mondeling, basis schriftelijk)",
             jobTitle: "Senior Software Ontwikkelaar",
             summary: "Ervaren software ontwikkelaar met 8+ jaar ervaring in full-stack development, gespecialiseerd in React, Node.js en cloud architectuur. Gepassioneerd over het creëren van schaalbare oplossingen en het begeleiden van junior ontwikkelaars.",
-            experience: "• Senior Software Ontwikkelaar bij TechBedrijf (2020-Heden)\n  - Leidde ontwikkeling van microservices architectuur voor 1M+ gebruikers\n  - Verbeterde applicatie prestaties met 40% door optimalisatie\n  - Begeleidde team van 5 junior ontwikkelaars\n\n• Software Ontwikkelaar bij StartupXYZ (2018-2020)\n  - Bouwde responsieve webapplicaties met React en Redux\n  - Werkte samen met multidisciplinaire teams in Agile omgeving\n  - Implementeerde CI/CD pipelines met 60% snellere deployments",
-            education: "• Master of Science in Informatica\n  Universiteit van Amsterdam, 2018\n  Gemiddeld: 8.5/10\n\n• Bachelor of Science in Software Engineering\n  TU Delft, 2016\n  Cum Laude, Dean's List",
+            experience: "• Senior Software Ontwikkelaar bij TechBedrijf\n  Maart 2020 - Heden\n  - Leidde ontwikkeling van microservices architectuur voor 1M+ gebruikers\n  - Verbeterde applicatie prestaties met 40% door optimalisatie\n  - Begeleidde team van 5 junior ontwikkelaars\n\n• Software Ontwikkelaar bij StartupXYZ\n  Juni 2018 - Februari 2020\n  - Bouwde responsieve webapplicaties met React en Redux\n  - Werkte samen met multidisciplinaire teams in Agile omgeving\n  - Implementeerde CI/CD pipelines met 60% snellere deployments",
+            education: "• Master of Science in Informatica\n  Universiteit van Amsterdam\n  2016-2018\n  Diploma behaald: Ja\n  Gemiddeld: 8.5/10\n\n• Bachelor of Science in Software Engineering\n  TU Delft\n  2012-2016\n  Diploma behaald: Ja\n  Cum Laude, Dean's List"
             skills: "Technische Vaardigheden:\n• Frontend: React, Vue.js, TypeScript, HTML/CSS, Tailwind\n• Backend: Node.js, Python, Java, PostgreSQL, MongoDB\n• Cloud: AWS, Docker, Kubernetes, Terraform\n• Tools: Git, Jenkins, Jira, Figma\n\nSociale Vaardigheden:\n• Teamleiderschap & Mentoring\n• Agile/Scrum Methodologieën\n• Probleemoplossing & Kritisch Denken\n• Technische Communicatie",
             achievements: "• Leidde migratie van legacy monoliet naar microservices, 75% minder downtime\n• Open source contributor aan populaire React library met 10k+ GitHub stars\n• Spreker op TechConf 2023: 'Schaalbare React Applicaties Bouwen'\n• Ontvanger van 'Innovatie Award' bij TechBedrijf voor ML-based aanbevelingssysteem\n• Vrijwillige programmeer instructeur bij lokaal buurthuis"
         }
@@ -336,6 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span>${formData.email || 'email@example.com'}</span>
                     <span>${formData.phone || 'Phone Number'}</span>
                     <span>${formData.location || 'Location'}</span>
+                    ${formData.birthDate ? `<span>Born: ${new Date(formData.birthDate).toLocaleDateString()}</span>` : ''}
                 </div>
             </div>
             
@@ -343,6 +354,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="cv-section">
                     <div class="cv-section-title">${t['cv-section-summary']}</div>
                     <div class="cv-content">${formData.summary}</div>
+                </div>
+            ` : ''}
+
+            ${formData.languages ? `
+                <div class="cv-section">
+                    <div class="cv-section-title">${currentLanguage === 'en' ? 'Languages' : 'Talen'}</div>
+                    <div class="cv-content">${formData.languages}</div>
                 </div>
             ` : ''}
             

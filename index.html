@@ -49,47 +49,61 @@
 
             <div class="question-container" data-question="4" style="display: none;">
                 <div class="question">
+                    <label for="birthDate" data-text="birthdate-label">Wat is je geboortedatum?</label>
+                    <input type="date" id="birthDate" name="birthDate" required>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="5" style="display: none;">
+                <div class="question">
+                    <label for="languages" data-text="languages-label">Welke talen spreek je en hoe goed?</label>
+                    <textarea id="languages" name="languages" data-placeholder="languages-placeholder" placeholder="Bijvoorbeeld: Nederlands (moedertaal), Engels (vloeiend mondeling en schriftelijk), Duits (basis mondeling)..." rows="4" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="6" style="display: none;">
+                <div class="question">
                     <label for="jobTitle" data-text="jobtitle-label">What's your current job title or desired position?</label>
                     <input type="text" id="jobTitle" name="jobTitle" data-placeholder="jobtitle-placeholder" placeholder="Software Developer, Marketing Manager, etc." required>
                 </div>
             </div>
 
-            <div class="question-container" data-question="5" style="display: none;">
+            <div class="question-container" data-question="7" style="display: none;">
                 <div class="question">
                     <label for="summary" data-text="summary-label">Tell us about yourself in a few sentences</label>
                     <textarea id="summary" name="summary" data-placeholder="summary-placeholder" placeholder="A brief professional summary highlighting your key strengths and experience..." rows="4" required></textarea>
                 </div>
             </div>
 
-            <div class="question-container" data-question="6" style="display: none;">
-                <div class="question">
-                    <label for="experience" data-text="experience-label">Describe your work experience</label>
-                    <textarea id="experience" name="experience" data-placeholder="experience-placeholder" placeholder="List your previous jobs, responsibilities, and achievements. Use bullet points if you like..." rows="6" required></textarea>
-                </div>
-            </div>
-
-            <div class="question-container" data-question="7" style="display: none;">
-                <div class="question">
-                    <label for="education" data-text="education-label">What's your educational background?</label>
-                    <textarea id="education" name="education" data-placeholder="education-placeholder" placeholder="Degree, Institution, Year of graduation, relevant coursework..." rows="4" required></textarea>
-                </div>
-            </div>
-
             <div class="question-container" data-question="8" style="display: none;">
+                <div class="question">
+                    <label for="experience" data-text="experience-label">Beschrijf je werkervaring met periodes</label>
+                    <textarea id="experience" name="experience" data-placeholder="experience-placeholder" placeholder="Vermeld per functie: Functietitel, Bedrijfsnaam, Periode (van-tot), Taken en verantwoordelijkheden. Bijvoorbeeld:\n\n• Software Developer bij TechBedrijf\n  Januari 2020 - Heden\n  - Ontwikkelen van webapplicaties\n  - Samenwerken met design team..." rows="6" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="9" style="display: none;">
+                <div class="question">
+                    <label for="education" data-text="education-label">Wat is je onderwijsachtergrond?</label>
+                    <textarea id="education" name="education" data-placeholder="education-placeholder" placeholder="Vermeld per opleiding: Naam opleiding, Instelling, Periode, Diploma behaald (ja/nee). Bijvoorbeeld:\n\n• Bachelor Informatica\n  Universiteit van Amsterdam\n  2016-2020\n  Diploma behaald: Ja\n\n• HBO Bedrijfskunde\n  Hogeschool van Amsterdam\n  2014-2016\n  Diploma behaald: Nee (niet afgemaakt)..." rows="6" required></textarea>
+                </div>
+            </div>
+
+            <div class="question-container" data-question="10" style="display: none;">
                 <div class="question">
                     <label for="skills" data-text="skills-label">What are your key skills?</label>
                     <textarea id="skills" name="skills" data-placeholder="skills-placeholder" placeholder="List your technical skills, soft skills, languages, certifications..." rows="4" required></textarea>
                 </div>
             </div>
 
-            <div class="question-container" data-question="9" style="display: none;">
+            <div class="question-container" data-question="11" style="display: none;">
                 <div class="question">
                     <label for="achievements" data-text="achievements-label">Any notable achievements or projects?</label>
                     <textarea id="achievements" name="achievements" data-placeholder="achievements-placeholder" placeholder="Awards, successful projects, publications, volunteer work..." rows="4"></textarea>
                 </div>
             </div>
 
-            <div class="question-container" data-question="10" style="display: none;">
+            <div class="question-container" data-question="12" style="display: none;">
                 <div class="question completed">
                     <h2 data-text="complete-title">Perfect! Your CV is ready</h2>
                     <p data-text="complete-description">We've gathered all the information needed to create your professional CV.</p>
