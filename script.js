@@ -93,7 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-message-label': "Your Feedback",
             'feedback-message-placeholder': "Tell us what you think about the questionnaire, what could be improved, or what you liked...",
             'feedback-cancel': "Cancel",
-            'feedback-submit': "Send Feedback"
+            'feedback-submit': "Send Feedback",
+            'tooltip-feedback-required': "Please provide your feedback message"
         },
         nl: {
             'start-title': "Laten we beginnen met je persoonlijke gegevens",
@@ -158,7 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-message-label': "Je Feedback",
             'feedback-message-placeholder': "Vertel ons wat je van de vragenlijst vindt, wat er verbeterd kan worden, of wat je leuk vond...",
             'feedback-cancel': "Annuleren",
-            'feedback-submit': "Feedback Versturen"
+            'feedback-submit': "Feedback Versturen",
+            'tooltip-feedback-required': "Geef je feedback bericht"
         }
     };
     
@@ -250,7 +252,14 @@ document.addEventListener('DOMContentLoaded', function() {
     showQuestion(0);
     
     // Navigation event listeners
-    nextBtn.addEventListener('click', function() {
+    nextBtn.addEventListener('click', function(e) {
+        // Prevent click if button is disabled
+        if (this.disabled) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+
         if (validateCurrentQuestion()) {
             saveCurrentAnswer();
             if (currentQuestion < totalQuestions - 1) {
@@ -259,6 +268,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateProgress();
                 updateNavigation();
             }
+        } else {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
         }
     });
     
@@ -557,6 +570,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 q.classList.remove('active');
             }
         });
+
+        // Update button state for new question
+        updateNavigation();
     }
     
     function validateCurrentQuestion() {
@@ -709,31 +725,59 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateNextButton() {
+        const t = translations[currentLanguage];
+
+        // Force disable first, then enable only if valid
+        nextBtn.disabled = true;
+
+
+        // Use the same validation logic as validateCurrentQuestion for consistency
         const currentQuestionElement = questions[currentQuestion];
         const input = currentQuestionElement.querySelector('input, textarea');
 
-        if (input && input.hasAttribute('required')) {
-            const value = input.value.trim();
+        if (!input) {
+            nextBtn.disabled = false;
+            return;
+        }
 
+        const value = input.value.trim();
+
+        // Use same validation logic as validateCurrentQuestion
+        let isValid = true;
+
+        // Required field validation
+        if (input.hasAttribute('required')) {
             // Special handling for date field
             if (input.name === 'birthDate') {
-                // Check if it's a complete date (dd/mm/yyyy format with only digits and slashes)
                 const isCompleteDate = /^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/.test(value);
-                if (isCompleteDate) {
-                    nextBtn.disabled = false;
-                } else {
-                    nextBtn.disabled = true;
-                }
+                isValid = isCompleteDate;
             }
             // Regular handling for other fields
-            else {
-                if (value) {
-                    nextBtn.disabled = false;
-                } else {
-                    nextBtn.disabled = true;
-                }
+            else if (input.name !== 'birthDate' && !value) {
+                isValid = false;
             }
-        } else {
+        }
+
+        // Additional specific validation
+        if (isValid && input.hasAttribute('required')) {
+            switch (input.name) {
+                case 'fullName':
+                    isValid = value.length >= 2 && /^[a-zA-ZÀ-ÿ\s'-]{2,50}$/.test(value);
+                    break;
+                case 'email':
+                    isValid = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
+                    break;
+                case 'phone':
+                    isValid = /^[\+]?[0-9\s\-\(\)]{1,50}$/.test(value);
+                    break;
+                case 'location':
+                    isValid = /^[a-zA-ZÀ-ÿ\s,'-]{2,100}$/.test(value);
+                    break;
+            }
+        }
+
+        // Only enable if truly valid
+        if (isValid) {
             nextBtn.disabled = false;
         }
     }
@@ -1015,6 +1059,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update document language attribute
         document.documentElement.lang = currentLanguage;
+
+        // Update button tooltips when language changes
+        updateNextButton();
+        if (document.getElementById('feedbackMessage')) {
+            updateFeedbackSubmitButton();
+        }
     }
     
     // Feedback functionality
@@ -1029,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show feedback modal
     feedbackBtn.addEventListener('click', () => {
         feedbackModal.style.display = 'block';
+        updateFeedbackSubmitButton(); // Check initial state
     });
 
     // Close feedback modal
@@ -1080,6 +1131,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Validate feedback form and update submit button
+    function updateFeedbackSubmitButton() {
+        const submitBtn = document.getElementById('submitFeedback');
+        const messageField = document.getElementById('feedbackMessage');
+        const t = translations[currentLanguage];
+
+        if (messageField.value.trim()) {
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute('data-tooltip');
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.setAttribute('data-tooltip', t['tooltip-feedback-required']);
+        }
+    }
+
+    // Add event listener to feedback message field
+    document.getElementById('feedbackMessage').addEventListener('input', updateFeedbackSubmitButton);
+    document.getElementById('feedbackMessage').addEventListener('blur', updateFeedbackSubmitButton);
 
     // Submit feedback
     feedbackForm.addEventListener('submit', async (e) => {
@@ -1136,6 +1206,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize
     updateNavigation();
     updateProgress();
+
+
+    // Add touched state tracking to all input fields
+    document.querySelectorAll('input, textarea').forEach(field => {
+        field.addEventListener('blur', function() {
+            this.setAttribute('data-has-been-touched', 'true');
+        });
+
+        field.addEventListener('input', function() {
+            if (this.value.trim() !== '') {
+                this.setAttribute('data-has-been-touched', 'true');
+            }
+            // Update next button when user types (only if it's the current question's field)
+            const currentQuestionElement = questions[currentQuestion];
+            if (currentQuestionElement && currentQuestionElement.contains(this)) {
+                updateNextButton();
+            }
+        });
+    });
     
     // Add error styling for validation
     const style = document.createElement('style');

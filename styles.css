@@ -245,11 +245,20 @@ body {
 }
 
 #nextBtn:disabled {
-    background: #cbd5e0;
-    color: #a0aec0;
-    cursor: not-allowed;
-    transform: none;
+    background: #cbd5e0 !important;
+    color: #a0aec0 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    opacity: 0.6;
 }
+
+/* Prevent disabled button from being clickable via CSS */
+#nextBtn:disabled {
+    pointer-events: none;
+}
+
+
+
 
 .modal {
     position: fixed;
@@ -519,9 +528,18 @@ input:invalid[data-has-been-touched="true"], textarea:invalid[data-has-been-touc
     box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
 }
 
-input:valid, textarea:valid {
+/* Only show valid state for touched fields with content */
+input:valid:not(:placeholder-shown)[data-has-been-touched="true"],
+textarea:valid:not(:placeholder-shown)[data-has-been-touched="true"] {
     border-color: #38a169;
     box-shadow: 0 0 0 3px rgba(56, 161, 105, 0.1);
+}
+
+/* Default state - neutral styling for untouched fields */
+input:not([data-has-been-touched="true"]),
+textarea:not([data-has-been-touched="true"]) {
+    border-color: #e2e8f0;
+    box-shadow: none;
 }
 
 .error-message {
@@ -700,10 +718,52 @@ input[name="birthDate"].typing-mode {
 }
 
 .submit-feedback-btn:disabled {
-    background: #cbd5e0;
-    color: #a0aec0;
-    cursor: not-allowed;
-    transform: none;
+    background: #cbd5e0 !important;
+    color: #a0aec0 !important;
+    cursor: pointer !important;
+    transform: none !important;
+    position: relative;
+    pointer-events: auto; /* Allow hover for tooltip */
+    opacity: 0.6;
+}
+
+/* Prevent disabled feedback button from being clickable via CSS */
+.submit-feedback-btn:disabled:not(:hover) {
+    pointer-events: none;
+}
+
+.submit-feedback-btn:disabled:hover {
+    pointer-events: auto; /* Allow hover for tooltip */
+}
+
+/* Tooltip for disabled feedback submit button */
+.submit-feedback-btn:disabled:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2d3748;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+    animation: fadeIn 0.3s ease;
+}
+
+.submit-feedback-btn:disabled:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #2d3748;
+    z-index: 1000;
 }
 
 .close-feedback {
