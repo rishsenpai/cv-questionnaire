@@ -429,75 +429,137 @@ body {
 }
 
 @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
     .container {
-        margin: 10px;
+        margin: 0;
+        border-radius: 8px;
+        max-width: 100%;
     }
-    
+
     #questionnaire {
-        padding: 40px 20px 20px;
+        padding: 60px 25px 20px;
     }
-    
+
     .question-container {
-        left: 20px;
-        right: 20px;
-        top: 40px;
+        left: 25px;
+        right: 25px;
+        top: 60px;
     }
-    
+
     .navigation {
-        padding: 15px 20px;
+        padding: 20px 25px;
     }
-    
+
     .question h2 {
-        font-size: 24px;
+        font-size: 22px;
+        margin-bottom: 20px;
     }
-    
+
+    .question label {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    .question input,
+    .question textarea {
+        padding: 14px 16px;
+        font-size: 16px; /* Prevent zoom on iOS */
+        border-width: 1px; /* Thinner border on mobile */
+    }
+
+    /* Lighter validation borders on mobile */
+    input:invalid:not(:placeholder-shown),
+    textarea:invalid:not(:placeholder-shown) {
+        border-width: 1px;
+        border-color: #fc8181; /* Lighter red */
+        box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.08);
+    }
+
+    input:invalid[data-has-been-touched="true"],
+    textarea:invalid[data-has-been-touched="true"] {
+        border-width: 1px;
+        border-color: #fc8181;
+        box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.08);
+    }
+
+    input:valid:not(:placeholder-shown)[data-has-been-touched="true"],
+    textarea:valid:not(:placeholder-shown)[data-has-been-touched="true"] {
+        border-width: 1px;
+        border-color: #68d391; /* Lighter green */
+        box-shadow: 0 0 0 2px rgba(56, 161, 105, 0.08);
+    }
+
+    input:focus, textarea:focus {
+        border-width: 1px;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.08);
+    }
+
+    input:not(:placeholder-shown):invalid[data-has-been-touched="true"] {
+        border-width: 1px;
+        background-color: rgba(229, 62, 62, 0.03);
+    }
+
+    input:not(:placeholder-shown):valid[data-has-been-touched="true"] {
+        border-width: 1px;
+        background-color: rgba(56, 161, 105, 0.03);
+    }
+
+    /* Top buttons responsive */
+    .language-toggle {
+        top: 12px;
+        right: 12px;
+        gap: 6px;
+    }
+
+    .lang-btn,
+    .demo-btn,
+    .feedback-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
     /* CV Mobile Styling */
     #cvPreview {
         padding: 30px 20px;
     }
-    
+
     .cv-header {
         padding: 20px;
         margin-bottom: 30px;
     }
-    
+
     .cv-name {
         font-size: 28px !important;
     }
-    
+
     .cv-title {
         font-size: 18px !important;
     }
-    
+
     .cv-contact {
         flex-direction: column;
         gap: 10px;
     }
-    
+
     .cv-contact span {
         font-size: 14px;
     }
-    
+
     .cv-section {
         padding: 20px;
         margin-bottom: 25px;
     }
-    
+
     .cv-section-title {
         font-size: 16px !important;
     }
-    
+
     .cv-content {
         font-size: 14px;
         padding-left: 15px;
-    }
-    
-    .question label {
-        font-size: 16px;
-    }
-    
-    #cvPreview {
-        padding: 20px;
     }
 }
 
