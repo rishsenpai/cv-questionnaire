@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'email-label': "What's your email address?",
             'email-placeholder': "your.email@example.com",
             'phone-label': "What's your phone number?",
-            'phone-placeholder': "+1 (555) 123-4567",
+            'phone-placeholder': "+597 123-4567",
             'location-label': "Where are you located?",
             'location-placeholder': "City, Country",
             'birthdate-label': "What's your date of birth?",
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'email-label': "Wat is je e-mailadres?",
             'email-placeholder': "jouw.email@voorbeeld.nl",
             'phone-label': "Wat is je telefoonnummer?",
-            'phone-placeholder': "+31 6 12345678",
+            'phone-placeholder': "+597 123-4567",
             'location-label': "Waar woon je?",
             'location-placeholder': "Stad, Land",
             'birthdate-label': "Wat is je geboortedatum?",
@@ -332,11 +332,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (input.name === 'birthDate') {
             if (!input.value || input.value === 'dd/mm/yyyy') {
                 input.value = 'dd/mm/yyyy';
-                input.setSelectionRange(0, 0);
+                // Use setTimeout to ensure cursor position is set after browser defaults
+                setTimeout(() => {
+                    input.setSelectionRange(0, 0);
+                }, 0);
+            } else {
+                // If field has content, still set cursor to beginning
+                setTimeout(() => {
+                    input.setSelectionRange(0, 0);
+                }, 0);
             }
             updateDateInputColor(input);
         }
     }, true);
+
+    // Handle click to reset cursor position for birth date
+    form.addEventListener('click', function(e) {
+        const input = e.target;
+        if (input.name === 'birthDate') {
+            setTimeout(() => {
+                input.setSelectionRange(0, 0);
+            }, 0);
+        }
+    });
 
     // Mark fields as touched when user starts typing
     form.addEventListener('keydown', function(e) {
