@@ -1,6 +1,11 @@
-# CV Questionnaire - Setup Instructions
+# CV Questionnaire
 
 A typeform-style questionnaire that collects CV information and emails it to you.
+
+## 🌐 Live Demo
+**Production URL:** https://cv-questionnaire.vercel.app
+
+> Note: The GitHub Pages URL (rishsenpai.github.io/cv-questionnaire/) is for static preview only and does not support CV submission. Use the Vercel URL above for full functionality.
 
 ## Quick Setup
 
@@ -45,36 +50,23 @@ Visit: `http://localhost:3000`
 3. Server formats the CV as HTML and emails it to you
 4. You receive a nicely formatted CV email with applicant details
 
-## Deployment Options
+## Deployment
 
-### Option 1: Heroku (Free Tier Available)
-1. Install Heroku CLI
-2. Create new Heroku app:
-   ```bash
-   heroku create your-cv-app-name
-   ```
-3. Set environment variables:
-   ```bash
-   heroku config:set EMAIL_USER=your.email@gmail.com
-   heroku config:set EMAIL_PASS=your_app_password
-   heroku config:set RECIPIENT_EMAIL=your.email@gmail.com
-   ```
-4. Deploy:
-   ```bash
-   git add .
-   git commit -m "Initial deployment"
-   git push heroku main
-   ```
+This project is configured for **Vercel** deployment (recommended).
 
-### Option 2: Vercel
-1. Install Vercel CLI: `npm i -g vercel`
-2. Run `vercel` and follow prompts
-3. Set environment variables in Vercel dashboard
+### Deploy to Vercel
+1. Go to [vercel.com](https://vercel.com) and sign in with GitHub
+2. Import the `cv-questionnaire` repository
+3. Configure Environment Variables:
+   - `EMAIL_USER` - Your Gmail address
+   - `EMAIL_PASS` - Your Gmail app password
+   - `RECIPIENT_EMAIL` - Where to receive CVs
+4. Click Deploy
 
-### Option 3: Railway
-1. Connect your GitHub repo to Railway
-2. Set environment variables in Railway dashboard
-3. Deploy automatically
+Vercel will automatically redeploy when you push to GitHub.
+
+### Why Not GitHub Pages?
+GitHub Pages only supports static files and cannot run the Node.js backend needed for email functionality. Use Vercel instead for full functionality.
 
 ## Sharing with Users
 
