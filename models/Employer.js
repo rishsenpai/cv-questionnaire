@@ -36,11 +36,11 @@ const employerSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-employerSchema.pre('save', function(next) {
-    if (!this.isModified('password')) return next();
+employerSchema.pre('save', async function() {
+    if (!this.isModified('password')) return;
+    if (!this.password) return;
     // Simple hash for demo - in production use bcrypt
     this.password = crypto.createHash('sha256').update(this.password).digest('hex');
-    next();
 });
 
 // Method to check password
