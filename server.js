@@ -2,11 +2,45 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
+const mongoose = require('mongoose');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = require('docx');
 require('dotenv').config();
 
+const CV = require('./models/CV');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// MongoDB connection with caching for serverless
+let cachedConnection = null;
+
+const connectDB = async () => {
+    if (cachedConnection && mongoose.connection.readyState === 1) {
+        return cachedConnection;
+    }
+
+    try {
+        if (process.env.MONGODB_URI) {
+            cachedConnection = await mongoose.connect(process.env.MONGODB_URI, {
+                bufferCommands: false,
+                maxPoolSize: 10
+            });
+            console.log('MongoDB connected successfully');
+            return cachedConnection;
+        } else {
+            console.log('No MONGODB_URI provided, running without database');
+            return null;
+        }
+    } catch (error) {
+        console.error('MongoDB connection error:', error.message);
+        return null;
+    }
+};
+
+// Connect on startup for local development
+if (process.env.NODE_ENV !== 'production') {
+    connectDB();
+}
 
 // Middleware
 app.use(cors());
@@ -265,15 +299,40 @@ function generateWordCV(formData) {
 app.post('/submit-cv', async (req, res) => {
     try {
         const formData = req.body;
-        
+
         // Validate required fields
         if (!formData.fullName || !formData.email) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Name and email are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Name and email are required'
             });
         }
-        
+
+        // Connect to database (for serverless)
+        await connectDB();
+
+        // Save CV to database
+        let savedCV = null;
+        if (mongoose.connection.readyState === 1) {
+            const cv = new CV({
+                fullName: formData.fullName,
+                email: formData.email,
+                phone: formData.phone,
+                location: formData.location,
+                birthDate: formData.birthDate,
+                jobTitle: formData.jobTitle,
+                summary: formData.summary,
+                languages: formData.languages,
+                experience: formData.experience,
+                education: formData.education,
+                skills: formData.skills,
+                achievements: formData.achievements,
+                emailSent: false
+            });
+            savedCV = await cv.save();
+            console.log(`CV saved to database with ID: ${savedCV._id}`);
+        }
+
         // Generate CV HTML
         const cvHTML = generateCVHTML(formData);
 
@@ -296,22 +355,27 @@ app.post('/submit-cv', async (req, res) => {
                 }
             ]
         };
-        
+
         // Send email
         await transporter.sendMail(mailOptions);
-        
+
+        // Update emailSent status in database
+        if (savedCV) {
+            await CV.findByIdAndUpdate(savedCV._id, { emailSent: true });
+        }
+
         console.log(`CV received from ${formData.fullName} (${formData.email})`);
-        
-        res.json({ 
-            success: true, 
-            message: 'CV submitted successfully!' 
+
+        res.json({
+            success: true,
+            message: 'CV submitted successfully!'
         });
-        
+
     } catch (error) {
         console.error('Error submitting CV:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to submit CV. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit CV. Please try again.'
         });
     }
 });
@@ -455,9 +519,107 @@ app.post('/submit-feedback', async (req, res) => {
     }
 });
 
+// Get all CVs endpoint (protected - add authentication in production)
+app.get('/api/cvs', async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const cvs = await CV.find().sort({ createdAt: -1 });
+        res.json({
+            success: true,
+            count: cvs.length,
+            data: cvs
+        });
+    } catch (error) {
+        console.error('Error fetching CVs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch CVs'
+        });
+    }
+});
+
+// Get single CV by ID
+app.get('/api/cvs/:id', async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const cv = await CV.findById(req.params.id);
+        if (!cv) {
+            return res.status(404).json({
+                success: false,
+                message: 'CV not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: cv
+        });
+    } catch (error) {
+        console.error('Error fetching CV:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch CV'
+        });
+    }
+});
+
+// Delete CV by ID
+app.delete('/api/cvs/:id', async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const cv = await CV.findByIdAndDelete(req.params.id);
+        if (!cv) {
+            return res.status(404).json({
+                success: false,
+                message: 'CV not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'CV deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting CV:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete CV'
+        });
+    }
+});
+
 // Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+    await connectDB();
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
 });
 
 // Export for Vercel serverless
