@@ -18,6 +18,98 @@
             color: #fff;
         }
 
+        /* Login Screen */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-box h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .login-box p {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 30px;
+        }
+
+        .login-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 14px 20px;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        .login-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: #667eea;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 24px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background: #5a6fd6;
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+        }
+
+        /* Dashboard (hidden by default) */
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
         .header {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -31,6 +123,12 @@
         .header h1 {
             font-size: 24px;
             font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 30px;
         }
 
         .header-stats {
@@ -52,6 +150,21 @@
             font-size: 12px;
             color: rgba(255, 255, 255, 0.6);
             text-transform: uppercase;
+        }
+
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: #ef4444;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
         }
 
         .container {
@@ -329,30 +442,49 @@
     </style>
 </head>
 <body>
-    <header class="header">
-        <h1>CV Dashboard</h1>
-        <div class="header-stats">
-            <div class="stat">
-                <div class="stat-value" id="totalCount">-</div>
-                <div class="stat-label">Totaal CV's</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="todayCount">-</div>
-                <div class="stat-label">Vandaag</div>
-            </div>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>CV Dashboard</h1>
+            <p>Voer het admin wachtwoord in om door te gaan</p>
+            <div class="login-error" id="loginError">Onjuist wachtwoord</div>
+            <form id="loginForm">
+                <input type="password" class="login-input" id="passwordInput" placeholder="Wachtwoord" required>
+                <button type="submit" class="login-btn" id="loginBtn">Inloggen</button>
+            </form>
         </div>
-    </header>
+    </div>
 
-    <div class="container">
-        <div class="toolbar">
-            <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
-            <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
-        </div>
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <header class="header">
+            <h1>CV Dashboard</h1>
+            <div class="header-right">
+                <div class="header-stats">
+                    <div class="stat">
+                        <div class="stat-value" id="totalCount">-</div>
+                        <div class="stat-label">Totaal CV's</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="todayCount">-</div>
+                        <div class="stat-label">Vandaag</div>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">Uitloggen</button>
+            </div>
+        </header>
 
-        <div id="cvList" class="cv-grid">
-            <div class="loading">
-                <div class="loading-spinner"></div>
-                <p>CV's laden...</p>
+        <div class="container">
+            <div class="toolbar">
+                <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
+                <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
+            </div>
+
+            <div id="cvList" class="cv-grid">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>CV's laden...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -370,6 +502,88 @@
 
     <script>
         let allCVs = [];
+        let authToken = localStorage.getItem('adminToken');
+
+        // Check authentication on load
+        async function checkAuth() {
+            if (!authToken) {
+                showLogin();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: authToken })
+                });
+
+                if (response.ok) {
+                    showDashboard();
+                } else {
+                    localStorage.removeItem('adminToken');
+                    authToken = null;
+                    showLogin();
+                }
+            } catch (error) {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboard').classList.remove('active');
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').classList.add('active');
+            loadCVs();
+        }
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('passwordInput').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const loginError = document.getElementById('loginError');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Bezig...';
+            loginError.classList.remove('show');
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    authToken = result.token;
+                    localStorage.setItem('adminToken', authToken);
+                    showDashboard();
+                } else {
+                    loginError.textContent = result.message || 'Onjuist wachtwoord';
+                    loginError.classList.add('show');
+                }
+            } catch (error) {
+                loginError.textContent = 'Verbindingsfout. Probeer opnieuw.';
+                loginError.classList.add('show');
+            }
+
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Inloggen';
+        });
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            authToken = null;
+            document.getElementById('passwordInput').value = '';
+            showLogin();
+        }
 
         async function loadCVs() {
             const cvList = document.getElementById('cvList');
@@ -381,7 +595,15 @@
             `;
 
             try {
-                const response = await fetch('/api/cvs');
+                const response = await fetch('/api/cvs', {
+                    headers: { 'X-Admin-Token': authToken }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
                 const result = await response.json();
 
                 if (result.success) {
@@ -487,7 +709,16 @@
             if (!confirm('Weet je zeker dat je deze CV wilt verwijderen?')) return;
 
             try {
-                const response = await fetch(`/api/cvs/${id}`, { method: 'DELETE' });
+                const response = await fetch(`/api/cvs/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Token': authToken }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
                 const result = await response.json();
 
                 if (result.success) {
@@ -538,8 +769,8 @@
             if (e.key === 'Escape') closeModal();
         });
 
-        // Initial load
-        loadCVs();
+        // Initial auth check
+        checkAuth();
     </script>
 </body>
 </html>

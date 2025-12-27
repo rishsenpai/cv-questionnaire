@@ -47,6 +47,64 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
+// Admin authentication
+const ADMIN_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+const activeTokens = new Map();
+
+function generateToken() {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+function validateToken(token) {
+    const tokenData = activeTokens.get(token);
+    if (!tokenData) return false;
+    if (Date.now() > tokenData.expires) {
+        activeTokens.delete(token);
+        return false;
+    }
+    return true;
+}
+
+// Admin login endpoint
+app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword) {
+        return res.status(500).json({
+            success: false,
+            message: 'Admin password not configured'
+        });
+    }
+
+    if (password === adminPassword) {
+        const token = generateToken();
+        activeTokens.set(token, { expires: Date.now() + ADMIN_TOKEN_EXPIRY });
+        res.json({ success: true, token });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid password' });
+    }
+});
+
+// Verify token endpoint
+app.post('/api/admin/verify', (req, res) => {
+    const { token } = req.body;
+    if (validateToken(token)) {
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+});
+
+// Admin middleware for protected routes
+function requireAdmin(req, res, next) {
+    const token = req.headers['x-admin-token'];
+    if (!validateToken(token)) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    next();
+}
+
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
     service: 'gmail', // or your email provider
@@ -519,8 +577,8 @@ app.post('/submit-feedback', async (req, res) => {
     }
 });
 
-// Get all CVs endpoint (protected - add authentication in production)
-app.get('/api/cvs', async (req, res) => {
+// Get all CVs endpoint (protected)
+app.get('/api/cvs', requireAdmin, async (req, res) => {
     try {
         await connectDB();
 
@@ -546,8 +604,8 @@ app.get('/api/cvs', async (req, res) => {
     }
 });
 
-// Get single CV by ID
-app.get('/api/cvs/:id', async (req, res) => {
+// Get single CV by ID (protected)
+app.get('/api/cvs/:id', requireAdmin, async (req, res) => {
     try {
         await connectDB();
 
@@ -579,8 +637,8 @@ app.get('/api/cvs/:id', async (req, res) => {
     }
 });
 
-// Delete CV by ID
-app.delete('/api/cvs/:id', async (req, res) => {
+// Delete CV by ID (protected)
+app.delete('/api/cvs/:id', requireAdmin, async (req, res) => {
     try {
         await connectDB();
 
