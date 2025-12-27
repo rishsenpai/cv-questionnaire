@@ -1457,7 +1457,7 @@
 
                     // Use parsed data or fallback to filename/defaults
                     const fullName = parsedData?.fullName || file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
-                    const email = parsedData?.email || defaultEmail || `${fullName.toLowerCase().replace(/\s+/g, '.')}@upload.local`;
+                    const email = parsedData?.email || defaultEmail || ''; // Geen nep-email meer
                     const jobTitle = parsedData?.jobTitle || defaultJobTitle || '';
                     const location = parsedData?.location || defaultLocation || '';
 

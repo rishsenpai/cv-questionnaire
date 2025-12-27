@@ -8,7 +8,7 @@ const cvSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: true,
+        required: false, // Not required for uploaded CVs without email
         trim: true,
         lowercase: true
     },

@@ -1208,7 +1208,7 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
         // Data comes from client-side parsing now
         const cvData = {
             fullName: fullName || fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
-            email: email || `${(fullName || 'unknown').toLowerCase().replace(/\s+/g, '.')}@upload.local`,
+            email: email || '', // Geen nep-email meer genereren
             phone: phone || '',
             jobTitle: jobTitle || '',
             location: location || '',
