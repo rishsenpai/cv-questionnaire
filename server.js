@@ -16,6 +16,7 @@ require('dotenv').config();
 const CV = require('./models/CV');
 const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
+const EmployerToken = require('./models/EmployerToken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -115,10 +116,7 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-// Employer authentication
-const employerTokens = new Map();
-
-// Employer login endpoint
+// Employer login endpoint - stores token in MongoDB for serverless compatibility
 app.post('/api/employer/login', async (req, res) => {
     try {
         await connectDB();
@@ -140,11 +138,14 @@ app.post('/api/employer/login', async (req, res) => {
         }
 
         const token = generateToken();
-        employerTokens.set(token, {
-            expires: Date.now() + ADMIN_TOKEN_EXPIRY,
-            employerId: employer._id,
-            plan: employer.plan || 'basic'
-        });
+        const expires = new Date(Date.now() + ADMIN_TOKEN_EXPIRY);
+
+        // Store token in MongoDB instead of memory
+        await EmployerToken.findOneAndUpdate(
+            { employerId: employer._id },
+            { token, employerId: employer._id, expires },
+            { upsert: true, new: true }
+        );
 
         res.json({
             success: true,
@@ -161,58 +162,56 @@ app.post('/api/employer/login', async (req, res) => {
     }
 });
 
-// Verify employer token - fetch current plan from database
+// Verify employer token - fetch from MongoDB
 app.post('/api/employer/verify', async (req, res) => {
-    const { token } = req.body;
-    const tokenData = employerTokens.get(token);
-    if (tokenData && Date.now() < tokenData.expires) {
-        try {
-            await connectDB();
-            const employer = await Employer.findById(tokenData.employerId);
-            if (employer && employer.isActive) {
-                res.json({ success: true, plan: employer.plan || 'basic' });
-            } else {
-                employerTokens.delete(token);
-                res.status(401).json({ success: false, message: 'Account inactive' });
-            }
-        } catch (error) {
-            // Fallback to cached plan if DB fails
-            res.json({ success: true, plan: tokenData.plan });
+    try {
+        await connectDB();
+        const { token } = req.body;
+
+        const tokenData = await EmployerToken.findOne({ token, expires: { $gt: new Date() } });
+        if (!tokenData) {
+            return res.status(401).json({ success: false, message: 'Invalid or expired token' });
         }
-    } else {
-        res.status(401).json({ success: false, message: 'Invalid or expired token' });
+
+        const employer = await Employer.findById(tokenData.employerId);
+        if (!employer || !employer.isActive) {
+            await EmployerToken.deleteOne({ token });
+            return res.status(401).json({ success: false, message: 'Account inactive' });
+        }
+
+        res.json({ success: true, plan: employer.plan || 'basic' });
+    } catch (error) {
+        console.error('Verify error:', error);
+        res.status(500).json({ success: false, message: 'Verification failed' });
     }
 });
 
-// Employer middleware - fetch current plan from database
-function requireEmployer(req, res, next) {
-    const token = req.headers['x-employer-token'];
-    const tokenData = employerTokens.get(token);
-    if (!tokenData || Date.now() > tokenData.expires) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
+// Employer middleware - fetch token from MongoDB
+async function requireEmployer(req, res, next) {
+    try {
+        await connectDB();
+        const token = req.headers['x-employer-token'];
 
-    // Fetch current plan from database
-    connectDB()
-        .then(() => Employer.findById(tokenData.employerId))
-        .then(employer => {
-            if (!employer || !employer.isActive) {
-                employerTokens.delete(token);
-                return res.status(401).json({ success: false, message: 'Account inactive' });
-            }
-            // Use current plan from database, not cached token
-            req.employer = {
-                ...tokenData,
-                plan: employer.plan || 'basic'
-            };
-            next();
-        })
-        .catch(error => {
-            console.error('Employer middleware error:', error);
-            // Fallback to cached data if DB fails
-            req.employer = tokenData;
-            next();
-        });
+        const tokenData = await EmployerToken.findOne({ token, expires: { $gt: new Date() } });
+        if (!tokenData) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const employer = await Employer.findById(tokenData.employerId);
+        if (!employer || !employer.isActive) {
+            await EmployerToken.deleteOne({ token });
+            return res.status(401).json({ success: false, message: 'Account inactive' });
+        }
+
+        req.employer = {
+            employerId: tokenData.employerId,
+            plan: employer.plan || 'basic'
+        };
+        next();
+    } catch (error) {
+        console.error('Employer middleware error:', error);
+        res.status(500).json({ success: false, message: 'Authentication error' });
+    }
 }
 
 // Get CVs for employers (with filtering and hidden fields)
