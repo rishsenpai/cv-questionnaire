@@ -185,31 +185,34 @@ app.post('/api/employer/verify', async (req, res) => {
 });
 
 // Employer middleware - fetch current plan from database
-async function requireEmployer(req, res, next) {
+function requireEmployer(req, res, next) {
     const token = req.headers['x-employer-token'];
     const tokenData = employerTokens.get(token);
     if (!tokenData || Date.now() > tokenData.expires) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    try {
-        await connectDB();
-        const employer = await Employer.findById(tokenData.employerId);
-        if (!employer || !employer.isActive) {
-            employerTokens.delete(token);
-            return res.status(401).json({ success: false, message: 'Account inactive' });
-        }
-        // Use current plan from database, not cached token
-        req.employer = {
-            ...tokenData,
-            plan: employer.plan || 'basic'
-        };
-        next();
-    } catch (error) {
-        // Fallback to cached data if DB fails
-        req.employer = tokenData;
-        next();
-    }
+    // Fetch current plan from database
+    connectDB()
+        .then(() => Employer.findById(tokenData.employerId))
+        .then(employer => {
+            if (!employer || !employer.isActive) {
+                employerTokens.delete(token);
+                return res.status(401).json({ success: false, message: 'Account inactive' });
+            }
+            // Use current plan from database, not cached token
+            req.employer = {
+                ...tokenData,
+                plan: employer.plan || 'basic'
+            };
+            next();
+        })
+        .catch(error => {
+            console.error('Employer middleware error:', error);
+            // Fallback to cached data if DB fails
+            req.employer = tokenData;
+            next();
+        });
 }
 
 // Get CVs for employers (with filtering and hidden fields)
