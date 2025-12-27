@@ -546,6 +546,49 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+
+        /* File input styling */
+        .file-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .file-input:hover {
+            border-color: #667eea;
+        }
+
+        .file-info {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #2ec4b6;
+        }
+
+        /* Download button */
+        .btn-download {
+            background: rgba(46, 196, 182, 0.2);
+            color: #2ec4b6;
+        }
+
+        .btn-download:hover {
+            background: rgba(46, 196, 182, 0.3);
+        }
+
+        .cv-file-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -585,7 +628,7 @@
             <div class="toolbar">
                 <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
                 <div class="toolbar-buttons">
-                    <button class="add-btn" onclick="openAddModal()">+ Nieuw CV</button>
+                    <button class="add-btn" onclick="openAddModal()">+ CV Uploaden</button>
                     <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
                 </div>
             </div>
@@ -610,11 +653,11 @@
         </div>
     </div>
 
-    <!-- Add CV Modal -->
+    <!-- Upload CV Modal -->
     <div class="modal form-modal" id="addModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Nieuw CV Toevoegen</h2>
+                <h2>CV Uploaden</h2>
                 <button class="modal-close" onclick="closeAddModal()">&times;</button>
             </div>
             <form id="addCvForm">
@@ -627,50 +670,15 @@
                         <label>Email *</label>
                         <input type="email" name="email" required placeholder="jan@email.com">
                     </div>
-                    <div class="form-group">
-                        <label>Telefoon</label>
-                        <input type="tel" name="phone" placeholder="+597 123 4567">
-                    </div>
-                    <div class="form-group">
-                        <label>Locatie</label>
-                        <input type="text" name="location" placeholder="Paramaribo, Suriname">
-                    </div>
-                    <div class="form-group">
-                        <label>Geboortedatum</label>
-                        <input type="text" name="birthDate" placeholder="01/01/1990">
-                    </div>
-                    <div class="form-group">
-                        <label>Functietitel</label>
-                        <input type="text" name="jobTitle" placeholder="Software Developer">
-                    </div>
                     <div class="form-group full-width">
-                        <label>Samenvatting</label>
-                        <textarea name="summary" placeholder="Korte professionele samenvatting..."></textarea>
-                    </div>
-                    <div class="form-group full-width">
-                        <label>Talen</label>
-                        <input type="text" name="languages" placeholder="Nederlands, Engels, Spaans">
-                    </div>
-                    <div class="form-group full-width">
-                        <label>Werkervaring</label>
-                        <textarea name="experience" placeholder="Beschrijf werkervaring..."></textarea>
-                    </div>
-                    <div class="form-group full-width">
-                        <label>Opleiding</label>
-                        <textarea name="education" placeholder="Beschrijf opleiding..."></textarea>
-                    </div>
-                    <div class="form-group full-width">
-                        <label>Vaardigheden</label>
-                        <textarea name="skills" placeholder="Technische en soft skills..."></textarea>
-                    </div>
-                    <div class="form-group full-width">
-                        <label>Prestaties</label>
-                        <textarea name="achievements" placeholder="Belangrijke prestaties en projecten..."></textarea>
+                        <label>CV Bestand * (PDF of Word, max 10MB)</label>
+                        <input type="file" name="cvFile" id="cvFileInput" required accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="file-input">
+                        <div class="file-info" id="fileInfo"></div>
                     </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-cancel" onclick="closeAddModal()">Annuleren</button>
-                    <button type="submit" class="btn-submit" id="submitBtn">CV Toevoegen</button>
+                    <button type="submit" class="btn-submit" id="submitBtn">CV Uploaden</button>
                 </div>
             </form>
         </div>
@@ -814,6 +822,7 @@
                         <div>
                             <div class="cv-name">${escapeHtml(cv.fullName)}</div>
                             <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
+                            ${cv.fileName ? `<div class="cv-file-badge">📄 ${escapeHtml(cv.fileName)}</div>` : ''}
                         </div>
                         <span class="cv-status ${cv.emailSent ? 'sent' : 'pending'}">
                             ${cv.emailSent ? 'Verzonden' : 'Pending'}
@@ -838,7 +847,7 @@
                         ` : ''}
                     </div>
                     <div class="cv-actions">
-                        <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
+                        ${cv.fileName ? `<button class="btn btn-download" onclick="downloadCV('${cv._id}')">Downloaden</button>` : `<button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>`}
                         <button class="btn btn-delete" onclick="deleteCV('${cv._id}')">Verwijderen</button>
                     </div>
                     <div class="cv-date">Ingediend: ${formatDate(cv.createdAt)}</div>
@@ -890,24 +899,63 @@
             document.getElementById('addModal').classList.remove('active');
         }
 
-        // Add CV form handler
+        // File input change handler
+        document.getElementById('cvFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const fileInfo = document.getElementById('fileInfo');
+            if (file) {
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                fileInfo.textContent = `${file.name} (${sizeMB} MB)`;
+            } else {
+                fileInfo.textContent = '';
+            }
+        });
+
+        // Upload CV form handler
         document.getElementById('addCvForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Bezig...';
+            submitBtn.textContent = 'Uploaden...';
 
-            const formData = new FormData(e.target);
-            const cvData = Object.fromEntries(formData.entries());
+            const fullName = e.target.fullName.value;
+            const email = e.target.email.value;
+            const fileInput = document.getElementById('cvFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Selecteer een CV bestand');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'CV Uploaden';
+                return;
+            }
+
+            // Check file size
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Bestand is te groot. Maximum is 10MB.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'CV Uploaden';
+                return;
+            }
 
             try {
-                const response = await fetch('/api/cvs', {
+                // Read file as base64
+                const fileData = await readFileAsBase64(file);
+
+                const response = await fetch('/api/cvs/upload', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Admin-Token': authToken
                     },
-                    body: JSON.stringify(cvData)
+                    body: JSON.stringify({
+                        fullName,
+                        email,
+                        fileName: file.name,
+                        fileData,
+                        fileType: file.type,
+                        fileSize: file.size
+                    })
                 });
 
                 if (response.status === 401) {
@@ -924,12 +972,57 @@
                     alert('Fout: ' + result.message);
                 }
             } catch (error) {
-                alert('Fout bij toevoegen: ' + error.message);
+                alert('Fout bij uploaden: ' + error.message);
             }
 
             submitBtn.disabled = false;
-            submitBtn.textContent = 'CV Toevoegen';
+            submitBtn.textContent = 'CV Uploaden';
         });
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Remove data:...;base64, prefix
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function downloadCV(id) {
+            try {
+                const response = await fetch(`/api/cvs/${id}/download`, {
+                    headers: { 'X-Admin-Token': authToken }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Create download link
+                    const byteCharacters = atob(result.data.fileData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: result.data.fileType });
+
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = result.data.fileName;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                } else {
+                    alert('Fout bij downloaden: ' + result.message);
+                }
+            } catch (error) {
+                alert('Fout bij downloaden: ' + error.message);
+            }
+        }
 
         async function deleteCV(id) {
             if (!confirm('Weet je zeker dat je deze CV wilt verwijderen?')) return;

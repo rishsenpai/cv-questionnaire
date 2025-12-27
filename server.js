@@ -44,7 +44,8 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));  // Increased for file uploads
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static('.'));
 
 // Admin authentication
@@ -645,7 +646,8 @@ app.get('/api/cvs', requireAdmin, async (req, res) => {
             });
         }
 
-        const cvs = await CV.find().sort({ createdAt: -1 });
+        // Exclude fileData from list (too large), include file metadata
+        const cvs = await CV.find().select('-fileData').sort({ createdAt: -1 });
         res.json({
             success: true,
             count: cvs.length,
@@ -722,6 +724,116 @@ app.delete('/api/cvs/:id', requireAdmin, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to delete CV'
+        });
+    }
+});
+
+// Upload CV file endpoint (protected)
+app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const { fullName, email, fileName, fileData, fileType, fileSize } = req.body;
+
+        // Validate required fields
+        if (!fullName || !email || !fileData) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name, email and file are required'
+            });
+        }
+
+        // Check file size (max 10MB)
+        if (fileSize > 10 * 1024 * 1024) {
+            return res.status(400).json({
+                success: false,
+                message: 'File size must be less than 10MB'
+            });
+        }
+
+        const cv = new CV({
+            fullName,
+            email,
+            fileName,
+            fileData,
+            fileType,
+            fileSize,
+            emailSent: true // Manual upload, no email needed
+        });
+
+        const savedCV = await cv.save();
+        console.log(`CV file uploaded: ${savedCV.fullName} - ${fileName}`);
+
+        res.json({
+            success: true,
+            message: 'CV uploaded successfully',
+            data: {
+                _id: savedCV._id,
+                fullName: savedCV.fullName,
+                email: savedCV.email,
+                fileName: savedCV.fileName,
+                fileSize: savedCV.fileSize
+            }
+        });
+
+    } catch (error) {
+        console.error('Error uploading CV:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload CV'
+        });
+    }
+});
+
+// Download CV file endpoint (protected)
+app.get('/api/cvs/:id/download', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const cv = await CV.findById(req.params.id);
+        if (!cv) {
+            return res.status(404).json({
+                success: false,
+                message: 'CV not found'
+            });
+        }
+
+        if (!cv.fileData) {
+            return res.status(404).json({
+                success: false,
+                message: 'No file attached to this CV'
+            });
+        }
+
+        // Return file data for download
+        res.json({
+            success: true,
+            data: {
+                fileName: cv.fileName,
+                fileType: cv.fileType,
+                fileData: cv.fileData
+            }
+        });
+
+    } catch (error) {
+        console.error('Error downloading CV:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to download CV'
         });
     }
 });

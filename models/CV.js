@@ -55,6 +55,21 @@ const cvSchema = new mongoose.Schema({
     emailSent: {
         type: Boolean,
         default: false
+    },
+    // File upload fields
+    fileName: {
+        type: String,
+        trim: true
+    },
+    fileData: {
+        type: String  // Base64 encoded file
+    },
+    fileType: {
+        type: String,
+        trim: true
+    },
+    fileSize: {
+        type: Number
     }
 }, {
     timestamps: true
