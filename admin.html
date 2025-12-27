@@ -927,6 +927,14 @@
                         <input type="file" name="cvFiles" id="cvFileInput" required multiple accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="file-input">
                         <div class="file-list" id="fileList"></div>
                     </div>
+                    <div class="form-group">
+                        <label>Functietitel (optioneel)</label>
+                        <input type="text" name="defaultJobTitle" id="defaultJobTitle" placeholder="Software Developer">
+                    </div>
+                    <div class="form-group">
+                        <label>Locatie (optioneel)</label>
+                        <input type="text" name="defaultLocation" id="defaultLocation" placeholder="Amsterdam, Nederland">
+                    </div>
                     <div class="form-group full-width">
                         <label>Standaard email (optioneel - voor alle uploads)</label>
                         <input type="email" name="defaultEmail" id="defaultEmail" placeholder="sollicitaties@bedrijf.com">
@@ -1245,6 +1253,8 @@
             const fileInput = document.getElementById('cvFileInput');
             const files = fileInput.files;
             const defaultEmail = document.getElementById('defaultEmail').value;
+            const defaultJobTitle = document.getElementById('defaultJobTitle').value;
+            const defaultLocation = document.getElementById('defaultLocation').value;
 
             if (files.length === 0) {
                 alert('Selecteer minimaal één CV bestand');
@@ -1291,6 +1301,8 @@
                         body: JSON.stringify({
                             fullName,
                             email,
+                            jobTitle: defaultJobTitle,
+                            location: defaultLocation,
                             fileName: file.name,
                             fileData,
                             fileType: file.type,

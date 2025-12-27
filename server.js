@@ -1009,7 +1009,7 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             });
         }
 
-        const { fullName, email, fileName, fileData, fileType, fileSize } = req.body;
+        const { fullName, email, jobTitle, location, fileName, fileData, fileType, fileSize } = req.body;
 
         // Validate required fields
         if (!fullName || !email || !fileData) {
@@ -1030,6 +1030,8 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
         const cv = new CV({
             fullName,
             email,
+            jobTitle,
+            location,
             fileName,
             fileData,
             fileType,
