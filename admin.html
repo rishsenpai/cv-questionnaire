@@ -194,7 +194,12 @@
             color: rgba(255, 255, 255, 0.5);
         }
 
-        .refresh-btn {
+        .toolbar-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .refresh-btn, .add-btn {
             background: #667eea;
             border: none;
             border-radius: 8px;
@@ -205,9 +210,17 @@
             transition: all 0.3s ease;
         }
 
-        .refresh-btn:hover {
+        .refresh-btn:hover, .add-btn:hover {
             background: #5a6fd6;
             transform: translateY(-2px);
+        }
+
+        .add-btn {
+            background: #2ec4b6;
+        }
+
+        .add-btn:hover {
+            background: #26a69a;
         }
 
         .cv-grid {
@@ -439,6 +452,100 @@
             margin-bottom: 10px;
             color: rgba(255, 255, 255, 0.8);
         }
+
+        /* Form Modal */
+        .form-modal .modal-content {
+            max-width: 600px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            justify-content: flex-end;
+        }
+
+        .form-actions button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-submit {
+            background: #2ec4b6;
+            color: #fff;
+        }
+
+        .btn-submit:hover {
+            background: #26a69a;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -477,7 +584,10 @@
         <div class="container">
             <div class="toolbar">
                 <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
-                <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
+                <div class="toolbar-buttons">
+                    <button class="add-btn" onclick="openAddModal()">+ Nieuw CV</button>
+                    <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
+                </div>
             </div>
 
             <div id="cvList" class="cv-grid">
@@ -497,6 +607,72 @@
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Add CV Modal -->
+    <div class="modal form-modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nieuw CV Toevoegen</h2>
+                <button class="modal-close" onclick="closeAddModal()">&times;</button>
+            </div>
+            <form id="addCvForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Volledige naam *</label>
+                        <input type="text" name="fullName" required placeholder="Jan de Vries">
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" name="email" required placeholder="jan@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefoon</label>
+                        <input type="tel" name="phone" placeholder="+597 123 4567">
+                    </div>
+                    <div class="form-group">
+                        <label>Locatie</label>
+                        <input type="text" name="location" placeholder="Paramaribo, Suriname">
+                    </div>
+                    <div class="form-group">
+                        <label>Geboortedatum</label>
+                        <input type="text" name="birthDate" placeholder="01/01/1990">
+                    </div>
+                    <div class="form-group">
+                        <label>Functietitel</label>
+                        <input type="text" name="jobTitle" placeholder="Software Developer">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Samenvatting</label>
+                        <textarea name="summary" placeholder="Korte professionele samenvatting..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Talen</label>
+                        <input type="text" name="languages" placeholder="Nederlands, Engels, Spaans">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Werkervaring</label>
+                        <textarea name="experience" placeholder="Beschrijf werkervaring..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Opleiding</label>
+                        <textarea name="education" placeholder="Beschrijf opleiding..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Vaardigheden</label>
+                        <textarea name="skills" placeholder="Technische en soft skills..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Prestaties</label>
+                        <textarea name="achievements" placeholder="Belangrijke prestaties en projecten..."></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" onclick="closeAddModal()">Annuleren</button>
+                    <button type="submit" class="btn-submit" id="submitBtn">CV Toevoegen</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -705,6 +881,56 @@
             document.getElementById('cvModal').classList.remove('active');
         }
 
+        function openAddModal() {
+            document.getElementById('addCvForm').reset();
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('active');
+        }
+
+        // Add CV form handler
+        document.getElementById('addCvForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Bezig...';
+
+            const formData = new FormData(e.target);
+            const cvData = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/cvs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': authToken
+                    },
+                    body: JSON.stringify(cvData)
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeAddModal();
+                    loadCVs();
+                } else {
+                    alert('Fout: ' + result.message);
+                }
+            } catch (error) {
+                alert('Fout bij toevoegen: ' + error.message);
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'CV Toevoegen';
+        });
+
         async function deleteCV(id) {
             if (!confirm('Weet je zeker dat je deze CV wilt verwijderen?')) return;
 
@@ -764,9 +990,16 @@
             if (e.target.id === 'cvModal') closeModal();
         });
 
+        document.getElementById('addModal').addEventListener('click', (e) => {
+            if (e.target.id === 'addModal') closeAddModal();
+        });
+
         // Close modal on Escape key
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
+            if (e.key === 'Escape') {
+                closeModal();
+                closeAddModal();
+            }
         });
 
         // Initial auth check

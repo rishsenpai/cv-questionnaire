@@ -577,6 +577,62 @@ app.post('/submit-feedback', async (req, res) => {
     }
 });
 
+// Create CV manually (protected - admin only)
+app.post('/api/cvs', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const formData = req.body;
+
+        // Validate required fields
+        if (!formData.fullName || !formData.email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name and email are required'
+            });
+        }
+
+        const cv = new CV({
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            location: formData.location,
+            birthDate: formData.birthDate,
+            jobTitle: formData.jobTitle,
+            summary: formData.summary,
+            languages: formData.languages,
+            experience: formData.experience,
+            education: formData.education,
+            skills: formData.skills,
+            achievements: formData.achievements,
+            emailSent: true // Mark as already processed since it's manual entry
+        });
+
+        const savedCV = await cv.save();
+        console.log(`CV manually added: ${savedCV.fullName} (${savedCV.email})`);
+
+        res.json({
+            success: true,
+            message: 'CV added successfully',
+            data: savedCV
+        });
+
+    } catch (error) {
+        console.error('Error creating CV:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create CV'
+        });
+    }
+});
+
 // Get all CVs endpoint (protected)
 app.get('/api/cvs', requireAdmin, async (req, res) => {
     try {
