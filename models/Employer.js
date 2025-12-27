@@ -23,9 +23,10 @@ const employerSchema = new mongoose.Schema({
         trim: true,
         lowercase: true
     },
-    hasPaid: {
-        type: Boolean,
-        default: false
+    plan: {
+        type: String,
+        enum: ['basic', 'advanced', 'premium'],
+        default: 'basic'
     },
     isActive: {
         type: Boolean,

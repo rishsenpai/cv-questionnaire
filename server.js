@@ -15,6 +15,7 @@ require('dotenv').config();
 
 const CV = require('./models/CV');
 const Employer = require('./models/Employer');
+const Vacancy = require('./models/Vacancy');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -142,7 +143,7 @@ app.post('/api/employer/login', async (req, res) => {
         employerTokens.set(token, {
             expires: Date.now() + ADMIN_TOKEN_EXPIRY,
             employerId: employer._id,
-            hasPaid: employer.hasPaid
+            plan: employer.plan || 'basic'
         });
 
         res.json({
@@ -150,7 +151,7 @@ app.post('/api/employer/login', async (req, res) => {
             token,
             employer: {
                 companyName: employer.companyName,
-                hasPaid: employer.hasPaid
+                plan: employer.plan || 'basic'
             }
         });
 
@@ -165,7 +166,7 @@ app.post('/api/employer/verify', (req, res) => {
     const { token } = req.body;
     const tokenData = employerTokens.get(token);
     if (tokenData && Date.now() < tokenData.expires) {
-        res.json({ success: true, hasPaid: tokenData.hasPaid });
+        res.json({ success: true, plan: tokenData.plan });
     } else {
         res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
@@ -211,17 +212,19 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
 
         const cvs = await CV.find(query).select('-fileData').sort({ createdAt: -1 });
 
-        // Hide sensitive info if employer hasn't paid
-        const hasPaid = req.employer.hasPaid;
+        // Access based on plan: basic = hidden, advanced/premium = full access
+        const plan = req.employer.plan || 'basic';
+        const hasFullAccess = plan === 'advanced' || plan === 'premium';
+
         const sanitizedCVs = cvs.map(cv => {
             const cvObj = cv.toObject();
-            if (!hasPaid) {
-                // Hide contact info, name details, and work history
+            if (!hasFullAccess) {
+                // Basic plan: hide contact info, name details, and work history
                 cvObj.email = '••••••@••••••';
                 cvObj.phone = '•••••••••••';
                 cvObj.fullName = cvObj.fullName.split(' ')[0] + ' ••••••';
                 cvObj.location = cvObj.location ? cvObj.location.split(',')[0] + ', ••••••' : null;
-                cvObj.experience = cvObj.experience ? '🔒 Betaal om werkervaring te zien' : null;
+                cvObj.experience = cvObj.experience ? '🔒 Upgrade naar Advanced om werkervaring te zien' : null;
             }
             return cvObj;
         });
@@ -229,7 +232,7 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         res.json({
             success: true,
             count: sanitizedCVs.length,
-            hasPaid,
+            plan,
             data: sanitizedCVs
         });
 
@@ -239,13 +242,14 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
     }
 });
 
-// Download CV for employers (only if paid)
+// Download CV for employers (only for advanced/premium plans)
 app.get('/api/employer/cvs/:id/download', requireEmployer, async (req, res) => {
     try {
-        if (!req.employer.hasPaid) {
+        const plan = req.employer.plan || 'basic';
+        if (plan === 'basic') {
             return res.status(403).json({
                 success: false,
-                message: 'Payment required to download CVs'
+                message: 'Upgrade naar Advanced of Premium om CVs te downloaden'
             });
         }
 
@@ -293,7 +297,7 @@ app.get('/api/admin/employers', requireAdmin, async (req, res) => {
 app.post('/api/admin/employers', requireAdmin, async (req, res) => {
     try {
         await connectDB();
-        const { username, password, companyName, contactEmail, hasPaid, isActive } = req.body;
+        const { username, password, companyName, contactEmail, plan, isActive } = req.body;
 
         if (!username || !password || !companyName) {
             return res.status(400).json({
@@ -323,7 +327,7 @@ app.post('/api/admin/employers', requireAdmin, async (req, res) => {
             password,
             companyName,
             contactEmail,
-            hasPaid: hasPaid || false,
+            plan: plan || 'basic',
             isActive: isActive !== false // Default to true unless explicitly set to false
         });
 
@@ -331,7 +335,7 @@ app.post('/api/admin/employers', requireAdmin, async (req, res) => {
         res.json({
             success: true,
             message: 'Employer created',
-            data: { _id: employer._id, username: employer.username, companyName: employer.companyName }
+            data: { _id: employer._id, username: employer.username, companyName: employer.companyName, plan: employer.plan }
         });
 
     } catch (error) {
@@ -347,7 +351,7 @@ app.post('/api/admin/employers', requireAdmin, async (req, res) => {
 app.put('/api/admin/employers/:id', requireAdmin, async (req, res) => {
     try {
         await connectDB();
-        const { companyName, contactEmail, hasPaid, isActive, password } = req.body;
+        const { companyName, contactEmail, plan, isActive, password } = req.body;
 
         const employer = await Employer.findById(req.params.id);
         if (!employer) {
@@ -356,7 +360,7 @@ app.put('/api/admin/employers/:id', requireAdmin, async (req, res) => {
 
         if (companyName) employer.companyName = companyName;
         if (contactEmail !== undefined) employer.contactEmail = contactEmail;
-        if (hasPaid !== undefined) employer.hasPaid = hasPaid;
+        if (plan !== undefined) employer.plan = plan;
         if (isActive !== undefined) employer.isActive = isActive;
         if (password) employer.password = password;
 
@@ -378,6 +382,175 @@ app.delete('/api/admin/employers/:id', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error deleting employer:', error);
         res.status(500).json({ success: false, message: 'Failed to delete employer' });
+    }
+});
+
+// === PREMIUM: Vacancy Management ===
+
+// Get vacancies for employer (premium only)
+app.get('/api/employer/vacancies', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan !== 'premium') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Premium voor vacature matching'
+            });
+        }
+
+        await connectDB();
+        const vacancies = await Vacancy.find({ employerId: req.employer.employerId, isActive: true })
+            .select('-fileData')
+            .sort({ createdAt: -1 });
+
+        res.json({ success: true, data: vacancies });
+    } catch (error) {
+        console.error('Error fetching vacancies:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch vacancies' });
+    }
+});
+
+// Create vacancy (premium only)
+app.post('/api/employer/vacancies', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan !== 'premium') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Premium voor vacature matching'
+            });
+        }
+
+        await connectDB();
+        const { title, description, location, requirements, fullText, fileName, fileData, fileType } = req.body;
+
+        if (!title) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vacature titel is verplicht'
+            });
+        }
+
+        const vacancy = new Vacancy({
+            employerId: req.employer.employerId,
+            title,
+            description,
+            location,
+            requirements,
+            fullText: fullText || `${title} ${description || ''} ${requirements || ''}`,
+            fileName,
+            fileData,
+            fileType
+        });
+
+        const savedVacancy = await vacancy.save();
+        res.json({
+            success: true,
+            message: 'Vacature aangemaakt',
+            data: { _id: savedVacancy._id, title: savedVacancy.title }
+        });
+
+    } catch (error) {
+        console.error('Error creating vacancy:', error);
+        res.status(500).json({ success: false, message: 'Failed to create vacancy' });
+    }
+});
+
+// Delete vacancy (premium only)
+app.delete('/api/employer/vacancies/:id', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan !== 'premium') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Premium voor vacature matching'
+            });
+        }
+
+        await connectDB();
+        const vacancy = await Vacancy.findOneAndDelete({
+            _id: req.params.id,
+            employerId: req.employer.employerId
+        });
+
+        if (!vacancy) {
+            return res.status(404).json({ success: false, message: 'Vacature niet gevonden' });
+        }
+
+        res.json({ success: true, message: 'Vacature verwijderd' });
+    } catch (error) {
+        console.error('Error deleting vacancy:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete vacancy' });
+    }
+});
+
+// Match vacancy with CVs (premium only)
+app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan !== 'premium') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Premium voor vacature matching'
+            });
+        }
+
+        await connectDB();
+        const vacancy = await Vacancy.findOne({
+            _id: req.params.id,
+            employerId: req.employer.employerId
+        });
+
+        if (!vacancy) {
+            return res.status(404).json({ success: false, message: 'Vacature niet gevonden' });
+        }
+
+        // Extract keywords from vacancy for matching
+        const vacancyText = vacancy.fullText || `${vacancy.title} ${vacancy.description || ''} ${vacancy.requirements || ''}`;
+        const keywords = vacancyText
+            .toLowerCase()
+            .replace(/[^a-zA-Z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(word => word.length > 3)
+            .filter((word, index, self) => self.indexOf(word) === index); // unique
+
+        // Find matching CVs based on keyword overlap
+        const cvs = await CV.find().select('-fileData');
+
+        const matchedCVs = cvs.map(cv => {
+            const cvText = (cv.fullText || `${cv.fullName} ${cv.jobTitle || ''} ${cv.skills || ''} ${cv.experience || ''}`).toLowerCase();
+
+            // Calculate match score based on keyword overlap
+            let matchCount = 0;
+            const matchedKeywords = [];
+            keywords.forEach(keyword => {
+                if (cvText.includes(keyword)) {
+                    matchCount++;
+                    matchedKeywords.push(keyword);
+                }
+            });
+
+            const matchScore = keywords.length > 0 ? Math.round((matchCount / keywords.length) * 100) : 0;
+
+            return {
+                ...cv.toObject(),
+                matchScore,
+                matchedKeywords: matchedKeywords.slice(0, 10) // Top 10 matched keywords
+            };
+        })
+        .filter(cv => cv.matchScore > 10) // Only show CVs with at least 10% match
+        .sort((a, b) => b.matchScore - a.matchScore) // Sort by match score
+        .slice(0, 20); // Top 20 matches
+
+        res.json({
+            success: true,
+            vacancy: { _id: vacancy._id, title: vacancy.title },
+            matches: matchedCVs
+        });
+
+    } catch (error) {
+        console.error('Error matching CVs:', error);
+        res.status(500).json({ success: false, message: 'Failed to match CVs' });
     }
 });
 

@@ -674,14 +674,41 @@
             font-weight: 500;
         }
 
-        .badge-paid {
+        .badge-basic {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .badge-advanced {
             background: rgba(46, 196, 182, 0.2);
             color: #2ec4b6;
         }
 
-        .badge-unpaid {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
+        .badge-premium {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+        }
+
+        /* Plan select */
+        .form-group select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group select option {
+            background: #1a1a2e;
+            color: #fff;
         }
 
         .badge-active {
@@ -983,10 +1010,12 @@
                         <input type="email" name="contactEmail" id="empContactEmail" placeholder="contact@bedrijf.nl">
                     </div>
                     <div class="form-group">
-                        <div class="toggle-group">
-                            <span class="toggle-label">Betaald account</span>
-                            <div class="toggle" id="empHasPaidToggle" onclick="togglePaid()"></div>
-                        </div>
+                        <label>Abonnement</label>
+                        <select name="plan" id="empPlan">
+                            <option value="basic">Basic (Gratis - Verborgen info)</option>
+                            <option value="advanced">Advanced (Betaald - Alle info zichtbaar)</option>
+                            <option value="premium">Premium (Betaald - Alle info + Vacature matching)</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <div class="toggle-group">
@@ -1702,7 +1731,10 @@
                 return;
             }
 
-            list.innerHTML = employers.map(emp => `
+            list.innerHTML = employers.map(emp => {
+                const plan = emp.plan || 'basic';
+                const planLabels = { basic: 'Basic', advanced: 'Advanced', premium: 'Premium' };
+                return `
                 <div class="employer-card">
                     <div class="employer-header">
                         <div>
@@ -1710,8 +1742,8 @@
                             <div class="employer-username">@${escapeHtml(emp.username)}</div>
                         </div>
                         <div class="employer-badges">
-                            <span class="badge ${emp.hasPaid ? 'badge-paid' : 'badge-unpaid'}">
-                                ${emp.hasPaid ? 'Betaald' : 'Gratis'}
+                            <span class="badge badge-${plan}">
+                                ${planLabels[plan]}
                             </span>
                             <span class="badge ${emp.isActive ? 'badge-active' : 'badge-inactive'}">
                                 ${emp.isActive ? 'Actief' : 'Inactief'}
@@ -1721,13 +1753,10 @@
                     ${emp.contactEmail ? `<div class="employer-email">${escapeHtml(emp.contactEmail)}</div>` : '<div class="employer-email">Geen email</div>'}
                     <div class="employer-actions">
                         <button class="btn btn-edit" onclick='editEmployer(${JSON.stringify(emp).replace(/'/g, "\\'")})'>Bewerken</button>
-                        <button class="btn btn-toggle" onclick="toggleEmployerPaid('${emp._id}', ${!emp.hasPaid})">
-                            ${emp.hasPaid ? 'Gratis Maken' : 'Betaald Maken'}
-                        </button>
                         <button class="btn btn-delete" onclick="deleteEmployer('${emp._id}')">Verwijderen</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function openEmployerModal() {
@@ -1738,7 +1767,7 @@
             document.getElementById('empUsername').disabled = false;
             document.getElementById('empPassword').required = true;
             document.getElementById('passwordLabel').textContent = 'Wachtwoord *';
-            document.getElementById('empHasPaidToggle').classList.remove('active');
+            document.getElementById('empPlan').value = 'basic';
             document.getElementById('empIsActiveToggle').classList.add('active');
             document.getElementById('employerModal').classList.add('active');
         }
@@ -1754,12 +1783,7 @@
             document.getElementById('empPassword').required = false;
             document.getElementById('passwordLabel').textContent = 'Nieuw Wachtwoord (leeg = ongewijzigd)';
             document.getElementById('empContactEmail').value = emp.contactEmail || '';
-
-            if (emp.hasPaid) {
-                document.getElementById('empHasPaidToggle').classList.add('active');
-            } else {
-                document.getElementById('empHasPaidToggle').classList.remove('active');
-            }
+            document.getElementById('empPlan').value = emp.plan || 'basic';
 
             if (emp.isActive) {
                 document.getElementById('empIsActiveToggle').classList.add('active');
@@ -1773,10 +1797,6 @@
         function closeEmployerModal() {
             document.getElementById('employerModal').classList.remove('active');
             editingEmployer = null;
-        }
-
-        function togglePaid() {
-            document.getElementById('empHasPaidToggle').classList.toggle('active');
         }
 
         function toggleActive() {
@@ -1794,7 +1814,7 @@
                 companyName: document.getElementById('empCompanyName').value,
                 username: document.getElementById('empUsername').value,
                 contactEmail: document.getElementById('empContactEmail').value,
-                hasPaid: document.getElementById('empHasPaidToggle').classList.contains('active'),
+                plan: document.getElementById('empPlan').value,
                 isActive: document.getElementById('empIsActiveToggle').classList.contains('active')
             };
 
@@ -1836,33 +1856,6 @@
             submitBtn.disabled = false;
             submitBtn.textContent = 'Opslaan';
         });
-
-        async function toggleEmployerPaid(id, hasPaid) {
-            try {
-                const response = await fetch(`/api/admin/employers/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Token': authToken
-                    },
-                    body: JSON.stringify({ hasPaid })
-                });
-
-                if (response.status === 401) {
-                    logout();
-                    return;
-                }
-
-                const result = await response.json();
-                if (result.success) {
-                    loadEmployers();
-                } else {
-                    alert('Fout: ' + result.message);
-                }
-            } catch (error) {
-                alert('Fout: ' + error.message);
-            }
-        }
 
         async function deleteEmployer(id) {
             if (!confirm('Weet je zeker dat je deze werkgever wilt verwijderen?')) return;

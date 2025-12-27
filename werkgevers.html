@@ -151,14 +151,140 @@
             font-size: 12px;
         }
 
-        .payment-status.paid {
+        .payment-status.basic {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .payment-status.advanced {
             background: rgba(46, 196, 182, 0.2);
             color: #2ec4b6;
         }
 
-        .payment-status.unpaid {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
+        .payment-status.premium {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+        }
+
+        /* Tabs for premium users */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .tab-btn.active {
+            background: #2ec4b6;
+            border-color: #2ec4b6;
+            color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Vacancy form */
+        .vacancy-form {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2ec4b6;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Vacancy cards */
+        .vacancy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .vacancy-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .vacancy-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .vacancy-info {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 16px;
+        }
+
+        .match-score {
+            display: inline-block;
+            background: rgba(46, 196, 182, 0.2);
+            color: #2ec4b6;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .match-keywords {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 8px;
         }
 
         .logout-btn {
@@ -576,35 +702,80 @@
         </header>
 
         <div class="container">
-            <!-- Upgrade Banner (for unpaid users) -->
+            <!-- Upgrade Banner (for basic users) -->
             <div class="upgrade-banner" id="upgradeBanner">
                 <div class="upgrade-text">
-                    <h3>Upgrade naar Premium</h3>
-                    <p>Krijg toegang tot contactgegevens, volledige namen en werkervaring van alle kandidaten.</p>
+                    <h3 id="upgradeBannerTitle">Upgrade naar Advanced</h3>
+                    <p id="upgradeBannerText">Krijg toegang tot contactgegevens, volledige namen en werkervaring van alle kandidaten.</p>
                 </div>
                 <button class="upgrade-btn">Upgrade Nu</button>
             </div>
 
-            <!-- Search Section -->
-            <div class="search-section">
-                <div class="search-title">Zoek kandidaten</div>
-                <div class="search-grid">
-                    <input type="text" class="search-input" id="searchInput" placeholder="Zoek op naam, vaardigheden, functie...">
-                    <input type="text" class="search-input" id="jobTitleInput" placeholder="Functietitel">
-                    <input type="text" class="search-input" id="locationInput" placeholder="Locatie/Regio">
-                    <button class="search-btn" onclick="searchCVs()">Zoeken</button>
+            <!-- Tabs (only for premium users) -->
+            <div class="tabs" id="tabsContainer" style="display: none;">
+                <button class="tab-btn active" onclick="switchTab('search')">Kandidaten Zoeken</button>
+                <button class="tab-btn" onclick="switchTab('vacancies')">Vacatures & Matching</button>
+            </div>
+
+            <!-- Search Tab -->
+            <div class="tab-content active" id="searchTab">
+                <!-- Search Section -->
+                <div class="search-section">
+                    <div class="search-title">Zoek kandidaten</div>
+                    <div class="search-grid">
+                        <input type="text" class="search-input" id="searchInput" placeholder="Zoek op naam, vaardigheden, functie...">
+                        <input type="text" class="search-input" id="jobTitleInput" placeholder="Functietitel">
+                        <input type="text" class="search-input" id="locationInput" placeholder="Locatie/Regio">
+                        <button class="search-btn" onclick="searchCVs()">Zoeken</button>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div class="results-header">
+                    <span class="results-count" id="resultsCount">0 kandidaten gevonden</span>
+                </div>
+
+                <div id="cvList" class="cv-grid">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>CV's laden...</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Results -->
-            <div class="results-header">
-                <span class="results-count" id="resultsCount">0 kandidaten gevonden</span>
-            </div>
+            <!-- Vacancies Tab (Premium only) -->
+            <div class="tab-content" id="vacanciesTab">
+                <div class="vacancy-form">
+                    <h3 style="margin-bottom: 16px; font-size: 16px;">Nieuwe Vacature Toevoegen</h3>
+                    <form id="vacancyForm">
+                        <div class="form-group">
+                            <label>Vacature Titel *</label>
+                            <input type="text" id="vacancyTitle" required placeholder="bijv. Senior Software Developer">
+                        </div>
+                        <div class="form-group">
+                            <label>Locatie</label>
+                            <input type="text" id="vacancyLocation" placeholder="bijv. Amsterdam, Nederland">
+                        </div>
+                        <div class="form-group">
+                            <label>Functie-eisen en beschrijving</label>
+                            <textarea id="vacancyRequirements" placeholder="Beschrijf de vereiste vaardigheden, ervaring, opleiding, etc..."></textarea>
+                        </div>
+                        <button type="submit" class="search-btn">Vacature Toevoegen & Matchen</button>
+                    </form>
+                </div>
 
-            <div id="cvList" class="cv-grid">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>CV's laden...</p>
+                <h3 style="margin-bottom: 16px; font-size: 16px;">Mijn Vacatures</h3>
+                <div id="vacancyList" class="vacancy-grid">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Vacatures laden...</p>
+                    </div>
+                </div>
+
+                <!-- Match Results -->
+                <div id="matchResults" style="margin-top: 24px; display: none;">
+                    <h3 style="margin-bottom: 16px; font-size: 16px;">Gematchte Kandidaten voor: <span id="matchVacancyTitle"></span></h3>
+                    <div id="matchList" class="cv-grid"></div>
                 </div>
             </div>
         </div>
@@ -623,8 +794,17 @@
 
     <script>
         let authToken = localStorage.getItem('employerToken');
-        let hasPaid = false;
+        let currentPlan = 'basic';
         let allCVs = [];
+
+        // Plan check helpers
+        function hasFullAccess() {
+            return currentPlan === 'advanced' || currentPlan === 'premium';
+        }
+
+        function isPremium() {
+            return currentPlan === 'premium';
+        }
 
         // Check auth on load
         async function checkAuth() {
@@ -642,7 +822,7 @@
 
                 const result = await response.json();
                 if (response.ok) {
-                    hasPaid = result.hasPaid;
+                    currentPlan = result.plan || 'basic';
                     showPortal();
                 } else {
                     localStorage.removeItem('employerToken');
@@ -664,20 +844,54 @@
             document.getElementById('portal').classList.add('active');
             updatePaymentUI();
             searchCVs();
+            if (isPremium()) {
+                loadVacancies();
+            }
         }
 
         function updatePaymentUI() {
             const statusEl = document.getElementById('paymentStatus');
             const bannerEl = document.getElementById('upgradeBanner');
+            const tabsEl = document.getElementById('tabsContainer');
 
-            if (hasPaid) {
-                statusEl.textContent = 'Premium';
-                statusEl.className = 'payment-status paid';
-                bannerEl.classList.add('hidden');
-            } else {
-                statusEl.textContent = 'Gratis account';
-                statusEl.className = 'payment-status unpaid';
+            const planLabels = {
+                basic: 'Basic',
+                advanced: 'Advanced',
+                premium: 'Premium'
+            };
+
+            statusEl.textContent = planLabels[currentPlan];
+            statusEl.className = `payment-status ${currentPlan}`;
+
+            // Show tabs only for premium users
+            tabsEl.style.display = isPremium() ? 'flex' : 'none';
+
+            // Upgrade banner
+            if (currentPlan === 'basic') {
                 bannerEl.classList.remove('hidden');
+                document.getElementById('upgradeBannerTitle').textContent = 'Upgrade naar Advanced';
+                document.getElementById('upgradeBannerText').textContent = 'Krijg toegang tot contactgegevens, volledige namen en werkervaring van alle kandidaten.';
+            } else if (currentPlan === 'advanced') {
+                bannerEl.classList.remove('hidden');
+                document.getElementById('upgradeBannerTitle').textContent = 'Upgrade naar Premium';
+                document.getElementById('upgradeBannerText').textContent = 'Upload vacatures en krijg automatisch gematchte kandidaten op basis van vaardigheden en ervaring.';
+            } else {
+                bannerEl.classList.add('hidden');
+            }
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            if (tab === 'search') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('searchTab').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('vacanciesTab').classList.add('active');
+                loadVacancies();
             }
         }
 
@@ -704,7 +918,7 @@
 
                 if (result.success) {
                     authToken = result.token;
-                    hasPaid = result.employer.hasPaid;
+                    currentPlan = result.employer.plan || 'basic';
                     localStorage.setItem('employerToken', authToken);
                     document.getElementById('companyName').textContent = result.employer.companyName;
                     showPortal();
@@ -761,7 +975,7 @@
 
                 if (result.success) {
                     allCVs = result.data;
-                    hasPaid = result.hasPaid;
+                    currentPlan = result.plan || 'basic';
                     updatePaymentUI();
                     renderCVs(allCVs);
                     document.getElementById('resultsCount').textContent = `${result.count} kandidaten gevonden`;
@@ -773,8 +987,8 @@
             }
         }
 
-        function renderCVs(cvs) {
-            const cvList = document.getElementById('cvList');
+        function renderCVs(cvs, showMatchScore = false) {
+            const cvList = document.getElementById(showMatchScore ? 'matchList' : 'cvList');
 
             if (cvs.length === 0) {
                 cvList.innerHTML = `
@@ -791,14 +1005,15 @@
 
                 return `
                     <div class="cv-card">
+                        ${showMatchScore && cv.matchScore ? `<div class="match-score">${cv.matchScore}% match</div>` : ''}
                         <div class="cv-name">${escapeHtml(cv.fullName)}</div>
                         <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
                         ${cv.fileName ? `<div class="cv-file-badge">📄 CV bestand beschikbaar</div>` : ''}
                         <div class="cv-info">
-                            <div class="cv-info-item ${!hasPaid ? 'locked' : ''}">
+                            <div class="cv-info-item ${!hasFullAccess() ? 'locked' : ''}">
                                 <span>📧</span> ${escapeHtml(cv.email)}
                             </div>
-                            <div class="cv-info-item ${!hasPaid ? 'locked' : ''}">
+                            <div class="cv-info-item ${!hasFullAccess() ? 'locked' : ''}">
                                 <span>📍</span> ${escapeHtml(cv.location || 'Niet opgegeven')}
                             </div>
                         </div>
@@ -807,12 +1022,15 @@
                                 ${skills.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}
                             </div>
                         ` : ''}
+                        ${showMatchScore && cv.matchedKeywords ? `
+                            <div class="match-keywords">Matcht op: ${cv.matchedKeywords.join(', ')}</div>
+                        ` : ''}
                         ${cv.summary ? `<div class="cv-summary">${escapeHtml(cv.summary)}</div>` : ''}
                         <div class="cv-actions">
                             <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
-                            ${cv.fileName ? (hasPaid ?
+                            ${cv.fileName ? (hasFullAccess() ?
                                 `<button class="btn btn-download" onclick="downloadCV('${cv._id}')">Download CV</button>` :
-                                `<button class="btn btn-locked">🔒 Premium</button>`
+                                `<button class="btn btn-locked">🔒 Advanced</button>`
                             ) : ''}
                         </div>
                     </div>
@@ -880,7 +1098,7 @@
                 }
 
                 if (response.status === 403) {
-                    alert('Premium account vereist om CV\'s te downloaden');
+                    alert('Advanced of Premium account vereist om CV\'s te downloaden');
                     return;
                 }
 
@@ -930,6 +1148,183 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
         });
+
+        // === VACANCY FUNCTIONS (Premium only) ===
+
+        async function loadVacancies() {
+            const list = document.getElementById('vacancyList');
+            list.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Vacatures laden...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/employer/vacancies', {
+                    headers: { 'X-Employer-Token': authToken }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                if (response.status === 403) {
+                    list.innerHTML = `<div class="empty-state"><p>Premium account vereist</p></div>`;
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    renderVacancies(result.data);
+                } else {
+                    list.innerHTML = `<div class="empty-state"><p>Fout bij laden</p></div>`;
+                }
+            } catch (error) {
+                list.innerHTML = `<div class="empty-state"><p>Fout bij laden</p></div>`;
+            }
+        }
+
+        function renderVacancies(vacancies) {
+            const list = document.getElementById('vacancyList');
+
+            if (vacancies.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h2>Nog geen vacatures</h2>
+                        <p>Voeg een vacature toe om kandidaten te matchen</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = vacancies.map(v => `
+                <div class="vacancy-card">
+                    <div class="vacancy-title">${escapeHtml(v.title)}</div>
+                    <div class="vacancy-info">${escapeHtml(v.location || 'Geen locatie')}</div>
+                    <div class="cv-actions">
+                        <button class="btn btn-view" onclick="matchVacancy('${v._id}', '${escapeHtml(v.title)}')">Kandidaten Matchen</button>
+                        <button class="btn btn-delete" onclick="deleteVacancy('${v._id}')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">Verwijderen</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Vacancy form submit
+        document.getElementById('vacancyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Bezig...';
+
+            const data = {
+                title: document.getElementById('vacancyTitle').value,
+                location: document.getElementById('vacancyLocation').value,
+                requirements: document.getElementById('vacancyRequirements').value
+            };
+
+            try {
+                const response = await fetch('/api/employer/vacancies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Employer-Token': authToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('vacancyForm').reset();
+                    loadVacancies();
+                    // Auto-match the new vacancy
+                    setTimeout(() => matchVacancy(result.data._id, data.title), 500);
+                } else {
+                    alert('Fout: ' + result.message);
+                }
+            } catch (error) {
+                alert('Fout bij toevoegen');
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Vacature Toevoegen & Matchen';
+        });
+
+        async function matchVacancy(id, title) {
+            const matchResults = document.getElementById('matchResults');
+            const matchList = document.getElementById('matchList');
+            document.getElementById('matchVacancyTitle').textContent = title;
+            matchResults.style.display = 'block';
+            matchList.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Kandidaten matchen...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/employer/vacancies/${id}/matches`, {
+                    headers: { 'X-Employer-Token': authToken }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    renderCVs(result.matches, true);
+                    if (result.matches.length === 0) {
+                        matchList.innerHTML = `
+                            <div class="empty-state">
+                                <h2>Geen matches gevonden</h2>
+                                <p>Probeer de vacature-eisen aan te passen</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    matchList.innerHTML = `<div class="empty-state"><p>Fout bij matchen</p></div>`;
+                }
+            } catch (error) {
+                matchList.innerHTML = `<div class="empty-state"><p>Fout bij matchen</p></div>`;
+            }
+        }
+
+        async function deleteVacancy(id) {
+            if (!confirm('Weet je zeker dat je deze vacature wilt verwijderen?')) return;
+
+            try {
+                const response = await fetch(`/api/employer/vacancies/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Employer-Token': authToken }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    loadVacancies();
+                    document.getElementById('matchResults').style.display = 'none';
+                } else {
+                    alert('Fout: ' + result.message);
+                }
+            } catch (error) {
+                alert('Fout bij verwijderen');
+            }
+        }
 
         // Init
         checkAuth();
