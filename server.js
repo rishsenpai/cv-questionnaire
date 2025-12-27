@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = require('docx');
+const pdfParse = require('pdf-parse');
 require('dotenv').config();
 
 const CV = require('./models/CV');
@@ -383,6 +384,172 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS
     }
 });
+
+// LinkedIn PDF Parser
+async function parseLinkedInPDF(base64Data) {
+    try {
+        // Convert base64 to buffer
+        const buffer = Buffer.from(base64Data, 'base64');
+        const data = await pdfParse(buffer);
+        const text = data.text;
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+        const result = {
+            fullName: '',
+            jobTitle: '',
+            location: '',
+            email: '',
+            phone: '',
+            summary: '',
+            experience: '',
+            education: '',
+            skills: '',
+            languages: ''
+        };
+
+        // LinkedIn PDFs typically start with the name at the very top
+        // Format: Name, then headline/title, then location
+        let currentSection = '';
+        let experienceLines = [];
+        let educationLines = [];
+        let skillsLines = [];
+        let summaryLines = [];
+        let languageLines = [];
+
+        // Find name - usually first non-empty line that's not "LinkedIn" or similar
+        for (let i = 0; i < Math.min(5, lines.length); i++) {
+            const line = lines[i];
+            if (line &&
+                !line.toLowerCase().includes('linkedin') &&
+                !line.toLowerCase().includes('page') &&
+                !line.includes('@') &&
+                line.length > 2 &&
+                line.length < 60 &&
+                !line.match(/^\d/)) {
+                result.fullName = line;
+                break;
+            }
+        }
+
+        // Parse through all lines
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const lineLower = line.toLowerCase();
+
+            // Detect section headers
+            if (lineLower === 'experience' || lineLower === 'werkervaring' || lineLower === 'ervaring') {
+                currentSection = 'experience';
+                continue;
+            } else if (lineLower === 'education' || lineLower === 'opleiding' || lineLower === 'opleidingen') {
+                currentSection = 'education';
+                continue;
+            } else if (lineLower === 'skills' || lineLower === 'vaardigheden' || lineLower.includes('top skills')) {
+                currentSection = 'skills';
+                continue;
+            } else if (lineLower === 'summary' || lineLower === 'samenvatting' || lineLower === 'about' || lineLower === 'over') {
+                currentSection = 'summary';
+                continue;
+            } else if (lineLower === 'languages' || lineLower === 'talen') {
+                currentSection = 'languages';
+                continue;
+            } else if (lineLower === 'contact' || lineLower === 'contactgegevens') {
+                currentSection = 'contact';
+                continue;
+            } else if (lineLower === 'certifications' || lineLower === 'certificaten' ||
+                       lineLower === 'honors' || lineLower === 'awards' ||
+                       lineLower === 'publications' || lineLower === 'projects') {
+                currentSection = 'other';
+                continue;
+            }
+
+            // Extract email
+            const emailMatch = line.match(/[\w.-]+@[\w.-]+\.\w+/);
+            if (emailMatch && !result.email) {
+                result.email = emailMatch[0];
+            }
+
+            // Extract phone (various formats)
+            const phoneMatch = line.match(/(\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/);
+            if (phoneMatch && !result.phone && line.length < 30) {
+                result.phone = phoneMatch[0].trim();
+            }
+
+            // Job title is usually right after the name (within first 10 lines, before Experience)
+            if (!result.jobTitle && i < 10 && i > 0 && currentSection === '') {
+                if (line !== result.fullName &&
+                    !line.includes('@') &&
+                    !line.match(/^\+?\d/) &&
+                    line.length > 3 &&
+                    line.length < 100 &&
+                    !lineLower.includes('linkedin') &&
+                    !lineLower.includes('contact')) {
+                    // Check if it looks like a job title
+                    if (!result.jobTitle) {
+                        result.jobTitle = line;
+                    } else if (!result.location &&
+                               (line.includes(',') ||
+                                lineLower.includes('netherlands') ||
+                                lineLower.includes('nederland') ||
+                                lineLower.includes('amsterdam') ||
+                                lineLower.includes('rotterdam') ||
+                                lineLower.includes('suriname') ||
+                                lineLower.includes('paramaribo'))) {
+                        result.location = line;
+                    }
+                }
+            }
+
+            // Location detection (usually contains city, country)
+            if (!result.location && i < 15) {
+                if ((line.includes(',') && line.length < 50) ||
+                    lineLower.includes('netherlands') ||
+                    lineLower.includes('nederland') ||
+                    lineLower.includes('suriname') ||
+                    lineLower.includes('belgium') ||
+                    lineLower.includes('belgië')) {
+                    if (line !== result.fullName && line !== result.jobTitle) {
+                        result.location = line;
+                    }
+                }
+            }
+
+            // Collect section content
+            if (currentSection === 'experience' && line.length > 0) {
+                experienceLines.push(line);
+            } else if (currentSection === 'education' && line.length > 0) {
+                educationLines.push(line);
+            } else if (currentSection === 'skills' && line.length > 0) {
+                skillsLines.push(line);
+            } else if (currentSection === 'summary' && line.length > 0) {
+                summaryLines.push(line);
+            } else if (currentSection === 'languages' && line.length > 0) {
+                languageLines.push(line);
+            }
+        }
+
+        // Format collected data
+        if (experienceLines.length > 0) {
+            result.experience = experienceLines.slice(0, 30).join('\n');
+        }
+        if (educationLines.length > 0) {
+            result.education = educationLines.slice(0, 15).join('\n');
+        }
+        if (skillsLines.length > 0) {
+            result.skills = skillsLines.slice(0, 20).join(', ');
+        }
+        if (summaryLines.length > 0) {
+            result.summary = summaryLines.slice(0, 10).join(' ');
+        }
+        if (languageLines.length > 0) {
+            result.languages = languageLines.slice(0, 10).join(', ');
+        }
+
+        return result;
+    } catch (error) {
+        console.error('PDF parsing error:', error);
+        return null;
+    }
+}
 
 // Generate CV HTML for email
 function generateCVHTML(formData) {
@@ -1012,10 +1179,10 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
         const { fullName, email, jobTitle, location, fileName, fileData, fileType, fileSize } = req.body;
 
         // Validate required fields
-        if (!fullName || !email || !fileData) {
+        if (!fileData) {
             return res.status(400).json({
                 success: false,
-                message: 'Name, email and file are required'
+                message: 'File is required'
             });
         }
 
@@ -1027,28 +1194,46 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             });
         }
 
-        const cv = new CV({
-            fullName,
-            email,
-            jobTitle,
-            location,
+        // Try to parse LinkedIn PDF for auto-extraction
+        let parsedData = null;
+        if (fileType === 'application/pdf') {
+            parsedData = await parseLinkedInPDF(fileData);
+            console.log('Parsed LinkedIn PDF:', parsedData ? 'success' : 'failed');
+        }
+
+        // Use parsed data if available, otherwise fall back to provided/default values
+        const cvData = {
+            fullName: parsedData?.fullName || fullName || fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
+            email: parsedData?.email || email || `${(parsedData?.fullName || fullName || 'unknown').toLowerCase().replace(/\s+/g, '.')}@upload.local`,
+            phone: parsedData?.phone || '',
+            jobTitle: parsedData?.jobTitle || jobTitle || '',
+            location: parsedData?.location || location || '',
+            summary: parsedData?.summary || '',
+            experience: parsedData?.experience || '',
+            education: parsedData?.education || '',
+            skills: parsedData?.skills || '',
+            languages: parsedData?.languages || '',
             fileName,
             fileData,
             fileType,
             fileSize,
             emailSent: true // Manual upload, no email needed
-        });
+        };
 
+        const cv = new CV(cvData);
         const savedCV = await cv.save();
         console.log(`CV file uploaded: ${savedCV.fullName} - ${fileName}`);
 
         res.json({
             success: true,
             message: 'CV uploaded successfully',
+            parsed: !!parsedData,
             data: {
                 _id: savedCV._id,
                 fullName: savedCV.fullName,
                 email: savedCV.email,
+                jobTitle: savedCV.jobTitle,
+                location: savedCV.location,
                 fileName: savedCV.fileName,
                 fileSize: savedCV.fileSize
             }

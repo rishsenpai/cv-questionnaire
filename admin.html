@@ -921,6 +921,10 @@
                 <button class="modal-close" onclick="closeAddModal()">&times;</button>
             </div>
             <form id="addCvForm">
+                <div style="background: rgba(46, 196, 182, 0.1); border: 1px solid rgba(46, 196, 182, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                    <strong style="color: #2ec4b6;">LinkedIn PDF Auto-Extract</strong>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 13px; margin-top: 4px;">Upload LinkedIn PDF's en de gegevens worden automatisch geëxtraheerd (naam, functie, locatie, ervaring, etc.)</p>
+                </div>
                 <div class="form-grid">
                     <div class="form-group full-width">
                         <label>CV Bestanden * (PDF of Word, max 10MB per bestand)</label>
@@ -928,17 +932,16 @@
                         <div class="file-list" id="fileList"></div>
                     </div>
                     <div class="form-group">
-                        <label>Functietitel (optioneel)</label>
-                        <input type="text" name="defaultJobTitle" id="defaultJobTitle" placeholder="Software Developer">
+                        <label>Functietitel (fallback)</label>
+                        <input type="text" name="defaultJobTitle" id="defaultJobTitle" placeholder="Wordt uit PDF gehaald">
                     </div>
                     <div class="form-group">
-                        <label>Locatie (optioneel)</label>
-                        <input type="text" name="defaultLocation" id="defaultLocation" placeholder="Amsterdam, Nederland">
+                        <label>Locatie (fallback)</label>
+                        <input type="text" name="defaultLocation" id="defaultLocation" placeholder="Wordt uit PDF gehaald">
                     </div>
                     <div class="form-group full-width">
-                        <label>Standaard email (optioneel - voor alle uploads)</label>
+                        <label>Standaard email (fallback - als niet in PDF)</label>
                         <input type="email" name="defaultEmail" id="defaultEmail" placeholder="sollicitaties@bedrijf.com">
-                        <small style="color: rgba(255,255,255,0.5); margin-top: 4px; display: block;">Laat leeg om bestandsnaam@upload.local te gebruiken</small>
                     </div>
                 </div>
                 <div class="upload-progress" id="uploadProgress" style="display: none;">
@@ -1318,6 +1321,11 @@
                     const result = await response.json();
                     if (result.success) {
                         uploaded++;
+                        if (result.parsed) {
+                            console.log(`✓ ${file.name}: Data extracted - ${result.data.fullName}, ${result.data.jobTitle || 'geen functie'}, ${result.data.location || 'geen locatie'}`);
+                        } else {
+                            console.log(`○ ${file.name}: Uploaded without extraction`);
+                        }
                     } else {
                         failed++;
                         console.error(`Failed to upload ${file.name}:`, result.message);
@@ -1329,7 +1337,7 @@
             }
 
             progressFill.style.width = '100%';
-            progressText.textContent = `Klaar! ${uploaded} geüpload, ${failed} mislukt`;
+            progressText.textContent = `Klaar! ${uploaded} geüpload (data automatisch geëxtraheerd), ${failed} mislukt`;
 
             setTimeout(() => {
                 closeAddModal();
