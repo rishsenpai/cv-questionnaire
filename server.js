@@ -161,26 +161,55 @@ app.post('/api/employer/login', async (req, res) => {
     }
 });
 
-// Verify employer token
-app.post('/api/employer/verify', (req, res) => {
+// Verify employer token - fetch current plan from database
+app.post('/api/employer/verify', async (req, res) => {
     const { token } = req.body;
     const tokenData = employerTokens.get(token);
     if (tokenData && Date.now() < tokenData.expires) {
-        res.json({ success: true, plan: tokenData.plan });
+        try {
+            await connectDB();
+            const employer = await Employer.findById(tokenData.employerId);
+            if (employer && employer.isActive) {
+                res.json({ success: true, plan: employer.plan || 'basic' });
+            } else {
+                employerTokens.delete(token);
+                res.status(401).json({ success: false, message: 'Account inactive' });
+            }
+        } catch (error) {
+            // Fallback to cached plan if DB fails
+            res.json({ success: true, plan: tokenData.plan });
+        }
     } else {
         res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
 });
 
-// Employer middleware
-function requireEmployer(req, res, next) {
+// Employer middleware - fetch current plan from database
+async function requireEmployer(req, res, next) {
     const token = req.headers['x-employer-token'];
     const tokenData = employerTokens.get(token);
     if (!tokenData || Date.now() > tokenData.expires) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-    req.employer = tokenData;
-    next();
+
+    try {
+        await connectDB();
+        const employer = await Employer.findById(tokenData.employerId);
+        if (!employer || !employer.isActive) {
+            employerTokens.delete(token);
+            return res.status(401).json({ success: false, message: 'Account inactive' });
+        }
+        // Use current plan from database, not cached token
+        req.employer = {
+            ...tokenData,
+            plan: employer.plan || 'basic'
+        };
+        next();
+    } catch (error) {
+        // Fallback to cached data if DB fails
+        req.employer = tokenData;
+        next();
+    }
 }
 
 // Get CVs for employers (with filtering and hidden fields)
