@@ -7,6 +7,7 @@ const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Borde
 require('dotenv').config();
 
 const CV = require('./models/CV');
+const Employer = require('./models/Employer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -105,6 +106,263 @@ function requireAdmin(req, res, next) {
     }
     next();
 }
+
+// Employer authentication
+const employerTokens = new Map();
+
+// Employer login endpoint
+app.post('/api/employer/login', async (req, res) => {
+    try {
+        await connectDB();
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username and password required'
+            });
+        }
+
+        const employer = await Employer.findOne({ username: username.toLowerCase(), isActive: true });
+        if (!employer || !employer.checkPassword(password)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
+
+        const token = generateToken();
+        employerTokens.set(token, {
+            expires: Date.now() + ADMIN_TOKEN_EXPIRY,
+            employerId: employer._id,
+            hasPaid: employer.hasPaid
+        });
+
+        res.json({
+            success: true,
+            token,
+            employer: {
+                companyName: employer.companyName,
+                hasPaid: employer.hasPaid
+            }
+        });
+
+    } catch (error) {
+        console.error('Employer login error:', error);
+        res.status(500).json({ success: false, message: 'Login failed' });
+    }
+});
+
+// Verify employer token
+app.post('/api/employer/verify', (req, res) => {
+    const { token } = req.body;
+    const tokenData = employerTokens.get(token);
+    if (tokenData && Date.now() < tokenData.expires) {
+        res.json({ success: true, hasPaid: tokenData.hasPaid });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+});
+
+// Employer middleware
+function requireEmployer(req, res, next) {
+    const token = req.headers['x-employer-token'];
+    const tokenData = employerTokens.get(token);
+    if (!tokenData || Date.now() > tokenData.expires) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    req.employer = tokenData;
+    next();
+}
+
+// Get CVs for employers (with filtering and hidden fields)
+app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
+    try {
+        await connectDB();
+
+        const { search, jobTitle, location } = req.query;
+        let query = {};
+
+        // Build search query
+        if (search) {
+            const searchRegex = new RegExp(search, 'i');
+            query.$or = [
+                { fullName: searchRegex },
+                { jobTitle: searchRegex },
+                { skills: searchRegex },
+                { location: searchRegex },
+                { summary: searchRegex }
+            ];
+        }
+
+        if (jobTitle) {
+            query.jobTitle = new RegExp(jobTitle, 'i');
+        }
+
+        if (location) {
+            query.location = new RegExp(location, 'i');
+        }
+
+        const cvs = await CV.find(query).select('-fileData').sort({ createdAt: -1 });
+
+        // Hide sensitive info if employer hasn't paid
+        const hasPaid = req.employer.hasPaid;
+        const sanitizedCVs = cvs.map(cv => {
+            const cvObj = cv.toObject();
+            if (!hasPaid) {
+                // Hide contact info, name details, and work history
+                cvObj.email = '••••••@••••••';
+                cvObj.phone = '•••••••••••';
+                cvObj.fullName = cvObj.fullName.split(' ')[0] + ' ••••••';
+                cvObj.location = cvObj.location ? cvObj.location.split(',')[0] + ', ••••••' : null;
+                cvObj.experience = cvObj.experience ? '🔒 Betaal om werkervaring te zien' : null;
+            }
+            return cvObj;
+        });
+
+        res.json({
+            success: true,
+            count: sanitizedCVs.length,
+            hasPaid,
+            data: sanitizedCVs
+        });
+
+    } catch (error) {
+        console.error('Error fetching CVs for employer:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch CVs' });
+    }
+});
+
+// Download CV for employers (only if paid)
+app.get('/api/employer/cvs/:id/download', requireEmployer, async (req, res) => {
+    try {
+        if (!req.employer.hasPaid) {
+            return res.status(403).json({
+                success: false,
+                message: 'Payment required to download CVs'
+            });
+        }
+
+        await connectDB();
+        const cv = await CV.findById(req.params.id);
+
+        if (!cv) {
+            return res.status(404).json({ success: false, message: 'CV not found' });
+        }
+
+        if (!cv.fileData) {
+            return res.status(404).json({ success: false, message: 'No file attached' });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                fileName: cv.fileName,
+                fileType: cv.fileType,
+                fileData: cv.fileData
+            }
+        });
+
+    } catch (error) {
+        console.error('Error downloading CV:', error);
+        res.status(500).json({ success: false, message: 'Failed to download CV' });
+    }
+});
+
+// === ADMIN: Employer Management ===
+
+// Get all employers (admin only)
+app.get('/api/admin/employers', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const employers = await Employer.find().select('-password').sort({ createdAt: -1 });
+        res.json({ success: true, data: employers });
+    } catch (error) {
+        console.error('Error fetching employers:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch employers' });
+    }
+});
+
+// Create employer (admin only)
+app.post('/api/admin/employers', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const { username, password, companyName, contactEmail, hasPaid } = req.body;
+
+        if (!username || !password || !companyName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username, password and company name required'
+            });
+        }
+
+        // Check if username exists
+        const existing = await Employer.findOne({ username: username.toLowerCase() });
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username already exists'
+            });
+        }
+
+        const employer = new Employer({
+            username,
+            password,
+            companyName,
+            contactEmail,
+            hasPaid: hasPaid || false
+        });
+
+        await employer.save();
+        res.json({
+            success: true,
+            message: 'Employer created',
+            data: { _id: employer._id, username: employer.username, companyName: employer.companyName }
+        });
+
+    } catch (error) {
+        console.error('Error creating employer:', error);
+        res.status(500).json({ success: false, message: 'Failed to create employer' });
+    }
+});
+
+// Update employer (admin only)
+app.put('/api/admin/employers/:id', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const { companyName, contactEmail, hasPaid, isActive, password } = req.body;
+
+        const employer = await Employer.findById(req.params.id);
+        if (!employer) {
+            return res.status(404).json({ success: false, message: 'Employer not found' });
+        }
+
+        if (companyName) employer.companyName = companyName;
+        if (contactEmail !== undefined) employer.contactEmail = contactEmail;
+        if (hasPaid !== undefined) employer.hasPaid = hasPaid;
+        if (isActive !== undefined) employer.isActive = isActive;
+        if (password) employer.password = password;
+
+        await employer.save();
+        res.json({ success: true, message: 'Employer updated' });
+
+    } catch (error) {
+        console.error('Error updating employer:', error);
+        res.status(500).json({ success: false, message: 'Failed to update employer' });
+    }
+});
+
+// Delete employer (admin only)
+app.delete('/api/admin/employers/:id', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        await Employer.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Employer deleted' });
+    } catch (error) {
+        console.error('Error deleting employer:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete employer' });
+    }
+});
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({

@@ -24,6 +24,10 @@
       "dest": "/admin.html"
     },
     {
+      "src": "/werkgevers",
+      "dest": "/werkgevers.html"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/server.js"
     },
