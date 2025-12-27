@@ -330,7 +330,10 @@ app.post('/api/admin/employers', requireAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('Error creating employer:', error);
-        res.status(500).json({ success: false, message: 'Failed to create employer' });
+        res.status(500).json({
+            success: false,
+            message: error.code === 11000 ? 'Username already exists' : `Failed to create employer: ${error.message}`
+        });
     }
 });
 
