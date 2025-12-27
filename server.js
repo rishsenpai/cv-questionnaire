@@ -287,12 +287,19 @@ app.get('/api/admin/employers', requireAdmin, async (req, res) => {
 app.post('/api/admin/employers', requireAdmin, async (req, res) => {
     try {
         await connectDB();
-        const { username, password, companyName, contactEmail, hasPaid } = req.body;
+        const { username, password, companyName, contactEmail, hasPaid, isActive } = req.body;
 
         if (!username || !password || !companyName) {
             return res.status(400).json({
                 success: false,
                 message: 'Username, password and company name required'
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters'
             });
         }
 
@@ -310,7 +317,8 @@ app.post('/api/admin/employers', requireAdmin, async (req, res) => {
             password,
             companyName,
             contactEmail,
-            hasPaid: hasPaid || false
+            hasPaid: hasPaid || false,
+            isActive: isActive !== false // Default to true unless explicitly set to false
         });
 
         await employer.save();
