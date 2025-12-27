@@ -17,6 +17,12 @@ const CV = require('./models/CV');
 const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
+const Anthropic = require('@anthropic-ai/sdk');
+
+// Initialize Anthropic client for AI matching
+const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your-api-key-here'
+    ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    : null;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -515,7 +521,7 @@ app.delete('/api/employer/vacancies/:id', requireEmployer, async (req, res) => {
     }
 });
 
-// Match vacancy with CVs (premium only)
+// Match vacancy with CVs using AI (premium only)
 app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res) => {
     try {
         const plan = req.employer.plan || 'basic';
@@ -536,42 +542,91 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
             return res.status(404).json({ success: false, message: 'Vacature niet gevonden' });
         }
 
-        // Extract keywords from vacancy for matching
         const vacancyText = vacancy.fullText || `${vacancy.title} ${vacancy.description || ''} ${vacancy.requirements || ''}`;
-        const keywords = vacancyText
-            .toLowerCase()
-            .replace(/[^a-zA-Z0-9\s]/g, ' ')
-            .split(/\s+/)
-            .filter(word => word.length > 3)
-            .filter((word, index, self) => self.indexOf(word) === index); // unique
-
-        // Find matching CVs based on keyword overlap
         const cvs = await CV.find().select('-fileData');
 
-        const matchedCVs = cvs.map(cv => {
-            const cvText = (cv.fullText || `${cv.fullName} ${cv.jobTitle || ''} ${cv.skills || ''} ${cv.experience || ''}`).toLowerCase();
+        let matchedCVs = [];
 
-            // Calculate match score based on keyword overlap
-            let matchCount = 0;
-            const matchedKeywords = [];
-            keywords.forEach(keyword => {
-                if (cvText.includes(keyword)) {
-                    matchCount++;
-                    matchedKeywords.push(keyword);
+        // Use AI matching if Anthropic is configured
+        if (anthropic) {
+            try {
+                // Prepare CV summaries for AI (limit text length to save tokens)
+                const cvSummaries = cvs.map((cv, index) => {
+                    const summary = `[CV ${index}] ${cv.fullName} | ${cv.jobTitle || 'Geen functie'} | Skills: ${cv.skills || 'N/A'} | Ervaring: ${(cv.experience || '').substring(0, 500)}`;
+                    return { index, cv, summary };
+                });
+
+                const prompt = `Je bent een recruitment AI. Analyseer deze vacature en geef voor elke CV een match score (0-100) en korte reden.
+
+VACATURE:
+${vacancyText.substring(0, 1500)}
+
+KANDIDATEN:
+${cvSummaries.map(s => s.summary).join('\n\n')}
+
+Geef je antwoord als JSON array met ALLEEN kandidaten die echt geschikt zijn (score >= 40):
+[{"index": 0, "score": 85, "reason": "Korte reden waarom match"}, ...]
+
+Wees STRENG: alleen echte matches op basis van relevante ervaring, skills en functietitel. Een developer moet niet matchen met een sales vacature.
+Antwoord ALLEEN met de JSON array, geen andere tekst.`;
+
+                const response = await anthropic.messages.create({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 2000,
+                    messages: [{ role: 'user', content: prompt }]
+                });
+
+                const aiResponse = response.content[0].text.trim();
+                // Parse JSON from response
+                const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    const aiMatches = JSON.parse(jsonMatch[0]);
+                    matchedCVs = aiMatches
+                        .filter(m => m.score >= 40)
+                        .map(m => ({
+                            ...cvSummaries[m.index].cv.toObject(),
+                            matchScore: m.score,
+                            matchReason: m.reason
+                        }))
+                        .sort((a, b) => b.matchScore - a.matchScore)
+                        .slice(0, 15);
                 }
-            });
+            } catch (aiError) {
+                console.error('AI matching error:', aiError);
+                // Fall back to keyword matching
+            }
+        }
 
-            const matchScore = keywords.length > 0 ? Math.round((matchCount / keywords.length) * 100) : 0;
+        // Fallback: simple keyword matching if AI fails or not configured
+        if (matchedCVs.length === 0) {
+            const keywords = vacancyText
+                .toLowerCase()
+                .replace(/[^a-zA-Z0-9\s]/g, ' ')
+                .split(/\s+/)
+                .filter(word => word.length > 4)
+                .filter((word, index, self) => self.indexOf(word) === index);
 
-            return {
-                ...cv.toObject(),
-                matchScore,
-                matchedKeywords: matchedKeywords.slice(0, 10) // Top 10 matched keywords
-            };
-        })
-        .filter(cv => cv.matchScore > 10) // Only show CVs with at least 10% match
-        .sort((a, b) => b.matchScore - a.matchScore) // Sort by match score
-        .slice(0, 20); // Top 20 matches
+            matchedCVs = cvs.map(cv => {
+                const cvText = (cv.fullText || `${cv.fullName} ${cv.jobTitle || ''} ${cv.skills || ''}`).toLowerCase();
+                let matchCount = 0;
+                const matchedKeywords = [];
+                keywords.forEach(keyword => {
+                    if (cvText.includes(keyword)) {
+                        matchCount++;
+                        matchedKeywords.push(keyword);
+                    }
+                });
+                const matchScore = keywords.length > 0 ? Math.round((matchCount / keywords.length) * 100) : 0;
+                return {
+                    ...cv.toObject(),
+                    matchScore,
+                    matchReason: matchedKeywords.length > 0 ? `Matcht op: ${matchedKeywords.slice(0, 5).join(', ')}` : ''
+                };
+            })
+            .filter(cv => cv.matchScore >= 25)
+            .sort((a, b) => b.matchScore - a.matchScore)
+            .slice(0, 15);
+        }
 
         res.json({
             success: true,

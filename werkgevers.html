@@ -1022,8 +1022,8 @@
                                 ${skills.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}
                             </div>
                         ` : ''}
-                        ${showMatchScore && cv.matchedKeywords ? `
-                            <div class="match-keywords">Matcht op: ${cv.matchedKeywords.join(', ')}</div>
+                        ${showMatchScore && cv.matchReason ? `
+                            <div class="match-keywords">${escapeHtml(cv.matchReason)}</div>
                         ` : ''}
                         ${cv.summary ? `<div class="cv-summary">${escapeHtml(cv.summary)}</div>` : ''}
                         <div class="cv-actions">
