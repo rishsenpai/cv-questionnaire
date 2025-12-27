@@ -589,6 +589,63 @@
             font-size: 11px;
             margin-top: 8px;
         }
+
+        /* File list for bulk upload */
+        .file-list {
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .file-list-item .file-name {
+            color: #fff;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-list-item .file-size {
+            color: rgba(255, 255, 255, 0.5);
+            margin-left: 12px;
+        }
+
+        /* Upload progress */
+        .upload-progress {
+            margin: 20px 0;
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #2ec4b6;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
     </style>
 </head>
 <body>
@@ -657,28 +714,29 @@
     <div class="modal form-modal" id="addModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>CV Uploaden</h2>
+                <h2>CV's Uploaden</h2>
                 <button class="modal-close" onclick="closeAddModal()">&times;</button>
             </div>
             <form id="addCvForm">
                 <div class="form-grid">
-                    <div class="form-group">
-                        <label>Volledige naam *</label>
-                        <input type="text" name="fullName" required placeholder="Jan de Vries">
-                    </div>
-                    <div class="form-group">
-                        <label>Email *</label>
-                        <input type="email" name="email" required placeholder="jan@email.com">
+                    <div class="form-group full-width">
+                        <label>CV Bestanden * (PDF of Word, max 10MB per bestand)</label>
+                        <input type="file" name="cvFiles" id="cvFileInput" required multiple accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="file-input">
+                        <div class="file-list" id="fileList"></div>
                     </div>
                     <div class="form-group full-width">
-                        <label>CV Bestand * (PDF of Word, max 10MB)</label>
-                        <input type="file" name="cvFile" id="cvFileInput" required accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="file-input">
-                        <div class="file-info" id="fileInfo"></div>
+                        <label>Standaard email (optioneel - voor alle uploads)</label>
+                        <input type="email" name="defaultEmail" id="defaultEmail" placeholder="sollicitaties@bedrijf.com">
+                        <small style="color: rgba(255,255,255,0.5); margin-top: 4px; display: block;">Laat leeg om bestandsnaam@upload.local te gebruiken</small>
                     </div>
+                </div>
+                <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="progress-text" id="progressText">Uploaden: 0 / 0</div>
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-cancel" onclick="closeAddModal()">Annuleren</button>
-                    <button type="submit" class="btn-submit" id="submitBtn">CV Uploaden</button>
+                    <button type="submit" class="btn-submit" id="submitBtn">CV's Uploaden</button>
                 </div>
             </form>
         </div>
@@ -892,6 +950,9 @@
 
         function openAddModal() {
             document.getElementById('addCvForm').reset();
+            document.getElementById('fileList').innerHTML = '';
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
             document.getElementById('addModal').classList.add('active');
         }
 
@@ -899,84 +960,125 @@
             document.getElementById('addModal').classList.remove('active');
         }
 
-        // File input change handler
+        // File input change handler - show list of selected files
         document.getElementById('cvFileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const fileInfo = document.getElementById('fileInfo');
-            if (file) {
-                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                fileInfo.textContent = `${file.name} (${sizeMB} MB)`;
-            } else {
-                fileInfo.textContent = '';
+            const files = e.target.files;
+            const fileList = document.getElementById('fileList');
+
+            if (files.length === 0) {
+                fileList.innerHTML = '';
+                return;
             }
+
+            let html = '';
+            let totalSize = 0;
+            for (const file of files) {
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                totalSize += file.size;
+                html += `
+                    <div class="file-list-item">
+                        <span class="file-name">${escapeHtml(file.name)}</span>
+                        <span class="file-size">${sizeMB} MB</span>
+                    </div>
+                `;
+            }
+
+            const totalMB = (totalSize / (1024 * 1024)).toFixed(2);
+            html = `<div style="color: #2ec4b6; margin-bottom: 8px; font-size: 13px;">${files.length} bestand(en) geselecteerd (${totalMB} MB totaal)</div>` + html;
+            fileList.innerHTML = html;
         });
 
-        // Upload CV form handler
+        // Bulk upload CV form handler
         document.getElementById('addCvForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
+            const fileInput = document.getElementById('cvFileInput');
+            const files = fileInput.files;
+            const defaultEmail = document.getElementById('defaultEmail').value;
+
+            if (files.length === 0) {
+                alert('Selecteer minimaal één CV bestand');
+                return;
+            }
+
+            // Check all file sizes
+            for (const file of files) {
+                if (file.size > 10 * 1024 * 1024) {
+                    alert(`Bestand "${file.name}" is te groot. Maximum is 10MB per bestand.`);
+                    return;
+                }
+            }
+
             submitBtn.disabled = true;
             submitBtn.textContent = 'Uploaden...';
 
-            const fullName = e.target.fullName.value;
-            const email = e.target.email.value;
-            const fileInput = document.getElementById('cvFileInput');
-            const file = fileInput.files[0];
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressText = document.getElementById('progressText');
+            const progressFill = document.getElementById('progressFill');
+            progressDiv.style.display = 'block';
 
-            if (!file) {
-                alert('Selecteer een CV bestand');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'CV Uploaden';
-                return;
-            }
+            let uploaded = 0;
+            let failed = 0;
 
-            // Check file size
-            if (file.size > 10 * 1024 * 1024) {
-                alert('Bestand is te groot. Maximum is 10MB.');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'CV Uploaden';
-                return;
-            }
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                progressText.textContent = `Uploaden: ${i + 1} / ${files.length} - ${file.name}`;
+                progressFill.style.width = `${((i) / files.length) * 100}%`;
 
-            try {
-                // Read file as base64
-                const fileData = await readFileAsBase64(file);
+                try {
+                    const fileData = await readFileAsBase64(file);
 
-                const response = await fetch('/api/cvs/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Token': authToken
-                    },
-                    body: JSON.stringify({
-                        fullName,
-                        email,
-                        fileName: file.name,
-                        fileData,
-                        fileType: file.type,
-                        fileSize: file.size
-                    })
-                });
+                    // Extract name from filename (remove extension)
+                    const fullName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+                    const email = defaultEmail || `${fullName.toLowerCase().replace(/\s+/g, '.')}@upload.local`;
 
-                if (response.status === 401) {
-                    logout();
-                    return;
+                    const response = await fetch('/api/cvs/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Admin-Token': authToken
+                        },
+                        body: JSON.stringify({
+                            fullName,
+                            email,
+                            fileName: file.name,
+                            fileData,
+                            fileType: file.type,
+                            fileSize: file.size
+                        })
+                    });
+
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+
+                    const result = await response.json();
+                    if (result.success) {
+                        uploaded++;
+                    } else {
+                        failed++;
+                        console.error(`Failed to upload ${file.name}:`, result.message);
+                    }
+                } catch (error) {
+                    failed++;
+                    console.error(`Error uploading ${file.name}:`, error);
                 }
-
-                const result = await response.json();
-
-                if (result.success) {
-                    closeAddModal();
-                    loadCVs();
-                } else {
-                    alert('Fout: ' + result.message);
-                }
-            } catch (error) {
-                alert('Fout bij uploaden: ' + error.message);
             }
+
+            progressFill.style.width = '100%';
+            progressText.textContent = `Klaar! ${uploaded} geüpload, ${failed} mislukt`;
+
+            setTimeout(() => {
+                closeAddModal();
+                loadCVs();
+                // Reset progress
+                progressDiv.style.display = 'none';
+                progressFill.style.width = '0%';
+            }, 1500);
 
             submitBtn.disabled = false;
-            submitBtn.textContent = 'CV Uploaden';
+            submitBtn.textContent = "CV's Uploaden";
         });
 
         function readFileAsBase64(file) {
