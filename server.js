@@ -4,7 +4,13 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = require('docx');
-const pdfParse = require('pdf-parse');
+let pdfParse;
+try {
+    pdfParse = require('pdf-parse');
+} catch (e) {
+    console.log('pdf-parse not available, PDF parsing disabled');
+    pdfParse = null;
+}
 require('dotenv').config();
 
 const CV = require('./models/CV');
@@ -387,10 +393,15 @@ const transporter = nodemailer.createTransport({
 
 // LinkedIn PDF Parser
 async function parseLinkedInPDF(base64Data) {
+    if (!pdfParse) {
+        console.log('PDF parsing not available');
+        return null;
+    }
+
     try {
         // Convert base64 to buffer
         const buffer = Buffer.from(base64Data, 'base64');
-        const data = await pdfParse(buffer);
+        const data = await pdfParse(buffer, { max: 0 }); // max: 0 to prevent test file loading
         const text = data.text;
         const lines = text.split('\n').map(l => l.trim()).filter(l => l);
 
