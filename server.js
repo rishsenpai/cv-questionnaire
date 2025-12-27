@@ -190,7 +190,7 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         const { search, jobTitle, location } = req.query;
         let query = {};
 
-        // Build search query
+        // Build search query - search in all relevant fields
         if (search) {
             const searchRegex = new RegExp(search, 'i');
             query.$or = [
@@ -198,7 +198,9 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
                 { jobTitle: searchRegex },
                 { skills: searchRegex },
                 { location: searchRegex },
-                { summary: searchRegex }
+                { summary: searchRegex },
+                { experience: searchRegex },
+                { education: searchRegex }
             ];
         }
 
