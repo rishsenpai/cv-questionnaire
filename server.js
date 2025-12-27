@@ -1187,7 +1187,7 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             });
         }
 
-        const { fullName, email, jobTitle, location, fileName, fileData, fileType, fileSize } = req.body;
+        const { fullName, email, phone, jobTitle, location, summary, experience, education, skills, fileName, fileData, fileType, fileSize } = req.body;
 
         // Validate required fields
         if (!fileData) {
@@ -1205,25 +1205,17 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             });
         }
 
-        // Try to parse LinkedIn PDF for auto-extraction
-        let parsedData = null;
-        if (fileType === 'application/pdf') {
-            parsedData = await parseLinkedInPDF(fileData);
-            console.log('Parsed LinkedIn PDF:', parsedData ? 'success' : 'failed');
-        }
-
-        // Use parsed data if available, otherwise fall back to provided/default values
+        // Data comes from client-side parsing now
         const cvData = {
-            fullName: parsedData?.fullName || fullName || fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
-            email: parsedData?.email || email || `${(parsedData?.fullName || fullName || 'unknown').toLowerCase().replace(/\s+/g, '.')}@upload.local`,
-            phone: parsedData?.phone || '',
-            jobTitle: parsedData?.jobTitle || jobTitle || '',
-            location: parsedData?.location || location || '',
-            summary: parsedData?.summary || '',
-            experience: parsedData?.experience || '',
-            education: parsedData?.education || '',
-            skills: parsedData?.skills || '',
-            languages: parsedData?.languages || '',
+            fullName: fullName || fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
+            email: email || `${(fullName || 'unknown').toLowerCase().replace(/\s+/g, '.')}@upload.local`,
+            phone: phone || '',
+            jobTitle: jobTitle || '',
+            location: location || '',
+            summary: summary || '',
+            experience: experience || '',
+            education: education || '',
+            skills: skills || '',
             fileName,
             fileData,
             fileType,
@@ -1238,7 +1230,6 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
         res.json({
             success: true,
             message: 'CV uploaded successfully',
-            parsed: !!parsedData,
             data: {
                 _id: savedCV._id,
                 fullName: savedCV.fullName,
