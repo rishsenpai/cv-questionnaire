@@ -9,7 +9,11 @@
 <body>
     <div class="container">
         <div class="language-toggle">
-            <button id="langToggle" class="lang-btn">🇳🇱 Nederlands</button>
+            <div class="lang-buttons">
+                <button class="lang-btn" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="nl">NL</button>
+                <button class="lang-btn" data-lang="es">ES</button>
+            </div>
             <button id="demoBtn" class="demo-btn" data-text="demo-btn">🎯 Demo</button>
             <button id="feedbackBtn" class="feedback-btn" data-text="feedback-btn">💬 Feedback</button>
         </div>
@@ -136,7 +140,10 @@
                 <div class="question completed">
                     <h2 data-text="complete-title">Perfect! Your CV is ready</h2>
                     <p data-text="complete-description">We've gathered all the information needed to create your professional CV.</p>
-                    <button type="button" id="generateCV" class="generate-btn" data-text="submit-btn">Submit CV</button>
+                    <div class="final-buttons">
+                        <button type="button" id="editCVBtn" class="generate-btn view-cv-btn" data-text="view-cv-btn">Edit CV</button>
+                        <button type="button" id="generateCV" class="generate-btn" data-text="submit-btn">Submit CV</button>
+                    </div>
                 </div>
             </div>
         </form>

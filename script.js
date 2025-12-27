@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('cvModal');
     const closeModal = document.querySelector('.close');
     const downloadBtn = document.getElementById('downloadCV');
-    const langToggle = document.getElementById('langToggle');
+    const langButtons = document.querySelectorAll('.lang-btn[data-lang]');
     const demoBtn = document.getElementById('demoBtn');
     
     let currentQuestion = 0;
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'prev-btn': "← Previous",
             'next-btn': "Continue →",
             'download-btn': "Download PDF",
-            'lang-toggle': "🇳🇱 Nederlands",
+            'lang-toggle': "→ NL",
             'cv-section-summary': "Professional Summary",
             'cv-section-experience': "Work Experience", 
             'cv-section-education': "Education",
@@ -81,6 +81,11 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Submission Failed",
             'error-button': "Try Again",
             'submitting': "Submitting...",
+            'view-cv-btn': "Edit CV",
+            'edit-cv-btn': "Edit CV",
+            'save-cv-btn': "Save Changes",
+            'resubmit-cv-btn': "Resubmit CV",
+            'cv-saved': "Changes saved!",
             'demo-btn': "🎯 Demo",
             'feedback-btn': "💬 Feedback",
             'feedback-title': "Share Your Feedback",
@@ -135,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'prev-btn': "← Vorige",
             'next-btn': "Doorgaan →",
             'download-btn': "PDF Downloaden",
-            'lang-toggle': "🇬🇧 English",
+            'lang-toggle': "→ ES",
             'cv-section-summary': "Professionele Samenvatting",
             'cv-section-experience': "Werkervaring", 
             'cv-section-education': "Onderwijs",
@@ -147,6 +152,11 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Versturen Mislukt",
             'error-button': "Opnieuw Proberen",
             'submitting': "Versturen...",
+            'view-cv-btn': "CV bewerken",
+            'edit-cv-btn': "CV bewerken",
+            'save-cv-btn': "Wijzigingen opslaan",
+            'resubmit-cv-btn': "CV opnieuw versturen",
+            'cv-saved': "Wijzigingen opgeslagen!",
             'demo-btn': "🎯 Demo",
             'feedback-btn': "💬 Feedback",
             'feedback-title': "Deel je Feedback",
@@ -161,9 +171,80 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-cancel': "Annuleren",
             'feedback-submit': "Feedback Versturen",
             'tooltip-feedback-required': "Geef je feedback bericht"
+        },
+        es: {
+            'start-title': "Comencemos con tu información personal",
+            'fullname-label': "¿Cuál es tu nombre completo?",
+            'fullname-placeholder': "Ingresa tu nombre completo",
+            'email-label': "¿Cuál es tu correo electrónico?",
+            'email-placeholder': "tu.correo@ejemplo.com",
+            'phone-label': "¿Cuál es tu número de teléfono?",
+            'phone-placeholder': "+34 612 345 678",
+            'location-label': "¿Dónde vives?",
+            'location-placeholder': "Ciudad, País",
+            'birthdate-label': "¿Cuál es tu fecha de nacimiento?",
+            'languages-label': "¿Qué idiomas hablas y a qué nivel?",
+            'languages-placeholder': "Por ejemplo: Español (nativo), Inglés (fluido oral y escrito), Francés (básico oral)...",
+            'jobtitle-label': "¿Cuál es tu puesto actual o deseado?",
+            'jobtitle-placeholder': "Desarrollador de Software, Gerente de Marketing, etc.",
+            'summary-label': "Cuéntanos sobre ti en unas pocas frases",
+            'summary-placeholder': "Un breve resumen profesional destacando tus principales fortalezas y experiencia...",
+            'experience-label': "Describe tu experiencia laboral con períodos",
+            'experience-placeholder': "Indica por cada puesto: Título del puesto, Nombre de la empresa, Período (desde-hasta), Tareas y responsabilidades. Por ejemplo:\n\n• Desarrollador de Software en TechEmpresa\n  Enero 2020 - Presente\n  - Desarrollo de aplicaciones web\n  - Colaboración con el equipo de diseño...",
+            'education-label': "¿Cuál es tu formación académica?",
+            'education-placeholder': "Indica por cada formación: Nombre del título, Institución, Período, Título obtenido (sí/no). Por ejemplo:\n\n• Grado en Informática\n  Universidad de Madrid\n  2016-2020\n  Título obtenido: Sí\n\n• Máster en Desarrollo Web\n  Universidad de Barcelona\n  2020-2022\n  Título obtenido: Sí...",
+            'skills-label': "¿Cuáles son tus habilidades principales?",
+            'skills-placeholder': "Lista tus habilidades técnicas, habilidades blandas, idiomas, certificaciones...",
+            'achievements-label': "¿Tienes logros o proyectos destacados?",
+            'achievements-placeholder': "Premios, proyectos exitosos, publicaciones, voluntariado...",
+            'targetjob-label': "¿Qué puesto estás buscando?",
+            'targetjob-placeholder': "Por ejemplo: Desarrollador Frontend, Gerente de Marketing...",
+            'availability-label': "¿Cuándo estás disponible y cuántas horas por semana?",
+            'availability-placeholder': "Por ejemplo: Disponible inmediatamente, 40 horas por semana...",
+            'salary-label': "¿Indicación salarial?",
+            'salary-placeholder': "Por ejemplo: €3000-4000 al mes, €50.000-60.000 al año...",
+            'sector-label': "¿En qué sector quieres trabajar?",
+            'sector-placeholder': "Por ejemplo: IT, Marketing, Finanzas, Salud...",
+            'complete-title': "¡Perfecto! Tu CV está listo",
+            'complete-description': "Hemos recopilado toda la información necesaria para crear tu CV profesional.",
+            'submit-btn': "Enviar CV",
+            'prev-btn': "← Anterior",
+            'next-btn': "Continuar →",
+            'download-btn': "Descargar PDF",
+            'lang-toggle': "→ EN",
+            'cv-section-summary': "Resumen Profesional",
+            'cv-section-experience': "Experiencia Laboral",
+            'cv-section-education': "Formación Académica",
+            'cv-section-skills': "Habilidades",
+            'cv-section-achievements': "Logros y Proyectos",
+            'success-title': "✅ ¡CV Enviado Exitosamente!",
+            'success-message': "Gracias por enviar tu CV. Ha sido enviado y pronto recibirás noticias.",
+            'success-button': "Enviar Otro CV",
+            'error-title': "❌ Error al Enviar",
+            'error-button': "Intentar de Nuevo",
+            'submitting': "Enviando...",
+            'view-cv-btn': "Editar CV",
+            'edit-cv-btn': "Editar CV",
+            'save-cv-btn': "Guardar Cambios",
+            'resubmit-cv-btn': "Reenviar CV",
+            'cv-saved': "¡Cambios guardados!",
+            'demo-btn': "🎯 Demo",
+            'feedback-btn': "💬 Feedback",
+            'feedback-title': "Comparte tu Opinión",
+            'feedback-description': "Ayúdanos a mejorar el cuestionario de CV compartiendo tus pensamientos.",
+            'feedback-name-label': "Tu Nombre (Opcional)",
+            'feedback-name-placeholder': "Ingresa tu nombre",
+            'feedback-email-label': "Tu Email (Opcional)",
+            'feedback-email-placeholder': "tu.correo@ejemplo.com",
+            'feedback-rating-label': "¿Cómo calificarías tu experiencia?",
+            'feedback-message-label': "Tu Opinión",
+            'feedback-message-placeholder': "Cuéntanos qué piensas del cuestionario, qué se podría mejorar, o qué te gustó...",
+            'feedback-cancel': "Cancelar",
+            'feedback-submit': "Enviar Opinión",
+            'tooltip-feedback-required': "Por favor proporciona tu mensaje de feedback"
         }
     };
-    
+
     // Demo data
     const demoData = {
         en: {
@@ -201,15 +282,46 @@ document.addEventListener('DOMContentLoaded', function() {
             availability: "Per direct beschikbaar, 40 uur per week",
             salaryIndication: "€65.000-€80.000 per jaar",
             preferredSector: "Technologie, Fintech"
+        },
+        es: {
+            fullName: "María García López",
+            email: "maria.garcia@email.es",
+            phone: "+34 612 345 678",
+            location: "Madrid, España",
+            birthDate: "15/03/1990",
+            languages: "Español (nativo)\nInglés (fluido oral y escrito)\nFrancés (conversación oral, básico escrito)",
+            jobTitle: "Ingeniera de Software Senior",
+            summary: "Ingeniera de software con más de 8 años de experiencia en desarrollo full-stack, especializada en React, Node.js y arquitectura cloud. Apasionada por crear soluciones escalables y mentorizar a desarrolladores junior.",
+            experience: "• Ingeniera de Software Senior en TechEmpresa\n  Marzo 2020 - Presente\n  - Lideré el desarrollo de arquitectura de microservicios para 1M+ usuarios\n  - Mejoré el rendimiento de la aplicación en un 40% mediante optimización\n  - Mentoricé a un equipo de 5 desarrolladores junior\n\n• Ingeniera de Software en StartupXYZ\n  Junio 2018 - Febrero 2020\n  - Construí aplicaciones web responsivas usando React y Redux\n  - Colaboré con equipos multifuncionales en entorno Agile\n  - Implementé pipelines CI/CD reduciendo el tiempo de despliegue en un 60%",
+            education: "• Máster en Ciencias de la Computación\n  Universidad Politécnica de Madrid\n  2016-2018\n  Título obtenido: Sí\n  Nota media: 9.2/10\n\n• Grado en Ingeniería Informática\n  Universidad Complutense de Madrid\n  2012-2016\n  Título obtenido: Sí\n  Matrícula de Honor, Premio Extraordinario",
+            skills: "Habilidades Técnicas:\n• Frontend: React, Vue.js, TypeScript, HTML/CSS, Tailwind\n• Backend: Node.js, Python, Java, PostgreSQL, MongoDB\n• Cloud: AWS, Docker, Kubernetes, Terraform\n• Herramientas: Git, Jenkins, Jira, Figma\n\nHabilidades Blandas:\n• Liderazgo de Equipo & Mentoría\n• Metodologías Agile/Scrum\n• Resolución de Problemas & Pensamiento Crítico\n• Comunicación Técnica",
+            achievements: "• Lideré la migración de monolito legacy a microservicios, reduciendo el tiempo de inactividad en un 75%\n• Contribuidora open source a librería React popular con 10k+ estrellas en GitHub\n• Ponente en TechConf 2023: 'Construyendo Aplicaciones React Escalables'\n• Receptora del 'Premio a la Innovación' en TechEmpresa por implementar sistema de recomendación basado en ML\n• Instructora voluntaria de programación en centro comunitario local",
+            targetJob: "Senior Frontend Developer",
+            availability: "Disponible inmediatamente, 40 horas por semana",
+            salaryIndication: "€55.000-€70.000 al año",
+            preferredSector: "Tecnología, Fintech"
         }
     };
 
-    // Language toggle functionality
-    langToggle.addEventListener('click', function() {
-        currentLanguage = currentLanguage === 'en' ? 'nl' : 'en';
-        updateLanguage();
-        localStorage.setItem('preferredLanguage', currentLanguage);
+    // Language buttons functionality
+    langButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentLanguage = this.getAttribute('data-lang');
+            updateLanguage();
+            updateActiveLanguageButton();
+            localStorage.setItem('preferredLanguage', currentLanguage);
+        });
     });
+
+    function updateActiveLanguageButton() {
+        langButtons.forEach(btn => {
+            if (btn.getAttribute('data-lang') === currentLanguage) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
     
     // Demo functionality
     demoBtn.addEventListener('click', function() {
@@ -556,7 +668,15 @@ document.addEventListener('DOMContentLoaded', function() {
         saveCurrentAnswer();
         submitCV();
     });
-    
+
+    // Edit CV button (before submit)
+    const editCVBtn = document.getElementById('editCVBtn');
+    editCVBtn.addEventListener('click', function() {
+        saveCurrentAnswer();
+        generateEditableCV();
+        modal.style.display = 'block';
+    });
+
     // Modal close
     closeModal.addEventListener('click', function() {
         modal.style.display = 'none';
@@ -861,7 +981,139 @@ document.addEventListener('DOMContentLoaded', function() {
         
         cvPreview.innerHTML = cvHTML;
     }
-    
+
+    function generateEditableCV() {
+        const cvPreview = document.getElementById('cvPreview');
+        const t = translations[currentLanguage];
+
+        const cvHTML = `
+            <div class="cv-header">
+                <div class="cv-name">
+                    <input type="text" class="cv-edit-field cv-edit-name" data-field="fullName" value="${formData.fullName || ''}" placeholder="${t['fullname-placeholder']}">
+                </div>
+                <div class="cv-title">
+                    <input type="text" class="cv-edit-field cv-edit-title" data-field="jobTitle" value="${formData.jobTitle || ''}" placeholder="${t['jobtitle-placeholder']}">
+                </div>
+                <div class="cv-contact-edit">
+                    <div class="cv-contact-row">
+                        <label>${t['email-label']}</label>
+                        <input type="email" class="cv-edit-field" data-field="email" value="${formData.email || ''}" placeholder="${t['email-placeholder']}">
+                    </div>
+                    <div class="cv-contact-row">
+                        <label>${t['phone-label']}</label>
+                        <input type="tel" class="cv-edit-field" data-field="phone" value="${formData.phone || ''}" placeholder="${t['phone-placeholder']}">
+                    </div>
+                    <div class="cv-contact-row">
+                        <label>${t['location-label']}</label>
+                        <input type="text" class="cv-edit-field" data-field="location" value="${formData.location || ''}" placeholder="${t['location-placeholder']}">
+                    </div>
+                    <div class="cv-contact-row">
+                        <label>${t['birthdate-label']}</label>
+                        <input type="text" class="cv-edit-field" data-field="birthDate" value="${formData.birthDate || ''}" placeholder="dd/mm/yyyy">
+                    </div>
+                </div>
+            </div>
+
+            <div class="cv-section">
+                <div class="cv-section-title">${t['cv-section-summary']}</div>
+                <textarea class="cv-edit-field cv-edit-textarea" data-field="summary" placeholder="${t['summary-placeholder']}">${formData.summary || ''}</textarea>
+            </div>
+
+            <div class="cv-section">
+                <div class="cv-section-title">${currentLanguage === 'en' ? 'Languages' : 'Talen'}</div>
+                <textarea class="cv-edit-field cv-edit-textarea" data-field="languages" placeholder="${t['languages-placeholder']}">${formData.languages || ''}</textarea>
+            </div>
+
+            <div class="cv-section">
+                <div class="cv-section-title">${t['cv-section-experience']}</div>
+                <textarea class="cv-edit-field cv-edit-textarea cv-edit-large" data-field="experience" placeholder="${t['experience-placeholder']}">${formData.experience || ''}</textarea>
+            </div>
+
+            <div class="cv-section">
+                <div class="cv-section-title">${t['cv-section-education']}</div>
+                <textarea class="cv-edit-field cv-edit-textarea cv-edit-large" data-field="education" placeholder="${t['education-placeholder']}">${formData.education || ''}</textarea>
+            </div>
+
+            <div class="cv-section">
+                <div class="cv-section-title">${t['cv-section-skills']}</div>
+                <textarea class="cv-edit-field cv-edit-textarea" data-field="skills" placeholder="${t['skills-placeholder']}">${formData.skills || ''}</textarea>
+            </div>
+
+            <div class="cv-section">
+                <div class="cv-section-title">${t['cv-section-achievements']}</div>
+                <textarea class="cv-edit-field cv-edit-textarea" data-field="achievements" placeholder="${t['achievements-placeholder']}">${formData.achievements || ''}</textarea>
+            </div>
+
+            <div class="cv-edit-actions">
+                <button type="button" id="saveCVBtn" class="save-cv-btn">${t['save-cv-btn']}</button>
+                <button type="button" id="resubmitCVBtn" class="resubmit-cv-btn">${t['resubmit-cv-btn']}</button>
+            </div>
+        `;
+
+        cvPreview.innerHTML = cvHTML;
+
+        // Update download button to be hidden in edit mode
+        downloadBtn.style.display = 'none';
+
+        // Add save button handler
+        document.getElementById('saveCVBtn').addEventListener('click', function() {
+            saveEditedCV();
+            const t = translations[currentLanguage];
+            this.textContent = t['cv-saved'];
+            this.classList.add('saved');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 800);
+        });
+
+        // Add resubmit button handler
+        document.getElementById('resubmitCVBtn').addEventListener('click', async function() {
+            saveEditedCV();
+            this.disabled = true;
+            this.textContent = translations[currentLanguage]['submitting'];
+
+            try {
+                const response = await fetch('/submit-cv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const t = translations[currentLanguage];
+                    this.textContent = t['success-title'];
+                    this.classList.add('saved');
+                    setTimeout(() => {
+                        this.textContent = t['resubmit-cv-btn'];
+                        this.classList.remove('saved');
+                        this.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Resubmit error:', error);
+                alert(currentLanguage === 'en' ? 'Failed to resubmit. Please try again.' : 'Opnieuw versturen mislukt. Probeer opnieuw.');
+                this.textContent = translations[currentLanguage]['resubmit-cv-btn'];
+                this.disabled = false;
+            }
+        });
+    }
+
+    function saveEditedCV() {
+        // Get all editable fields and update formData
+        document.querySelectorAll('.cv-edit-field').forEach(field => {
+            const fieldName = field.getAttribute('data-field');
+            if (fieldName) {
+                formData[fieldName] = field.value.trim();
+            }
+        });
+    }
+
     async function submitCV() {
         try {
             // Show loading state
@@ -900,11 +1152,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
             <div class="question completed">
-                <h2>${t['success-title']}</h2>
-                <p>${t['success-message']}</p>
-                <button type="button" onclick="window.location.reload()" class="generate-btn">${t['success-button']}</button>
+                <h2 data-text="success-title">${t['success-title']}</h2>
+                <p data-text="success-message">${t['success-message']}</p>
+                <div class="success-buttons">
+                    <button type="button" id="viewCVBtn" class="generate-btn view-cv-btn" data-text="view-cv-btn">${t['view-cv-btn']}</button>
+                    <button type="button" onclick="window.location.reload()" class="generate-btn secondary-btn" data-text="success-button">${t['success-button']}</button>
+                </div>
             </div>
         `;
+
+        // Add click handler for View CV button
+        document.getElementById('viewCVBtn').addEventListener('click', function() {
+            generateEditableCV();
+            modal.style.display = 'block';
+        });
     }
     
     function showErrorMessage(message) {
@@ -912,9 +1173,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
             <div class="question">
-                <h2>${t['error-title']}</h2>
+                <h2 data-text="error-title">${t['error-title']}</h2>
                 <p style="color: #e53e3e; margin-bottom: 20px;">${message}</p>
-                <button type="button" onclick="generateBtn.click()" class="generate-btn">${t['error-button']}</button>
+                <button type="button" onclick="generateBtn.click()" class="generate-btn" data-text="error-button">${t['error-button']}</button>
             </div>
         `;
     }
@@ -1072,9 +1333,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Update language toggle button
-        langToggle.textContent = currentTranslations['lang-toggle'];
-        
+        // Update active language button
+        updateActiveLanguageButton();
+
         // Update document language attribute
         document.documentElement.lang = currentLanguage;
 
