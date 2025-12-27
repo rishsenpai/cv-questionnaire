@@ -56,6 +56,10 @@ const cvSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // Full text for searching
+    fullText: {
+        type: String  // All text extracted from PDF for search
+    },
     // File upload fields
     fileName: {
         type: String,

@@ -190,17 +190,14 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         const { search, jobTitle, location } = req.query;
         let query = {};
 
-        // Build search query - search in all relevant fields
+        // Build search query - search in fullText (contains all PDF content)
         if (search) {
             const searchRegex = new RegExp(search, 'i');
             query.$or = [
+                { fullText: searchRegex },  // Search entire PDF content
                 { fullName: searchRegex },
                 { jobTitle: searchRegex },
-                { skills: searchRegex },
-                { location: searchRegex },
-                { summary: searchRegex },
-                { experience: searchRegex },
-                { education: searchRegex }
+                { skills: searchRegex }
             ];
         }
 
@@ -1189,7 +1186,7 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             });
         }
 
-        const { fullName, email, phone, jobTitle, location, summary, experience, education, skills, fileName, fileData, fileType, fileSize } = req.body;
+        const { fullName, email, phone, jobTitle, location, summary, experience, education, skills, fullText, fileName, fileData, fileType, fileSize } = req.body;
 
         // Validate required fields
         if (!fileData) {
@@ -1218,6 +1215,7 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             experience: experience || '',
             education: education || '',
             skills: skills || '',
+            fullText: fullText || '', // All PDF text for searching
             fileName,
             fileData,
             fileType,

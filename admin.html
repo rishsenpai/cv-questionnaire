@@ -1036,7 +1036,8 @@
                     summary: '',
                     experience: '',
                     education: '',
-                    skills: ''
+                    skills: '',
+                    fullText: fullText // Store all text for searching
                 };
 
                 // LinkedIn section headers to skip when looking for name
@@ -1479,6 +1480,7 @@
                             experience: parsedData?.experience || '',
                             education: parsedData?.education || '',
                             skills: parsedData?.skills || '',
+                            fullText: parsedData?.fullText || '', // All text for searching
                             fileName: file.name,
                             fileData,
                             fileType: file.type,
