@@ -17,11 +17,11 @@ const CV = require('./models/CV');
 const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Initialize Anthropic client for AI matching
-const anthropic = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your-api-key-here'
-    ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+// Initialize Google Gemini for AI matching (FREE tier available)
+const gemini = process.env.GEMINI_API_KEY
+    ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
     : null;
 
 const app = express();
@@ -547,9 +547,11 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
 
         let matchedCVs = [];
 
-        // Use AI matching if Anthropic is configured
-        if (anthropic) {
+        // Use AI matching if Gemini is configured
+        if (gemini) {
             try {
+                const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
                 // Prepare CV summaries for AI (limit text length to save tokens)
                 const cvSummaries = cvs.map((cv, index) => {
                     const summary = `[CV ${index}] ${cv.fullName} | ${cv.jobTitle || 'Geen functie'} | Skills: ${cv.skills || 'N/A'} | Ervaring: ${(cv.experience || '').substring(0, 500)}`;
@@ -570,13 +572,9 @@ Geef je antwoord als JSON array met ALLEEN kandidaten die echt geschikt zijn (sc
 Wees STRENG: alleen echte matches op basis van relevante ervaring, skills en functietitel. Een developer moet niet matchen met een sales vacature.
 Antwoord ALLEEN met de JSON array, geen andere tekst.`;
 
-                const response = await anthropic.messages.create({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 2000,
-                    messages: [{ role: 'user', content: prompt }]
-                });
+                const result = await model.generateContent(prompt);
+                const aiResponse = result.response.text().trim();
 
-                const aiResponse = response.content[0].text.trim();
                 // Parse JSON from response
                 const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
                 if (jsonMatch) {
