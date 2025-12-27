@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Dashboard - Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 30px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 14px;
+            width: 300px;
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+        }
+
+        .cv-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .cv-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .cv-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .cv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .cv-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .cv-title {
+            font-size: 14px;
+            color: #667eea;
+        }
+
+        .cv-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .cv-status.sent {
+            background: rgba(46, 196, 182, 0.2);
+            color: #2ec4b6;
+        }
+
+        .cv-status.pending {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .cv-details {
+            margin-bottom: 16px;
+        }
+
+        .cv-detail {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .cv-detail:last-child {
+            border-bottom: none;
+        }
+
+        .cv-detail-icon {
+            width: 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .cv-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-view {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .btn-view:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .cv-date {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 12px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 28px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .modal-section-content {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>CV Dashboard</h1>
+        <div class="header-stats">
+            <div class="stat">
+                <div class="stat-value" id="totalCount">-</div>
+                <div class="stat-label">Totaal CV's</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="todayCount">-</div>
+                <div class="stat-label">Vandaag</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="toolbar">
+            <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
+            <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
+        </div>
+
+        <div id="cvList" class="cv-grid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>CV's laden...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal" id="cvModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalName">CV Details</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let allCVs = [];
+
+        async function loadCVs() {
+            const cvList = document.getElementById('cvList');
+            cvList.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>CV's laden...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/cvs');
+                const result = await response.json();
+
+                if (result.success) {
+                    allCVs = result.data;
+                    renderCVs(allCVs);
+                    updateStats(allCVs);
+                } else {
+                    cvList.innerHTML = `<div class="empty-state"><p>Fout bij laden: ${result.message}</p></div>`;
+                }
+            } catch (error) {
+                cvList.innerHTML = `<div class="empty-state"><p>Fout bij laden: ${error.message}</p></div>`;
+            }
+        }
+
+        function renderCVs(cvs) {
+            const cvList = document.getElementById('cvList');
+
+            if (cvs.length === 0) {
+                cvList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📄</div>
+                        <h2>Nog geen CV's</h2>
+                        <p>Ingediende CV's verschijnen hier</p>
+                    </div>
+                `;
+                return;
+            }
+
+            cvList.innerHTML = cvs.map(cv => `
+                <div class="cv-card">
+                    <div class="cv-header">
+                        <div>
+                            <div class="cv-name">${escapeHtml(cv.fullName)}</div>
+                            <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
+                        </div>
+                        <span class="cv-status ${cv.emailSent ? 'sent' : 'pending'}">
+                            ${cv.emailSent ? 'Verzonden' : 'Pending'}
+                        </span>
+                    </div>
+                    <div class="cv-details">
+                        <div class="cv-detail">
+                            <span class="cv-detail-icon">✉</span>
+                            <span>${escapeHtml(cv.email)}</span>
+                        </div>
+                        ${cv.phone ? `
+                            <div class="cv-detail">
+                                <span class="cv-detail-icon">📱</span>
+                                <span>${escapeHtml(cv.phone)}</span>
+                            </div>
+                        ` : ''}
+                        ${cv.location ? `
+                            <div class="cv-detail">
+                                <span class="cv-detail-icon">📍</span>
+                                <span>${escapeHtml(cv.location)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="cv-actions">
+                        <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
+                        <button class="btn btn-delete" onclick="deleteCV('${cv._id}')">Verwijderen</button>
+                    </div>
+                    <div class="cv-date">Ingediend: ${formatDate(cv.createdAt)}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(cvs) {
+            document.getElementById('totalCount').textContent = cvs.length;
+
+            const today = new Date().toDateString();
+            const todayCount = cvs.filter(cv => new Date(cv.createdAt).toDateString() === today).length;
+            document.getElementById('todayCount').textContent = todayCount;
+        }
+
+        function viewCV(cv) {
+            document.getElementById('modalName').textContent = cv.fullName;
+
+            const sections = [
+                { title: 'Contact', content: `Email: ${cv.email}\nTelefoon: ${cv.phone || '-'}\nLocatie: ${cv.location || '-'}\nGeboortedatum: ${cv.birthDate || '-'}` },
+                { title: 'Samenvatting', content: cv.summary },
+                { title: 'Talen', content: cv.languages },
+                { title: 'Werkervaring', content: cv.experience },
+                { title: 'Opleiding', content: cv.education },
+                { title: 'Vaardigheden', content: cv.skills },
+                { title: 'Prestaties', content: cv.achievements }
+            ].filter(s => s.content);
+
+            document.getElementById('modalBody').innerHTML = sections.map(section => `
+                <div class="modal-section">
+                    <div class="modal-section-title">${section.title}</div>
+                    <div class="modal-section-content">${escapeHtml(section.content)}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('cvModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('cvModal').classList.remove('active');
+        }
+
+        async function deleteCV(id) {
+            if (!confirm('Weet je zeker dat je deze CV wilt verwijderen?')) return;
+
+            try {
+                const response = await fetch(`/api/cvs/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+
+                if (result.success) {
+                    loadCVs();
+                } else {
+                    alert('Fout bij verwijderen: ' + result.message);
+                }
+            } catch (error) {
+                alert('Fout bij verwijderen: ' + error.message);
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('nl-NL', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allCVs.filter(cv =>
+                cv.fullName.toLowerCase().includes(query) ||
+                cv.email.toLowerCase().includes(query)
+            );
+            renderCVs(filtered);
+        });
+
+        // Close modal on outside click
+        document.getElementById('cvModal').addEventListener('click', (e) => {
+            if (e.target.id === 'cvModal') closeModal();
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Initial load
+        loadCVs();
+    </script>
+</body>
+</html>

@@ -20,6 +20,10 @@
   ],
   "routes": [
     {
+      "src": "/admin",
+      "dest": "/admin.html"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/server.js"
     },
