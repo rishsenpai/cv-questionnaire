@@ -38,50 +38,189 @@ const stopwords = new Set([
 
 // Synonym mapping (English <-> Dutch) for job-related terms
 const synonyms = {
+    // === FUNCTIETITELS / JOB TITLES ===
     // Developer/Ontwikkelaar
-    'developer': ['ontwikkelaar', 'programmeur', 'developer'],
-    'ontwikkelaar': ['developer', 'programmeur', 'ontwikkelaar'],
-    'programmeur': ['developer', 'ontwikkelaar', 'programmeur'],
+    'developer': ['ontwikkelaar', 'programmeur', 'developer', 'dev', 'coder'],
+    'ontwikkelaar': ['developer', 'programmeur', 'ontwikkelaar', 'dev', 'coder'],
+    'programmeur': ['developer', 'ontwikkelaar', 'programmeur', 'dev', 'coder'],
+    'dev': ['developer', 'ontwikkelaar', 'programmeur'],
+    'coder': ['developer', 'ontwikkelaar', 'programmeur'],
     // Engineer/Ingenieur
-    'engineer': ['ingenieur', 'engineer'],
-    'ingenieur': ['engineer', 'ingenieur'],
-    // Software
-    'software': ['software', 'applicatie'],
-    // Manager/Beheerder
-    'manager': ['beheerder', 'manager', 'leider'],
-    'beheerder': ['manager', 'beheerder'],
-    // Senior/Junior
-    'senior': ['senior', 'ervaren', 'sr'],
-    'junior': ['junior', 'jr', 'medior'],
-    // Frontend/Backend
-    'frontend': ['frontend', 'front-end', 'ui'],
-    'backend': ['backend', 'back-end', 'server'],
-    'fullstack': ['fullstack', 'full-stack', 'full'],
+    'engineer': ['ingenieur', 'engineer', 'technicus'],
+    'ingenieur': ['engineer', 'ingenieur', 'technicus'],
+    'technicus': ['engineer', 'ingenieur', 'technician'],
+    'technician': ['technicus', 'engineer'],
+    // Manager/Beheerder/Leider
+    'manager': ['beheerder', 'manager', 'leider', 'leidinggevende', 'hoofd', 'directeur'],
+    'beheerder': ['manager', 'beheerder', 'administrator', 'admin'],
+    'leider': ['manager', 'leider', 'lead', 'hoofd', 'leidinggevende'],
+    'leidinggevende': ['manager', 'leider', 'lead', 'supervisor'],
+    'hoofd': ['manager', 'leider', 'lead', 'head', 'chief'],
+    'directeur': ['director', 'manager', 'ceo', 'bestuurder'],
+    'director': ['directeur', 'manager', 'hoofd'],
+    // Senior/Junior/Medior
+    'senior': ['senior', 'ervaren', 'sr', 'experienced', 'lead'],
+    'junior': ['junior', 'jr', 'starter', 'trainee', 'beginnend'],
+    'medior': ['medior', 'mid', 'middle', 'gevorderd'],
+    'trainee': ['junior', 'starter', 'trainee', 'stagiair'],
+    'stagiair': ['trainee', 'intern', 'stagiaire', 'stage'],
+    'intern': ['stagiair', 'trainee', 'stage'],
     // Analyst/Analist
-    'analyst': ['analist', 'analyst'],
+    'analyst': ['analist', 'analyst', 'analyzer'],
     'analist': ['analyst', 'analist'],
     // Designer/Ontwerper
-    'designer': ['ontwerper', 'designer'],
-    'ontwerper': ['designer', 'ontwerper'],
+    'designer': ['ontwerper', 'designer', 'vormgever'],
+    'ontwerper': ['designer', 'ontwerper', 'vormgever'],
+    'vormgever': ['designer', 'ontwerper'],
     // Consultant/Adviseur
-    'consultant': ['adviseur', 'consultant'],
-    'adviseur': ['consultant', 'adviseur'],
-    // Data
-    'data': ['data', 'gegevens'],
-    // Lead/Leider
-    'lead': ['lead', 'leider', 'hoofd'],
-    'leider': ['lead', 'leider'],
+    'consultant': ['adviseur', 'consultant', 'advisor', 'raadgever'],
+    'adviseur': ['consultant', 'adviseur', 'advisor'],
+    'advisor': ['consultant', 'adviseur'],
     // Architect
-    'architect': ['architect', 'ontwerper'],
-    // Tester/QA
-    'tester': ['tester', 'qa', 'test'],
-    'qa': ['tester', 'qa', 'quality'],
-    // DevOps/Cloud
-    'devops': ['devops', 'operations', 'cloud'],
-    'cloud': ['cloud', 'aws', 'azure'],
-    // Scrum/Agile
-    'scrum': ['scrum', 'agile'],
-    'agile': ['agile', 'scrum'],
+    'architect': ['architect', 'solution architect', 'solutions'],
+    // Specialist
+    'specialist': ['specialist', 'expert', 'deskundige', 'professional'],
+    'expert': ['specialist', 'expert', 'deskundige'],
+    'deskundige': ['specialist', 'expert'],
+    // Coordinator
+    'coordinator': ['coordinator', 'coördinator'],
+    'coördinator': ['coordinator', 'coördinator'],
+
+    // === FRONTEND/BACKEND/FULLSTACK ===
+    'frontend': ['frontend', 'front-end', 'front', 'ui', 'client-side', 'clientside'],
+    'backend': ['backend', 'back-end', 'back', 'server-side', 'serverside', 'api'],
+    'fullstack': ['fullstack', 'full-stack', 'full', 'stack'],
+    'webdeveloper': ['webontwikkelaar', 'web developer', 'webdev'],
+    'webontwikkelaar': ['webdeveloper', 'web developer', 'webdev'],
+
+    // === TALEN / LANGUAGES ===
+    'javascript': ['javascript', 'js', 'ecmascript', 'es6', 'node', 'nodejs'],
+    'typescript': ['typescript', 'ts'],
+    'python': ['python', 'py', 'django', 'flask'],
+    'java': ['java', 'jvm', 'spring', 'springboot'],
+    'csharp': ['csharp', 'c#', '.net', 'dotnet', 'asp.net'],
+    'php': ['php', 'laravel', 'symfony', 'wordpress'],
+    'ruby': ['ruby', 'rails', 'rubyonrails'],
+    'golang': ['golang', 'go'],
+    'rust': ['rust', 'rustlang'],
+    'swift': ['swift', 'ios', 'xcode'],
+    'kotlin': ['kotlin', 'android'],
+    'scala': ['scala', 'jvm'],
+    'sql': ['sql', 'mysql', 'postgresql', 'postgres', 'mssql', 'oracle', 'database'],
+    'html': ['html', 'html5', 'markup'],
+    'css': ['css', 'css3', 'sass', 'scss', 'less', 'styling'],
+
+    // === FRAMEWORKS & LIBRARIES ===
+    'react': ['react', 'reactjs', 'react.js', 'redux', 'nextjs', 'next.js'],
+    'angular': ['angular', 'angularjs', 'angular.js'],
+    'vue': ['vue', 'vuejs', 'vue.js', 'nuxt', 'nuxtjs'],
+    'node': ['node', 'nodejs', 'node.js', 'express', 'expressjs'],
+    'spring': ['spring', 'springboot', 'spring boot', 'java'],
+    'django': ['django', 'python', 'flask'],
+    'laravel': ['laravel', 'php', 'symfony'],
+    'dotnet': ['dotnet', '.net', 'asp.net', 'csharp', 'c#'],
+
+    // === DATA & AI ===
+    'data': ['data', 'gegevens', 'informatie', 'analytics'],
+    'database': ['database', 'databank', 'db', 'sql', 'nosql'],
+    'machinelearning': ['machine learning', 'ml', 'ai', 'artificial intelligence'],
+    'ai': ['ai', 'artificial intelligence', 'kunstmatige intelligentie', 'machine learning', 'ml'],
+    'datascience': ['data science', 'datascience', 'data scientist', 'analytics'],
+    'bigdata': ['big data', 'bigdata', 'hadoop', 'spark'],
+    'analytics': ['analytics', 'analyse', 'analysis', 'bi', 'business intelligence'],
+    'bi': ['bi', 'business intelligence', 'analytics', 'reporting'],
+
+    // === CLOUD & DEVOPS ===
+    'devops': ['devops', 'dev ops', 'operations', 'sre', 'platform'],
+    'cloud': ['cloud', 'aws', 'azure', 'gcp', 'google cloud'],
+    'aws': ['aws', 'amazon', 'amazon web services', 'cloud'],
+    'azure': ['azure', 'microsoft azure', 'cloud'],
+    'gcp': ['gcp', 'google cloud', 'google cloud platform', 'cloud'],
+    'kubernetes': ['kubernetes', 'k8s', 'container', 'docker'],
+    'docker': ['docker', 'container', 'containerization', 'kubernetes'],
+    'cicd': ['cicd', 'ci/cd', 'continuous integration', 'continuous deployment', 'jenkins', 'gitlab'],
+    'linux': ['linux', 'unix', 'ubuntu', 'centos', 'redhat'],
+    'windows': ['windows', 'microsoft', 'server'],
+
+    // === TESTING / QA ===
+    'tester': ['tester', 'qa', 'test', 'quality', 'testautomation'],
+    'qa': ['qa', 'quality assurance', 'tester', 'testing', 'kwaliteit'],
+    'testing': ['testing', 'testen', 'test', 'qa'],
+    'automation': ['automation', 'automatisering', 'automated', 'geautomatiseerd'],
+    'selenium': ['selenium', 'testing', 'testautomation'],
+
+    // === AGILE & PROJECTMANAGEMENT ===
+    'scrum': ['scrum', 'agile', 'sprint', 'kanban'],
+    'agile': ['agile', 'scrum', 'kanban', 'lean'],
+    'kanban': ['kanban', 'agile', 'lean'],
+    'projectmanager': ['projectmanager', 'project manager', 'pm', 'projectleider'],
+    'projectleider': ['projectleider', 'projectmanager', 'project manager', 'pm'],
+    'productowner': ['product owner', 'po', 'productmanager'],
+    'scrummaster': ['scrum master', 'scrummaster', 'agile coach'],
+
+    // === SECURITY ===
+    'security': ['security', 'beveiliging', 'cybersecurity', 'infosec'],
+    'beveiliging': ['security', 'beveiliging', 'cybersecurity'],
+    'cybersecurity': ['cybersecurity', 'security', 'infosec', 'beveiliging'],
+
+    // === NETWERK & SYSTEEM ===
+    'netwerk': ['netwerk', 'network', 'networking'],
+    'network': ['network', 'netwerk', 'networking', 'infrastructure'],
+    'systeem': ['systeem', 'system', 'systems'],
+    'system': ['system', 'systeem', 'systems'],
+    'infrastructure': ['infrastructure', 'infrastructuur', 'infra'],
+    'infrastructuur': ['infrastructuur', 'infrastructure', 'infra'],
+    'systeembeheer': ['systeembeheer', 'system administration', 'sysadmin'],
+    'sysadmin': ['sysadmin', 'systeembeheer', 'system administrator'],
+
+    // === UX/UI ===
+    'ux': ['ux', 'user experience', 'gebruikerservaring', 'usability'],
+    'ui': ['ui', 'user interface', 'gebruikersinterface', 'frontend'],
+    'uxdesigner': ['ux designer', 'ux ontwerper', 'user experience designer'],
+    'uidesigner': ['ui designer', 'ui ontwerper', 'user interface designer'],
+
+    // === BUSINESS & FINANCE ===
+    'finance': ['finance', 'financieel', 'financial', 'financiën'],
+    'financieel': ['financieel', 'finance', 'financial'],
+    'accounting': ['accounting', 'boekhouding', 'accountant'],
+    'boekhouding': ['boekhouding', 'accounting', 'administratie'],
+    'sales': ['sales', 'verkoop', 'commercial', 'commercieel'],
+    'verkoop': ['verkoop', 'sales', 'commercial'],
+    'marketing': ['marketing', 'marketeer', 'digital marketing'],
+    'hr': ['hr', 'human resources', 'personeelszaken', 'recruitment'],
+    'recruitment': ['recruitment', 'werving', 'hr', 'recruiter'],
+    'administratie': ['administratie', 'administration', 'admin', 'office'],
+
+    // === SUPPORT & SERVICE ===
+    'support': ['support', 'ondersteuning', 'helpdesk', 'service desk'],
+    'helpdesk': ['helpdesk', 'support', 'service desk', 'it support'],
+    'klantenservice': ['klantenservice', 'customer service', 'klantcontact'],
+    'customerservice': ['customer service', 'klantenservice', 'support'],
+
+    // === OPLEIDING / EDUCATION ===
+    'hbo': ['hbo', 'bachelor', 'hogeschool'],
+    'wo': ['wo', 'master', 'universiteit', 'university', 'academisch'],
+    'mbo': ['mbo', 'beroepsonderwijs'],
+    'bachelor': ['bachelor', 'hbo', 'bsc', 'ba'],
+    'master': ['master', 'wo', 'msc', 'ma'],
+    'phd': ['phd', 'doctor', 'doctorate', 'promotie'],
+
+    // === SOFT SKILLS ===
+    'communicatie': ['communicatie', 'communication', 'communicatief'],
+    'communication': ['communication', 'communicatie'],
+    'leiderschap': ['leiderschap', 'leadership', 'leidinggevend'],
+    'leadership': ['leadership', 'leiderschap'],
+    'teamwork': ['teamwork', 'samenwerken', 'teamplayer', 'teamspeler'],
+    'samenwerken': ['samenwerken', 'teamwork', 'collaboration'],
+    'probleemoplossend': ['probleemoplossend', 'problem solving', 'analytisch'],
+    'analytisch': ['analytisch', 'analytical', 'analyse'],
+
+    // === CONTRACTVORMEN ===
+    'fulltime': ['fulltime', 'full-time', 'voltijd', 'vast'],
+    'parttime': ['parttime', 'part-time', 'deeltijd'],
+    'freelance': ['freelance', 'zzp', 'zelfstandig', 'contractor', 'interim'],
+    'zzp': ['zzp', 'freelance', 'zelfstandig', 'contractor'],
+    'interim': ['interim', 'tijdelijk', 'freelance', 'contractor'],
 };
 
 const app = express();
