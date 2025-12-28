@@ -419,6 +419,24 @@ async function requireEmployer(req, res, next) {
     }
 }
 
+// Helper function to expand search terms with synonyms
+function expandSearchWithSynonyms(searchText) {
+    if (!searchText) return null;
+
+    const words = searchText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const allTerms = new Set();
+
+    words.forEach(word => {
+        allTerms.add(word);
+        if (synonyms[word]) {
+            synonyms[word].forEach(syn => allTerms.add(syn));
+        }
+    });
+
+    // Create regex pattern: (term1|term2|term3)
+    return Array.from(allTerms).join('|');
+}
+
 // Get CVs for employers (with filtering and hidden fields)
 app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
     try {
@@ -427,19 +445,21 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         const { search, jobTitle, location } = req.query;
         let query = {};
 
-        // Build search query - search in fullText (contains all PDF content)
+        // Build search query with synonym expansion
         if (search) {
-            const searchRegex = new RegExp(search, 'i');
+            const expandedSearch = expandSearchWithSynonyms(search);
+            const searchRegex = new RegExp(expandedSearch, 'i');
             query.$or = [
                 { fullText: searchRegex },  // Search entire PDF content
-                { fullName: searchRegex },
+                { fullName: new RegExp(search, 'i') }, // Name: exact search only
                 { jobTitle: searchRegex },
                 { skills: searchRegex }
             ];
         }
 
         if (jobTitle) {
-            query.jobTitle = new RegExp(jobTitle, 'i');
+            const expandedJobTitle = expandSearchWithSynonyms(jobTitle);
+            query.jobTitle = new RegExp(expandedJobTitle, 'i');
         }
 
         if (location) {

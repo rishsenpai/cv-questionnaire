@@ -429,11 +429,19 @@
             border-radius: 16px;
             padding: 24px;
             transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 200px;
         }
 
         .cv-card:hover {
             background: rgba(255, 255, 255, 0.08);
             transform: translateY(-2px);
+        }
+
+        .cv-card .cv-actions {
+            margin-top: auto;
+            padding-top: 16px;
         }
 
         .cv-name {
