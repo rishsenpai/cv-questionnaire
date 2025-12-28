@@ -1163,6 +1163,7 @@
                 const result = await response.json();
                 if (response.ok) {
                     currentPlan = result.plan || 'basic';
+                    document.getElementById('companyName').textContent = result.companyName || 'Bedrijf';
                     showPortal();
                 } else {
                     localStorage.removeItem('employerToken');

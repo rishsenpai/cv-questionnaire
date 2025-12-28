@@ -384,7 +384,7 @@ app.post('/api/employer/verify', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Account inactive' });
         }
 
-        res.json({ success: true, plan: employer.plan || 'basic' });
+        res.json({ success: true, plan: employer.plan || 'basic', companyName: employer.companyName });
     } catch (error) {
         console.error('Verify error:', error);
         res.status(500).json({ success: false, message: 'Verification failed' });
