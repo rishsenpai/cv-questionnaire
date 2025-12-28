@@ -615,16 +615,44 @@ app.get('/api/employer/cvs/:id/download', requireEmployer, async (req, res) => {
             return res.status(404).json({ success: false, message: 'CV not found' });
         }
 
-        if (!cv.fileData) {
-            return res.status(404).json({ success: false, message: 'No file attached' });
+        // If there's an uploaded file, return it
+        if (cv.fileData) {
+            return res.json({
+                success: true,
+                data: {
+                    fileName: cv.fileName,
+                    fileType: cv.fileType,
+                    fileData: cv.fileData
+                }
+            });
         }
+
+        // Otherwise, generate a Word document from the questionnaire data
+        const formData = {
+            fullName: cv.fullName,
+            email: cv.email,
+            phone: cv.phone,
+            location: cv.location,
+            birthDate: cv.birthDate,
+            jobTitle: cv.jobTitle,
+            summary: cv.summary,
+            languages: cv.languages,
+            experience: cv.experience,
+            education: cv.education,
+            skills: cv.skills,
+            achievements: cv.achievements
+        };
+
+        const wordDoc = generateWordCV(formData);
+        const wordBuffer = await Packer.toBuffer(wordDoc);
+        const base64Data = wordBuffer.toString('base64');
 
         res.json({
             success: true,
             data: {
-                fileName: cv.fileName,
-                fileType: cv.fileType,
-                fileData: cv.fileData
+                fileName: `CV_${cv.fullName?.replace(/\s+/g, '_') || 'Applicant'}.docx`,
+                fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                fileData: base64Data
             }
         });
 
@@ -1959,20 +1987,44 @@ app.get('/api/cvs/:id/download', requireAdmin, async (req, res) => {
             });
         }
 
-        if (!cv.fileData) {
-            return res.status(404).json({
-                success: false,
-                message: 'No file attached to this CV'
+        // If there's an uploaded file, return it
+        if (cv.fileData) {
+            return res.json({
+                success: true,
+                data: {
+                    fileName: cv.fileName,
+                    fileType: cv.fileType,
+                    fileData: cv.fileData
+                }
             });
         }
 
-        // Return file data for download
+        // Otherwise, generate a Word document from the questionnaire data
+        const formData = {
+            fullName: cv.fullName,
+            email: cv.email,
+            phone: cv.phone,
+            location: cv.location,
+            birthDate: cv.birthDate,
+            jobTitle: cv.jobTitle,
+            summary: cv.summary,
+            languages: cv.languages,
+            experience: cv.experience,
+            education: cv.education,
+            skills: cv.skills,
+            achievements: cv.achievements
+        };
+
+        const wordDoc = generateWordCV(formData);
+        const wordBuffer = await Packer.toBuffer(wordDoc);
+        const base64Data = wordBuffer.toString('base64');
+
         res.json({
             success: true,
             data: {
-                fileName: cv.fileName,
-                fileType: cv.fileType,
-                fileData: cv.fileData
+                fileName: `CV_${cv.fullName?.replace(/\s+/g, '_') || 'Applicant'}.docx`,
+                fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                fileData: base64Data
             }
         });
 

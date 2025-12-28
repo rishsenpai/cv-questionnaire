@@ -1390,7 +1390,7 @@
                         ${showMatchScore && cv.matchScore ? `<div class="match-score">${cv.matchScore}% match</div>` : ''}
                         <div class="cv-name">${escapeHtml(cv.fullName)}</div>
                         <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
-                        ${cv.fileName ? `<div class="cv-file-badge">📄 CV bestand beschikbaar</div>` : ''}
+                        <div class="cv-file-badge">📄 CV download beschikbaar</div>
                         <div class="cv-info">
                             <div class="cv-info-item">
                                 <span>📧</span> ${escapeHtml(cv.email)}
@@ -1415,9 +1415,7 @@
                         ${cv.summary ? `<div class="cv-summary">${escapeHtml(cv.summary)}</div>` : ''}
                         <div class="cv-actions">
                             <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
-                            ${cv.fileName ?
-                                `<button class="btn btn-download" onclick="downloadCV('${cv._id}')">Download CV</button>` : ''
-                            }
+                            <button class="btn btn-download" onclick="downloadCV('${cv._id}')">Download CV</button>
                         </div>
                     </div>
                 `;

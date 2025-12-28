@@ -1494,7 +1494,8 @@
                         ` : ''}
                     </div>
                     <div class="cv-actions">
-                        ${cv.fileName ? `<button class="btn btn-download" onclick="downloadCV('${cv._id}')">Downloaden</button>` : `<button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>`}
+                        <button class="btn btn-download" onclick="downloadCV('${cv._id}')">Downloaden</button>
+                        <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
                         <button class="btn btn-delete" onclick="deleteCV('${cv._id}')">Verwijderen</button>
                     </div>
                     <div class="cv-date">Ingediend: ${formatDate(cv.createdAt)}</div>
