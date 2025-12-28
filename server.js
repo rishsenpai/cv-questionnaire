@@ -419,22 +419,13 @@ async function requireEmployer(req, res, next) {
     }
 }
 
-// Helper function to expand search terms with synonyms
-function expandSearchWithSynonyms(searchText) {
-    if (!searchText) return null;
-
-    const words = searchText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    const allTerms = new Set();
-
-    words.forEach(word => {
-        allTerms.add(word);
-        if (synonyms[word]) {
-            synonyms[word].forEach(syn => allTerms.add(syn));
-        }
-    });
-
-    // Create regex pattern: (term1|term2|term3)
-    return Array.from(allTerms).join('|');
+// Helper function to expand a single word with its synonyms
+function getWordWithSynonyms(word) {
+    const terms = new Set([word]);
+    if (synonyms[word]) {
+        synonyms[word].forEach(syn => terms.add(syn));
+    }
+    return Array.from(terms);
 }
 
 // Get CVs for employers (with filtering and hidden fields)
@@ -445,21 +436,44 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         const { search, jobTitle, location } = req.query;
         let query = {};
 
-        // Build search query with synonym expansion
+        // Build search query with synonym expansion - ALL terms must match (AND logic)
         if (search) {
-            const expandedSearch = expandSearchWithSynonyms(search);
-            const searchRegex = new RegExp(expandedSearch, 'i');
-            query.$or = [
-                { fullText: searchRegex },  // Search entire PDF content
-                { fullName: new RegExp(search, 'i') }, // Name: exact search only
-                { jobTitle: searchRegex },
-                { skills: searchRegex }
-            ];
+            const words = search.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+
+            if (words.length > 0) {
+                // Each word (with its synonyms) must appear in the CV
+                const andConditions = words.map(word => {
+                    const synonymTerms = getWordWithSynonyms(word);
+                    const wordPattern = synonymTerms.join('|');
+                    const wordRegex = new RegExp(wordPattern, 'i');
+
+                    return {
+                        $or: [
+                            { fullText: wordRegex },
+                            { jobTitle: wordRegex },
+                            { skills: wordRegex }
+                        ]
+                    };
+                });
+
+                // Also allow exact name search
+                query.$or = [
+                    { $and: andConditions },
+                    { fullName: new RegExp(search, 'i') }
+                ];
+            }
         }
 
         if (jobTitle) {
-            const expandedJobTitle = expandSearchWithSynonyms(jobTitle);
-            query.jobTitle = new RegExp(expandedJobTitle, 'i');
+            const words = jobTitle.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+            if (words.length > 0) {
+                const andConditions = words.map(word => {
+                    const synonymTerms = getWordWithSynonyms(word);
+                    const wordPattern = synonymTerms.join('|');
+                    return { jobTitle: new RegExp(wordPattern, 'i') };
+                });
+                query.$and = query.$and ? [...query.$and, ...andConditions] : andConditions;
+            }
         }
 
         if (location) {
