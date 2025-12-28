@@ -452,28 +452,89 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         const plan = req.employer.plan || 'basic';
         const hasFullAccess = plan === 'advanced' || plan === 'premium';
 
-        // Helper function to extract years of experience from experience text
-        const extractYearsExperience = (experience) => {
-            if (!experience) return null;
-            const yearMatches = experience.match(/\b(19|20)\d{2}\b/g);
-            if (yearMatches && yearMatches.length >= 2) {
-                const years = yearMatches.map(y => parseInt(y)).sort((a, b) => a - b);
-                const oldest = years[0];
-                const newest = years[years.length - 1];
-                const currentYear = new Date().getFullYear();
-                const totalYears = (newest > currentYear ? currentYear : newest) - oldest;
-                if (totalYears > 0 && totalYears < 50) {
-                    return totalYears;
+        // Combine search terms for relevant experience calculation
+        const searchTerms = [search, jobTitle].filter(Boolean).join(' ').toLowerCase();
+
+        // Expand search terms with synonyms
+        const expandedSearchTerms = new Set();
+        searchTerms.split(/\s+/).forEach(term => {
+            if (term.length > 2) {
+                expandedSearchTerms.add(term);
+                if (synonyms[term]) {
+                    synonyms[term].forEach(syn => expandedSearchTerms.add(syn));
                 }
             }
-            return null;
+        });
+
+        // Helper function to extract RELEVANT years of experience based on search criteria
+        const extractRelevantYearsExperience = (experience, jobTitleField) => {
+            if (!experience && !jobTitleField) return null;
+
+            const fullText = `${jobTitleField || ''} ${experience || ''}`;
+
+            // If no search terms, calculate total years
+            if (expandedSearchTerms.size === 0) {
+                const yearMatches = fullText.match(/\b(19|20)\d{2}\b/g);
+                if (yearMatches && yearMatches.length >= 2) {
+                    const years = yearMatches.map(y => parseInt(y)).sort((a, b) => a - b);
+                    const totalYears = Math.min(new Date().getFullYear(), years[years.length - 1]) - years[0];
+                    return (totalYears > 0 && totalYears < 50) ? totalYears : null;
+                }
+                return null;
+            }
+
+            // Split experience into job entries (typically separated by year patterns)
+            // Look for patterns like "2019 - 2023" or "2019 - Present" or "2019 - heden"
+            const jobEntryPattern = /(.{10,500}?)(\b(19|20)\d{2}\b\s*[-–—]\s*(\b(19|20)\d{2}\b|[Pp]resent|[Hh]eden|[Nn]u|[Cc]urrent))/g;
+            const entries = [];
+            let match;
+
+            while ((match = jobEntryPattern.exec(fullText)) !== null) {
+                const entryText = match[1] + match[2];
+                const yearMatch = entryText.match(/\b(19|20)(\d{2})\b\s*[-–—]\s*(\b(19|20)(\d{2})\b|[Pp]resent|[Hh]eden|[Nn]u|[Cc]urrent)/);
+                if (yearMatch) {
+                    const startYear = parseInt(yearMatch[1] + yearMatch[2]);
+                    let endYear = new Date().getFullYear();
+                    if (yearMatch[4] && yearMatch[5]) {
+                        endYear = parseInt(yearMatch[4] + yearMatch[5]);
+                    }
+                    entries.push({ text: entryText.toLowerCase(), startYear, endYear });
+                }
+            }
+
+            // If no structured entries found, fall back to checking if search terms appear anywhere
+            if (entries.length === 0) {
+                const textLower = fullText.toLowerCase();
+                const hasRelevantTerms = Array.from(expandedSearchTerms).some(term => textLower.includes(term));
+                if (hasRelevantTerms) {
+                    const yearMatches = fullText.match(/\b(19|20)\d{2}\b/g);
+                    if (yearMatches && yearMatches.length >= 2) {
+                        const years = yearMatches.map(y => parseInt(y)).sort((a, b) => a - b);
+                        const totalYears = Math.min(new Date().getFullYear(), years[years.length - 1]) - years[0];
+                        return (totalYears > 0 && totalYears < 50) ? totalYears : null;
+                    }
+                }
+                return null;
+            }
+
+            // Calculate years only from relevant entries
+            let relevantYears = 0;
+            entries.forEach(entry => {
+                const hasRelevantTerms = Array.from(expandedSearchTerms).some(term => entry.text.includes(term));
+                if (hasRelevantTerms) {
+                    const years = Math.min(new Date().getFullYear(), entry.endYear) - entry.startYear;
+                    if (years > 0) relevantYears += years;
+                }
+            });
+
+            return relevantYears > 0 ? relevantYears : null;
         };
 
         const sanitizedCVs = cvs.map(cv => {
             const cvObj = cv.toObject();
 
-            // Calculate years of experience BEFORE hiding the experience text
-            cvObj.yearsExperience = extractYearsExperience(cvObj.experience);
+            // Calculate RELEVANT years of experience based on search criteria
+            cvObj.yearsExperience = extractRelevantYearsExperience(cvObj.experience, cvObj.jobTitle);
 
             if (!hasFullAccess) {
                 // Basic plan: hide contact info, name details, and work history
