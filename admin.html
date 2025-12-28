@@ -1495,7 +1495,7 @@
                     </div>
                     <div class="cv-actions">
                         <button class="btn btn-download" onclick="downloadCV('${cv._id}')">Downloaden</button>
-                        <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
+                        <button class="btn btn-view" onclick="viewCV('${cv._id}')">Bekijken</button>
                         <button class="btn btn-delete" onclick="deleteCV('${cv._id}')">Verwijderen</button>
                     </div>
                     <div class="cv-date">Ingediend: ${formatDate(cv.createdAt)}</div>
@@ -1511,7 +1511,14 @@
             document.getElementById('todayCount').textContent = todayCount;
         }
 
-        function viewCV(cv) {
+        function viewCV(cvId) {
+            // Find CV in the loaded data
+            const cv = allCVs.find(c => c._id === cvId);
+            if (!cv) {
+                alert('CV niet gevonden');
+                return;
+            }
+
             document.getElementById('modalName').textContent = cv.fullName;
 
             const sections = [

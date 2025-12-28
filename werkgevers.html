@@ -1414,7 +1414,7 @@
                         ` : ''}
                         ${cv.summary ? `<div class="cv-summary">${escapeHtml(cv.summary)}</div>` : ''}
                         <div class="cv-actions">
-                            <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
+                            <button class="btn btn-view" onclick="viewCV('${cv._id}')">Bekijken</button>
                             <button class="btn btn-download" onclick="downloadCV('${cv._id}')">Download CV</button>
                         </div>
                     </div>
@@ -1422,10 +1422,17 @@
             }).join('');
         }
 
-        function viewCV(cv) {
+        function viewCV(cvId) {
             // Block viewing for basic users
             if (currentPlan === 'basic') {
                 alert('Upgrade naar Advanced om CV details te bekijken');
+                return;
+            }
+
+            // Find CV in the loaded data
+            const cv = allCVs.find(c => c._id === cvId);
+            if (!cv) {
+                alert('CV niet gevonden');
                 return;
             }
 
