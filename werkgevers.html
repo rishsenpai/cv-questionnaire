@@ -207,30 +207,30 @@
         /* Tooltip for disabled tabs */
         .tab-btn .tooltip {
             visibility: hidden;
-            background: rgba(168, 85, 247, 0.95);
+            background: #a855f7;
             color: #fff;
             text-align: center;
             border-radius: 8px;
             padding: 10px 14px;
             position: absolute;
-            z-index: 100;
-            bottom: 125%;
+            z-index: 1000;
+            top: 120%;
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
             font-size: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
 
         .tab-btn .tooltip::after {
             content: "";
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 50%;
             margin-left: -6px;
             border-width: 6px;
             border-style: solid;
-            border-color: rgba(168, 85, 247, 0.95) transparent transparent transparent;
+            border-color: transparent transparent #a855f7 transparent;
         }
 
         .tab-btn.disabled:hover .tooltip {
