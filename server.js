@@ -629,7 +629,7 @@ Antwoord ALLEEN met JSON array.`;
                     matchReason: matchedKeywords.length > 0 ? `Matcht op: ${matchedKeywords.slice(0, 5).join(', ')}` : ''
                 };
             })
-            .filter(cv => cv.matchScore >= 25)
+            .filter(cv => cv.matchScore >= 60)
             .sort((a, b) => b.matchScore - a.matchScore)
             .slice(0, 15);
         }
