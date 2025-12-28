@@ -194,6 +194,49 @@
             color: #fff;
         }
 
+        .tab-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .tab-btn.disabled:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Tooltip for disabled tabs */
+        .tab-btn .tooltip {
+            visibility: hidden;
+            background: rgba(168, 85, 247, 0.95);
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 10px 14px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .tab-btn .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: rgba(168, 85, 247, 0.95) transparent transparent transparent;
+        }
+
+        .tab-btn.disabled:hover .tooltip {
+            visibility: visible;
+        }
+
         .tab-content {
             display: none;
         }
@@ -711,10 +754,13 @@
                 <button class="upgrade-btn">Upgrade Nu</button>
             </div>
 
-            <!-- Tabs (only for premium users) -->
-            <div class="tabs" id="tabsContainer" style="display: none;">
+            <!-- Tabs -->
+            <div class="tabs" id="tabsContainer">
                 <button class="tab-btn active" onclick="switchTab('search')">Kandidaten Zoeken</button>
-                <button class="tab-btn" onclick="switchTab('vacancies')">Vacatures & Matching</button>
+                <button class="tab-btn" id="vacanciesTabBtn" onclick="switchTab('vacancies')">
+                    Vacatures & Matching
+                    <span class="tooltip">🔒 Premium abonnement vereist</span>
+                </button>
             </div>
 
             <!-- Search Tab -->
@@ -852,7 +898,7 @@
         function updatePaymentUI() {
             const statusEl = document.getElementById('paymentStatus');
             const bannerEl = document.getElementById('upgradeBanner');
-            const tabsEl = document.getElementById('tabsContainer');
+            const vacanciesTabBtn = document.getElementById('vacanciesTabBtn');
 
             const planLabels = {
                 basic: 'Basic',
@@ -863,8 +909,12 @@
             statusEl.textContent = planLabels[currentPlan];
             statusEl.className = `payment-status ${currentPlan}`;
 
-            // Show tabs only for premium users
-            tabsEl.style.display = isPremium() ? 'flex' : 'none';
+            // Enable/disable vacancies tab based on plan
+            if (isPremium()) {
+                vacanciesTabBtn.classList.remove('disabled');
+            } else {
+                vacanciesTabBtn.classList.add('disabled');
+            }
 
             // Upgrade banner
             if (currentPlan === 'basic') {
@@ -882,6 +932,11 @@
 
         // Tab switching
         function switchTab(tab) {
+            // Block vacancies tab for non-premium users
+            if (tab === 'vacancies' && !isPremium()) {
+                return; // Do nothing, tooltip will show on hover
+            }
+
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
@@ -889,7 +944,7 @@
                 document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
                 document.getElementById('searchTab').classList.add('active');
             } else {
-                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('vacanciesTabBtn').classList.add('active');
                 document.getElementById('vacanciesTab').classList.add('active');
                 loadVacancies();
             }
