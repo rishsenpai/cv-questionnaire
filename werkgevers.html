@@ -1080,8 +1080,28 @@
             }
         }
 
+        // Extract years of experience from experience text
+        function extractYearsExperience(experience) {
+            if (!experience) return null;
+
+            // Look for year patterns like "2019 - 2023" or "2015 - Present"
+            const yearMatches = experience.match(/\b(19|20)\d{2}\b/g);
+            if (yearMatches && yearMatches.length >= 2) {
+                const years = yearMatches.map(y => parseInt(y)).sort((a, b) => a - b);
+                const oldest = years[0];
+                const newest = years[years.length - 1];
+                const currentYear = new Date().getFullYear();
+                const totalYears = (newest > currentYear ? currentYear : newest) - oldest;
+                if (totalYears > 0 && totalYears < 50) {
+                    return totalYears;
+                }
+            }
+            return null;
+        }
+
         function renderCVs(cvs, showMatchScore = false) {
             const cvList = document.getElementById(showMatchScore ? 'matchList' : 'cvList');
+            const isBasic = currentPlan === 'basic';
 
             if (cvs.length === 0) {
                 cvList.innerHTML = `
@@ -1093,9 +1113,32 @@
                 return;
             }
 
-            cvList.innerHTML = cvs.map(cv => {
+            cvList.innerHTML = cvs.map((cv, index) => {
                 const skills = cv.skills ? cv.skills.split(',').slice(0, 4).map(s => s.trim()) : [];
+                const yearsExp = extractYearsExperience(cv.experience);
 
+                // Basic plan: only show job title and years experience
+                if (isBasic) {
+                    return `
+                        <div class="cv-card">
+                            ${showMatchScore && cv.matchScore ? `<div class="match-score">${cv.matchScore}% match</div>` : ''}
+                            <div class="cv-name" style="color: rgba(255,255,255,0.4);">Kandidaat #${index + 1}</div>
+                            <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
+                            ${yearsExp ? `
+                                <div class="cv-info">
+                                    <div class="cv-info-item">
+                                        <span>⏱️</span> ${yearsExp}+ jaar ervaring
+                                    </div>
+                                </div>
+                            ` : ''}
+                            <div class="cv-actions">
+                                <button class="btn btn-locked" style="flex: 1;">🔒 Upgrade voor details</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Advanced/Premium: full view
                 return `
                     <div class="cv-card">
                         ${showMatchScore && cv.matchScore ? `<div class="match-score">${cv.matchScore}% match</div>` : ''}
@@ -1103,12 +1146,17 @@
                         <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
                         ${cv.fileName ? `<div class="cv-file-badge">📄 CV bestand beschikbaar</div>` : ''}
                         <div class="cv-info">
-                            <div class="cv-info-item ${!hasFullAccess() ? 'locked' : ''}">
+                            <div class="cv-info-item">
                                 <span>📧</span> ${escapeHtml(cv.email)}
                             </div>
-                            <div class="cv-info-item ${!hasFullAccess() ? 'locked' : ''}">
+                            <div class="cv-info-item">
                                 <span>📍</span> ${escapeHtml(cv.location || 'Niet opgegeven')}
                             </div>
+                            ${yearsExp ? `
+                                <div class="cv-info-item">
+                                    <span>⏱️</span> ${yearsExp}+ jaar ervaring
+                                </div>
+                            ` : ''}
                         </div>
                         ${skills.length > 0 ? `
                             <div class="cv-skills">
@@ -1121,10 +1169,9 @@
                         ${cv.summary ? `<div class="cv-summary">${escapeHtml(cv.summary)}</div>` : ''}
                         <div class="cv-actions">
                             <button class="btn btn-view" onclick='viewCV(${JSON.stringify(cv).replace(/'/g, "\\'")})'>Bekijken</button>
-                            ${cv.fileName ? (hasFullAccess() ?
-                                `<button class="btn btn-download" onclick="downloadCV('${cv._id}')">Download CV</button>` :
-                                `<button class="btn btn-locked">🔒 Advanced</button>`
-                            ) : ''}
+                            ${cv.fileName ?
+                                `<button class="btn btn-download" onclick="downloadCV('${cv._id}')">Download CV</button>` : ''
+                            }
                         </div>
                     </div>
                 `;
@@ -1132,6 +1179,12 @@
         }
 
         function viewCV(cv) {
+            // Block viewing for basic users
+            if (currentPlan === 'basic') {
+                alert('Upgrade naar Advanced om CV details te bekijken');
+                return;
+            }
+
             document.getElementById('modalName').textContent = cv.fullName;
 
             let sections = [];
