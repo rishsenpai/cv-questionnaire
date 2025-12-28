@@ -644,6 +644,104 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
     }
 });
 
+// === ADMIN: Test Matching (for testing TF-IDF without creating vacancy) ===
+app.post('/api/admin/test-matching', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const { vacancyText } = req.body;
+
+        if (!vacancyText || vacancyText.trim().length < 3) {
+            return res.status(400).json({
+                success: false,
+                message: 'Voer een vacature tekst in (minimaal 3 karakters)'
+            });
+        }
+
+        const cvs = await CV.find().select('-fileData');
+        console.log('Test Matching - Processing', cvs.length, 'CVs');
+
+        // Helper function to clean and tokenize text
+        const tokenize = (text) => {
+            return (text || '')
+                .toLowerCase()
+                .replace(/[^a-zA-Z0-9\s]/g, ' ')
+                .split(/\s+/)
+                .filter(word => word.length > 2 && !stopwords.has(word));
+        };
+
+        // Create TF-IDF instance
+        const tfidf = new TfIdf();
+
+        // Add vacancy as first document (index 0)
+        const vacancyTokens = tokenize(vacancyText);
+        tfidf.addDocument(vacancyTokens);
+
+        // Add all CVs
+        const cvTexts = cvs.map(cv => {
+            const text = `${cv.jobTitle || ''} ${cv.jobTitle || ''} ${cv.skills || ''} ${cv.skills || ''} ${cv.fullText || ''} ${cv.experience || ''}`;
+            return tokenize(text);
+        });
+        cvTexts.forEach(tokens => tfidf.addDocument(tokens));
+
+        // Get vacancy's important terms
+        const vacancyTerms = [];
+        tfidf.listTerms(0).slice(0, 30).forEach(item => {
+            vacancyTerms.push({ term: item.term, tfidf: item.tfidf });
+        });
+
+        // Calculate match scores for each CV
+        const matchedCVs = cvs.map((cv, index) => {
+            const cvDocIndex = index + 1;
+            let score = 0;
+            const matchedTerms = [];
+
+            vacancyTerms.forEach(vacTerm => {
+                const cvTfidf = tfidf.tfidf(vacTerm.term, cvDocIndex);
+                if (cvTfidf > 0) {
+                    score += Math.min(vacTerm.tfidf, cvTfidf);
+                    matchedTerms.push(vacTerm.term);
+                }
+            });
+
+            // Bonus for job title match (extract title from first line of vacancyText)
+            const vacancyTitle = vacancyText.split('\n')[0].toLowerCase();
+            const cvTitle = (cv.jobTitle || '').toLowerCase();
+            const titleWords = tokenize(vacancyTitle);
+            const cvTitleWords = tokenize(cvTitle);
+            const titleOverlap = titleWords.filter(w => cvTitleWords.includes(w)).length;
+            if (titleOverlap > 0) {
+                score *= (1 + (titleOverlap * 0.3));
+            }
+
+            const maxPossibleScore = vacancyTerms.reduce((sum, t) => sum + t.tfidf, 0) * 1.5;
+            const normalizedScore = Math.min(100, Math.round((score / maxPossibleScore) * 100));
+
+            return {
+                _id: cv._id,
+                fullName: cv.fullName,
+                jobTitle: cv.jobTitle,
+                skills: cv.skills,
+                location: cv.location,
+                matchScore: normalizedScore,
+                matchedTerms: matchedTerms.slice(0, 8)
+            };
+        })
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 20); // Show top 20 for testing
+
+        res.json({
+            success: true,
+            vacancyTerms: vacancyTerms.slice(0, 15).map(t => t.term),
+            totalCVs: cvs.length,
+            matches: matchedCVs
+        });
+
+    } catch (error) {
+        console.error('Test matching error:', error);
+        res.status(500).json({ success: false, message: 'Test matching failed' });
+    }
+});
+
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
     service: 'gmail', // or your email provider

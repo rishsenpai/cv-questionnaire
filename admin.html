@@ -849,6 +849,115 @@
             transition: width 0.3s ease;
             width: 0%;
         }
+
+        /* Test Matching Styles */
+        .test-matching-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .test-matching-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .test-matching-form {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .test-matching-results {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .test-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .test-terms {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .test-term {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .test-match-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .test-match-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .test-match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .test-match-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .test-match-title {
+            font-size: 13px;
+            color: #667eea;
+            margin-top: 4px;
+        }
+
+        .test-match-score {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2ec4b6;
+        }
+
+        .test-match-details {
+            margin-top: 12px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .score-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #2ec4b6);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -889,6 +998,7 @@
             <div class="tabs">
                 <button class="tab-btn active" onclick="switchTab('cvs')">CV's</button>
                 <button class="tab-btn" onclick="switchTab('employers')">Werkgevers</button>
+                <button class="tab-btn" onclick="switchTab('testMatching')">Test Matching</button>
             </div>
 
             <!-- CV Tab -->
@@ -923,6 +1033,37 @@
                     <div class="loading">
                         <div class="loading-spinner"></div>
                         <p>Werkgevers laden...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Matching Tab -->
+            <div class="tab-content" id="testMatchingTab">
+                <div class="test-matching-container">
+                    <div class="test-matching-form">
+                        <h3 style="margin-bottom: 16px; color: #667eea;">Test TF-IDF Matching</h3>
+                        <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 20px;">
+                            Voer een vacaturetekst in om te testen welke CV's matchen. Dit gebruikt hetzelfde TF-IDF algoritme als de Premium matching.
+                        </p>
+                        <div class="form-group">
+                            <label>Vacature Titel</label>
+                            <input type="text" id="testVacancyTitle" placeholder="bijv. Senior Software Developer" style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 12px 16px; color: #fff; font-size: 14px;">
+                        </div>
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label>Vacature Beschrijving</label>
+                            <textarea id="testVacancyText" placeholder="Plak hier de volledige vacaturetekst..." style="width: 100%; min-height: 200px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 12px 16px; color: #fff; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <button onclick="runTestMatching()" class="refresh-btn" style="margin-top: 16px; width: 100%;">
+                            Test Matching Uitvoeren
+                        </button>
+                    </div>
+
+                    <div class="test-matching-results" id="testMatchingResults">
+                        <div class="empty-state" style="padding: 40px;">
+                            <div class="empty-state-icon">🔍</div>
+                            <h2>Voer een vacature in</h2>
+                            <p>De matchende CV's worden hier weergegeven</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1675,10 +1816,13 @@
             if (tab === 'cvs') {
                 document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
                 document.getElementById('cvTab').classList.add('active');
-            } else {
+            } else if (tab === 'employers') {
                 document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
                 document.getElementById('employersTab').classList.add('active');
                 loadEmployers();
+            } else if (tab === 'testMatching') {
+                document.querySelector('.tab-btn:nth-child(3)').classList.add('active');
+                document.getElementById('testMatchingTab').classList.add('active');
             }
         }
 
@@ -1896,6 +2040,122 @@
         document.getElementById('employerModal').addEventListener('click', (e) => {
             if (e.target.id === 'employerModal') closeEmployerModal();
         });
+
+        // === TEST MATCHING ===
+        async function runTestMatching() {
+            const title = document.getElementById('testVacancyTitle').value.trim();
+            const description = document.getElementById('testVacancyText').value.trim();
+            const resultsDiv = document.getElementById('testMatchingResults');
+
+            if (!title && !description) {
+                alert('Voer een vacaturetitel of beschrijving in');
+                return;
+            }
+
+            const vacancyText = `${title}\n\n${description}`;
+
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Matching uitvoeren...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/admin/test-matching', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': authToken
+                    },
+                    body: JSON.stringify({ vacancyText })
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    renderTestResults(result);
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="empty-state" style="padding: 40px;">
+                            <div class="empty-state-icon">⚠️</div>
+                            <h2>Fout</h2>
+                            <p>${escapeHtml(result.message)}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="empty-state" style="padding: 40px;">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h2>Verbindingsfout</h2>
+                        <p>${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTestResults(data) {
+            const resultsDiv = document.getElementById('testMatchingResults');
+
+            if (data.matches.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="test-result-header">
+                        <h3>Resultaten</h3>
+                        <span style="color: rgba(255,255,255,0.5);">${data.totalCVs} CV's geanalyseerd</span>
+                    </div>
+                    <div class="test-terms">
+                        ${data.vacancyTerms.map(term => `<span class="test-term">${escapeHtml(term)}</span>`).join('')}
+                    </div>
+                    <div class="empty-state" style="padding: 30px;">
+                        <div class="empty-state-icon">📋</div>
+                        <h2>Geen matches gevonden</h2>
+                        <p>Geen CV's met voldoende overlap met de vacature</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="test-result-header">
+                    <h3>Resultaten</h3>
+                    <span style="color: rgba(255,255,255,0.5);">${data.matches.length} matches van ${data.totalCVs} CV's</span>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">BELANGRIJKSTE TERMEN:</div>
+                    <div class="test-terms">
+                        ${data.vacancyTerms.map(term => `<span class="test-term">${escapeHtml(term)}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+
+            html += data.matches.map(match => `
+                <div class="test-match-card">
+                    <div class="test-match-header">
+                        <div>
+                            <div class="test-match-name">${escapeHtml(match.fullName)}</div>
+                            <div class="test-match-title">${escapeHtml(match.jobTitle || 'Geen functie opgegeven')}</div>
+                        </div>
+                        <div class="test-match-score">${match.matchScore}%</div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" style="width: ${match.matchScore}%;"></div>
+                    </div>
+                    ${match.matchedTerms && match.matchedTerms.length > 0 ? `
+                        <div class="test-match-details">
+                            <strong>Matchende termen:</strong> ${match.matchedTerms.slice(0, 10).map(t => escapeHtml(t)).join(', ')}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            resultsDiv.innerHTML = html;
+        }
 
         // Initial auth check
         checkAuth();
