@@ -1891,6 +1891,43 @@ app.delete('/api/cvs/:id', requireAdmin, async (req, res) => {
     }
 });
 
+// Bulk delete CVs (protected)
+app.post('/api/cvs/bulk-delete', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No CV IDs provided'
+            });
+        }
+
+        const result = await CV.deleteMany({ _id: { $in: ids } });
+
+        res.json({
+            success: true,
+            message: `${result.deletedCount} CV('s) verwijderd`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Error bulk deleting CVs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete CVs'
+        });
+    }
+});
+
 // Upload CV file endpoint (protected)
 app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
     try {
