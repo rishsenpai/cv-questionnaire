@@ -452,15 +452,38 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         const plan = req.employer.plan || 'basic';
         const hasFullAccess = plan === 'advanced' || plan === 'premium';
 
+        // Helper function to extract years of experience from experience text
+        const extractYearsExperience = (experience) => {
+            if (!experience) return null;
+            const yearMatches = experience.match(/\b(19|20)\d{2}\b/g);
+            if (yearMatches && yearMatches.length >= 2) {
+                const years = yearMatches.map(y => parseInt(y)).sort((a, b) => a - b);
+                const oldest = years[0];
+                const newest = years[years.length - 1];
+                const currentYear = new Date().getFullYear();
+                const totalYears = (newest > currentYear ? currentYear : newest) - oldest;
+                if (totalYears > 0 && totalYears < 50) {
+                    return totalYears;
+                }
+            }
+            return null;
+        };
+
         const sanitizedCVs = cvs.map(cv => {
             const cvObj = cv.toObject();
+
+            // Calculate years of experience BEFORE hiding the experience text
+            cvObj.yearsExperience = extractYearsExperience(cvObj.experience);
+
             if (!hasFullAccess) {
                 // Basic plan: hide contact info, name details, and work history
                 cvObj.email = '••••••@••••••';
                 cvObj.phone = '•••••••••••';
                 cvObj.fullName = cvObj.fullName.split(' ')[0] + ' ••••••';
                 cvObj.location = cvObj.location ? cvObj.location.split(',')[0] + ', ••••••' : null;
-                cvObj.experience = cvObj.experience ? '🔒 Upgrade naar Advanced om werkervaring te zien' : null;
+                cvObj.experience = null; // Hide experience text but keep yearsExperience
+                cvObj.summary = null; // Hide summary for basic
+                cvObj.skills = null; // Hide skills for basic
             }
             return cvObj;
         });
