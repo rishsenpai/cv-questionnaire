@@ -585,6 +585,32 @@
             background: #f59e0b;
         }
 
+        .upgrade-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .upgrade-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .upgrade-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
         /* Modal */
         .modal {
             display: none;
@@ -751,7 +777,10 @@
                     <h3 id="upgradeBannerTitle">Upgrade naar Advanced</h3>
                     <p id="upgradeBannerText">Krijg toegang tot contactgegevens, volledige namen en werkervaring van alle kandidaten.</p>
                 </div>
-                <button class="upgrade-btn">Upgrade Nu</button>
+                <div class="upgrade-actions">
+                    <button class="upgrade-btn">Upgrade Nu</button>
+                    <button class="upgrade-close" onclick="dismissUpgradeBanner()" title="Sluiten">&times;</button>
+                </div>
             </div>
 
             <!-- Tabs -->
@@ -916,18 +945,27 @@
                 vacanciesTabBtn.classList.add('disabled');
             }
 
-            // Upgrade banner
-            if (currentPlan === 'basic') {
+            // Upgrade banner - check if dismissed today
+            const dismissedAt = localStorage.getItem('upgradeBannerDismissed');
+            const oneDayMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+            const wasDismissedToday = dismissedAt && (Date.now() - parseInt(dismissedAt)) < oneDayMs;
+
+            if (currentPlan === 'basic' && !wasDismissedToday) {
                 bannerEl.classList.remove('hidden');
                 document.getElementById('upgradeBannerTitle').textContent = 'Upgrade naar Advanced';
                 document.getElementById('upgradeBannerText').textContent = 'Krijg toegang tot contactgegevens, volledige namen en werkervaring van alle kandidaten.';
-            } else if (currentPlan === 'advanced') {
+            } else if (currentPlan === 'advanced' && !wasDismissedToday) {
                 bannerEl.classList.remove('hidden');
                 document.getElementById('upgradeBannerTitle').textContent = 'Upgrade naar Premium';
                 document.getElementById('upgradeBannerText').textContent = 'Upload vacatures en krijg automatisch gematchte kandidaten op basis van vaardigheden en ervaring.';
             } else {
                 bannerEl.classList.add('hidden');
             }
+        }
+
+        function dismissUpgradeBanner() {
+            localStorage.setItem('upgradeBannerDismissed', Date.now().toString());
+            document.getElementById('upgradeBanner').classList.add('hidden');
         }
 
         // Tab switching
