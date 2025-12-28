@@ -558,7 +558,7 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
                     return { index, cv, summary };
                 });
 
-                const prompt = `Je bent een recruitment AI. Analyseer deze vacature en geef voor elke CV een match score (0-100) en korte reden.
+                const prompt = `Je bent een STRENGE recruitment AI. Match ALLEEN kandidaten die ECHT geschikt zijn voor deze vacature.
 
 VACATURE:
 ${vacancyText.substring(0, 1500)}
@@ -566,11 +566,19 @@ ${vacancyText.substring(0, 1500)}
 KANDIDATEN:
 ${cvSummaries.map(s => s.summary).join('\n\n')}
 
-Geef je antwoord als JSON array met ALLEEN kandidaten die echt geschikt zijn (score >= 40):
-[{"index": 0, "score": 85, "reason": "Korte reden waarom match"}, ...]
+STRIKTE REGELS:
+- Score 80-100: Functietitel EN ervaring matchen direct met de vacature
+- Score 60-79: Zeer relevante ervaring, vergelijkbare functie
+- Score 0-59: NIET TONEN - onvoldoende match
+- Een "Senior Software Developer" vacature matcht ALLEEN met developers/programmeurs
+- Iemand in Insurance/Finance/Sales is GEEN match voor een IT development rol
+- Kijk naar de PRIMAIRE functie, niet naar bijzaken
 
-Wees STRENG: alleen echte matches op basis van relevante ervaring, skills en functietitel. Een developer moet niet matchen met een sales vacature.
-Antwoord ALLEEN met de JSON array, geen andere tekst.`;
+Geef ALLEEN kandidaten met score >= 60:
+[{"index": 0, "score": 85, "reason": "Korte reden"}]
+
+Geen matches? Antwoord: []
+Antwoord ALLEEN met JSON array.`;
 
                 const result = await model.generateContent(prompt);
                 const aiResponse = result.response.text().trim();
@@ -580,7 +588,7 @@ Antwoord ALLEEN met de JSON array, geen andere tekst.`;
                 if (jsonMatch) {
                     const aiMatches = JSON.parse(jsonMatch[0]);
                     matchedCVs = aiMatches
-                        .filter(m => m.score >= 40)
+                        .filter(m => m.score >= 60)
                         .map(m => ({
                             ...cvSummaries[m.index].cv.toObject(),
                             matchScore: m.score,
