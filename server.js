@@ -36,6 +36,54 @@ const stopwords = new Set([
     'such', 'only', 'own', 'same', 'than', 'too', 'very', 'just', 'also', 'now', 'here'
 ]);
 
+// Synonym mapping (English <-> Dutch) for job-related terms
+const synonyms = {
+    // Developer/Ontwikkelaar
+    'developer': ['ontwikkelaar', 'programmeur', 'developer'],
+    'ontwikkelaar': ['developer', 'programmeur', 'ontwikkelaar'],
+    'programmeur': ['developer', 'ontwikkelaar', 'programmeur'],
+    // Engineer/Ingenieur
+    'engineer': ['ingenieur', 'engineer'],
+    'ingenieur': ['engineer', 'ingenieur'],
+    // Software
+    'software': ['software', 'applicatie'],
+    // Manager/Beheerder
+    'manager': ['beheerder', 'manager', 'leider'],
+    'beheerder': ['manager', 'beheerder'],
+    // Senior/Junior
+    'senior': ['senior', 'ervaren', 'sr'],
+    'junior': ['junior', 'jr', 'medior'],
+    // Frontend/Backend
+    'frontend': ['frontend', 'front-end', 'ui'],
+    'backend': ['backend', 'back-end', 'server'],
+    'fullstack': ['fullstack', 'full-stack', 'full'],
+    // Analyst/Analist
+    'analyst': ['analist', 'analyst'],
+    'analist': ['analyst', 'analist'],
+    // Designer/Ontwerper
+    'designer': ['ontwerper', 'designer'],
+    'ontwerper': ['designer', 'ontwerper'],
+    // Consultant/Adviseur
+    'consultant': ['adviseur', 'consultant'],
+    'adviseur': ['consultant', 'adviseur'],
+    // Data
+    'data': ['data', 'gegevens'],
+    // Lead/Leider
+    'lead': ['lead', 'leider', 'hoofd'],
+    'leider': ['lead', 'leider'],
+    // Architect
+    'architect': ['architect', 'ontwerper'],
+    // Tester/QA
+    'tester': ['tester', 'qa', 'test'],
+    'qa': ['tester', 'qa', 'quality'],
+    // DevOps/Cloud
+    'devops': ['devops', 'operations', 'cloud'],
+    'cloud': ['cloud', 'aws', 'azure'],
+    // Scrum/Agile
+    'scrum': ['scrum', 'agile'],
+    'agile': ['agile', 'scrum'],
+};
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -560,26 +608,37 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
         // === TF-IDF MATCHING ===
         console.log('TF-IDF Matching - Processing', cvs.length, 'CVs');
 
-        // Helper function to clean and tokenize text
-        const tokenize = (text) => {
-            return (text || '')
+        // Helper function to clean and tokenize text with synonym expansion
+        const tokenize = (text, expandSynonyms = false) => {
+            const words = (text || '')
                 .toLowerCase()
                 .replace(/[^a-zA-Z0-9\s]/g, ' ')
                 .split(/\s+/)
                 .filter(word => word.length > 2 && !stopwords.has(word));
+
+            if (!expandSynonyms) return words;
+
+            // Expand with synonyms
+            const expanded = new Set(words);
+            words.forEach(word => {
+                if (synonyms[word]) {
+                    synonyms[word].forEach(syn => expanded.add(syn));
+                }
+            });
+            return Array.from(expanded);
         };
 
         // Create TF-IDF instance
         const tfidf = new TfIdf();
 
-        // Add vacancy as first document (index 0)
-        const vacancyTokens = tokenize(vacancyText);
+        // Add vacancy as first document (index 0) - with synonym expansion
+        const vacancyTokens = tokenize(vacancyText, true);
         tfidf.addDocument(vacancyTokens);
 
-        // Add all CVs
+        // Add all CVs - also with synonym expansion
         const cvTexts = cvs.map(cv => {
             const text = `${cv.jobTitle || ''} ${cv.jobTitle || ''} ${cv.skills || ''} ${cv.skills || ''} ${cv.fullText || ''} ${cv.experience || ''}`;
-            return tokenize(text);
+            return tokenize(text, true);
         });
         cvTexts.forEach(tokens => tfidf.addDocument(tokens));
 
@@ -660,26 +719,37 @@ app.post('/api/admin/test-matching', requireAdmin, async (req, res) => {
         const cvs = await CV.find().select('-fileData');
         console.log('Test Matching - Processing', cvs.length, 'CVs');
 
-        // Helper function to clean and tokenize text
-        const tokenize = (text) => {
-            return (text || '')
+        // Helper function to clean and tokenize text with synonym expansion
+        const tokenize = (text, expandSynonyms = false) => {
+            const words = (text || '')
                 .toLowerCase()
                 .replace(/[^a-zA-Z0-9\s]/g, ' ')
                 .split(/\s+/)
                 .filter(word => word.length > 2 && !stopwords.has(word));
+
+            if (!expandSynonyms) return words;
+
+            // Expand with synonyms
+            const expanded = new Set(words);
+            words.forEach(word => {
+                if (synonyms[word]) {
+                    synonyms[word].forEach(syn => expanded.add(syn));
+                }
+            });
+            return Array.from(expanded);
         };
 
         // Create TF-IDF instance
         const tfidf = new TfIdf();
 
-        // Add vacancy as first document (index 0)
-        const vacancyTokens = tokenize(vacancyText);
+        // Add vacancy as first document (index 0) - with synonym expansion
+        const vacancyTokens = tokenize(vacancyText, true);
         tfidf.addDocument(vacancyTokens);
 
-        // Add all CVs
+        // Add all CVs - also with synonym expansion
         const cvTexts = cvs.map(cv => {
             const text = `${cv.jobTitle || ''} ${cv.jobTitle || ''} ${cv.skills || ''} ${cv.skills || ''} ${cv.fullText || ''} ${cv.experience || ''}`;
-            return tokenize(text);
+            return tokenize(text, true);
         });
         cvTexts.forEach(tokens => tfidf.addDocument(tokens));
 
