@@ -450,6 +450,10 @@
             margin-bottom: 4px;
         }
 
+        .cv-name-anonymous {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
         .cv-title {
             font-size: 14px;
             color: #2ec4b6;
@@ -869,11 +873,23 @@
             color: #1e293b;
         }
 
+        body.light-mode .cv-title {
+            color: #0d9488;
+        }
+
         body.light-mode .cv-info-item,
         body.light-mode .cv-summary,
         body.light-mode .vacancy-info,
         body.light-mode .results-count {
             color: #64748b;
+        }
+
+        body.light-mode .search-title {
+            color: #1e293b;
+        }
+
+        body.light-mode .search-input::placeholder {
+            color: #94a3b8;
         }
 
         body.light-mode .modal-content {
@@ -926,7 +942,62 @@
         }
 
         body.light-mode .btn-locked {
-            background: rgba(251, 191, 36, 0.1);
+            background: rgba(251, 191, 36, 0.15);
+            color: #b45309;
+        }
+
+        /* Fix anonymous name in light mode */
+        body.light-mode .cv-name-anonymous {
+            color: #94a3b8;
+        }
+
+        body.light-mode .container {
+            color: #1e293b;
+        }
+
+        body.light-mode .company-badge {
+            background: rgba(46, 196, 182, 0.15);
+            color: #0d9488;
+        }
+
+        body.light-mode .payment-status.basic {
+            background: rgba(251, 191, 36, 0.15);
+            color: #b45309;
+        }
+
+        body.light-mode .payment-status.advanced {
+            background: rgba(46, 196, 182, 0.15);
+            color: #0d9488;
+        }
+
+        body.light-mode .payment-status.premium {
+            background: rgba(168, 85, 247, 0.15);
+            color: #7c3aed;
+        }
+
+        body.light-mode .logout-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+
+        body.light-mode .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        body.light-mode .upgrade-text h3 {
+            color: #b45309;
+        }
+
+        body.light-mode .upgrade-text p {
+            color: #64748b;
+        }
+
+        body.light-mode .tab-btn .tooltip {
+            background: #7c3aed;
+        }
+
+        body.light-mode .tab-btn .tooltip::after {
+            border-color: transparent transparent #7c3aed transparent;
         }
     </style>
 </head>
@@ -1297,7 +1368,7 @@
                     return `
                         <div class="cv-card">
                             ${showMatchScore && cv.matchScore ? `<div class="match-score">${cv.matchScore}% match</div>` : ''}
-                            <div class="cv-name" style="color: rgba(255,255,255,0.4);">Kandidaat #${index + 1}</div>
+                            <div class="cv-name cv-name-anonymous">Kandidaat #${index + 1}</div>
                             <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
                             ${yearsExp ? `
                                 <div class="cv-info">
