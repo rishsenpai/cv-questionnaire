@@ -419,13 +419,14 @@ async function requireEmployer(req, res, next) {
     }
 }
 
-// Helper function to expand a single word with its synonyms
+// Helper function to expand a single word with its synonyms (with word boundaries)
 function getWordWithSynonyms(word) {
     const terms = new Set([word]);
     if (synonyms[word]) {
         synonyms[word].forEach(syn => terms.add(syn));
     }
-    return Array.from(terms);
+    // Add word boundaries to prevent partial matches (dev shouldn't match development)
+    return Array.from(terms).map(t => `\\b${t}\\b`);
 }
 
 // Get CVs for employers (with filtering and hidden fields)
