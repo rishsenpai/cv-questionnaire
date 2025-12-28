@@ -548,9 +548,11 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
         let matchedCVs = [];
 
         // Use AI matching if Gemini is configured
+        console.log('AI Matching - Gemini configured:', !!gemini);
         if (gemini) {
             try {
                 const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+                console.log('AI Matching - Starting Gemini request...');
 
                 // Prepare CV summaries for AI (limit text length to save tokens)
                 const cvSummaries = cvs.map((cv, index) => {
@@ -582,11 +584,13 @@ Antwoord ALLEEN met JSON array.`;
 
                 const result = await model.generateContent(prompt);
                 const aiResponse = result.response.text().trim();
+                console.log('AI Matching - Response received:', aiResponse.substring(0, 200));
 
                 // Parse JSON from response
                 const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
                 if (jsonMatch) {
                     const aiMatches = JSON.parse(jsonMatch[0]);
+                    console.log('AI Matching - Parsed matches:', aiMatches.length, 'candidates');
                     matchedCVs = aiMatches
                         .filter(m => m.score >= 60)
                         .map(m => ({
@@ -596,11 +600,16 @@ Antwoord ALLEEN met JSON array.`;
                         }))
                         .sort((a, b) => b.matchScore - a.matchScore)
                         .slice(0, 15);
+                    console.log('AI Matching - After 60% filter:', matchedCVs.length, 'candidates');
                 }
             } catch (aiError) {
-                console.error('AI matching error:', aiError);
+                console.error('AI matching error:', aiError.message || aiError);
                 // Fall back to keyword matching
             }
+        }
+
+        if (matchedCVs.length === 0) {
+            console.log('AI Matching - Using FALLBACK keyword matching');
         }
 
         // Fallback: simple keyword matching if AI fails or not configured
