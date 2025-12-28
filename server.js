@@ -551,7 +551,7 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
         console.log('AI Matching - Gemini configured:', !!gemini);
         if (gemini) {
             try {
-                const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+                const model = gemini.getGenerativeModel({ model: 'gemini-2.0-flash' });
                 console.log('AI Matching - Starting Gemini request...');
 
                 // Prepare CV summaries for AI (limit text length to save tokens)
