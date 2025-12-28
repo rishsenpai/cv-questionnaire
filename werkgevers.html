@@ -748,6 +748,186 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .theme-icon {
+            font-size: 16px;
+        }
+
+        .theme-switch {
+            width: 40px;
+            height: 22px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 11px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .theme-switch-handle {
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+
+        /* Light Mode Styles */
+        body.light-mode {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            color: #1e293b;
+        }
+
+        body.light-mode .login-screen {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+        }
+
+        body.light-mode .login-box {
+            background: #fff;
+            border-color: #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .login-input {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .login-input::placeholder {
+            color: #94a3b8;
+        }
+
+        body.light-mode .header {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .header h1 {
+            color: #1e293b;
+        }
+
+        body.light-mode .theme-toggle {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode .theme-toggle:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .theme-switch {
+            background: #2ec4b6;
+        }
+
+        body.light-mode .theme-switch-handle {
+            left: 20px;
+        }
+
+        body.light-mode .search-section,
+        body.light-mode .cv-card,
+        body.light-mode .vacancy-card,
+        body.light-mode .vacancy-form,
+        body.light-mode .upgrade-banner,
+        body.light-mode .test-matching-form,
+        body.light-mode .test-matching-results {
+            background: #fff;
+            border-color: #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode .cv-card:hover {
+            background: #f8fafc;
+        }
+
+        body.light-mode .search-input,
+        body.light-mode .form-group input,
+        body.light-mode .form-group textarea {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .cv-name,
+        body.light-mode .vacancy-title {
+            color: #1e293b;
+        }
+
+        body.light-mode .cv-info-item,
+        body.light-mode .cv-summary,
+        body.light-mode .vacancy-info,
+        body.light-mode .results-count {
+            color: #64748b;
+        }
+
+        body.light-mode .modal-content {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .modal-section-content {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        body.light-mode .tab-btn {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #64748b;
+        }
+
+        body.light-mode .tab-btn:hover {
+            background: #e2e8f0;
+        }
+
+        body.light-mode .tab-btn.active {
+            background: #2ec4b6;
+            border-color: #2ec4b6;
+            color: #fff;
+        }
+
+        body.light-mode .tab-btn.disabled {
+            background: #f1f5f9;
+            opacity: 0.6;
+        }
+
+        body.light-mode .skill-tag {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        body.light-mode .upgrade-banner {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1));
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+
+        body.light-mode .btn-view {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        body.light-mode .btn-download {
+            background: rgba(46, 196, 182, 0.1);
+        }
+
+        body.light-mode .btn-locked {
+            background: rgba(251, 191, 36, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -773,6 +953,12 @@
                 <span class="company-badge" id="companyName">Bedrijf</span>
             </div>
             <div class="header-right">
+                <div class="theme-toggle" onclick="toggleTheme()" title="Wissel thema">
+                    <span class="theme-icon" id="themeIcon">🌙</span>
+                    <div class="theme-switch">
+                        <div class="theme-switch-handle" id="themeSwitchHandle"></div>
+                    </div>
+                </div>
                 <span class="payment-status" id="paymentStatus">Status</span>
                 <button class="logout-btn" onclick="logout()">Uitloggen</button>
             </div>
@@ -1460,6 +1646,35 @@
                 alert('Fout bij verwijderen');
             }
         }
+
+        // === THEME TOGGLE ===
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light-mode');
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                themeIcon.textContent = '☀️';
+            }
+        }
+
+        // Load theme immediately
+        loadTheme();
 
         // Init
         checkAuth();
