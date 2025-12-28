@@ -17,12 +17,24 @@ const CV = require('./models/CV');
 const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const natural = require('natural');
+const TfIdf = natural.TfIdf;
 
-// Initialize Google Gemini for AI matching (FREE tier available)
-const gemini = process.env.GEMINI_API_KEY
-    ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-    : null;
+// Dutch/English stopwords to ignore in matching
+const stopwords = new Set([
+    // Dutch
+    'de', 'het', 'een', 'van', 'en', 'in', 'is', 'op', 'te', 'dat', 'die', 'voor',
+    'met', 'zijn', 'aan', 'wordt', 'als', 'naar', 'bij', 'om', 'ook', 'tot', 'uit',
+    'maar', 'door', 'over', 'dan', 'nog', 'wel', 'geen', 'moet', 'kan', 'zou', 'zeer',
+    'meer', 'veel', 'hebben', 'worden', 'jaar', 'jaren', 'binnen', 'onder', 'tussen',
+    // English
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does',
+    'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need',
+    'this', 'that', 'these', 'those', 'what', 'which', 'who', 'whom', 'where', 'when',
+    'how', 'why', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
+    'such', 'only', 'own', 'same', 'than', 'too', 'very', 'just', 'also', 'now', 'here'
+]);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -545,103 +557,80 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
         const vacancyText = vacancy.fullText || `${vacancy.title} ${vacancy.description || ''} ${vacancy.requirements || ''}`;
         const cvs = await CV.find().select('-fileData');
 
-        let matchedCVs = [];
+        // === TF-IDF MATCHING ===
+        console.log('TF-IDF Matching - Processing', cvs.length, 'CVs');
 
-        // Use AI matching if Gemini is configured
-        console.log('AI Matching - Gemini configured:', !!gemini);
-        if (gemini) {
-            try {
-                const model = gemini.getGenerativeModel({ model: 'gemini-2.0-flash' });
-                console.log('AI Matching - Starting Gemini request...');
-
-                // Prepare CV summaries for AI (limit text length to save tokens)
-                const cvSummaries = cvs.map((cv, index) => {
-                    const summary = `[CV ${index}] ${cv.fullName} | ${cv.jobTitle || 'Geen functie'} | Skills: ${cv.skills || 'N/A'} | Ervaring: ${(cv.experience || '').substring(0, 500)}`;
-                    return { index, cv, summary };
-                });
-
-                const prompt = `Je bent een STRENGE recruitment AI. Match ALLEEN kandidaten die ECHT geschikt zijn voor deze vacature.
-
-VACATURE:
-${vacancyText.substring(0, 1500)}
-
-KANDIDATEN:
-${cvSummaries.map(s => s.summary).join('\n\n')}
-
-STRIKTE REGELS:
-- Score 80-100: Functietitel EN ervaring matchen direct met de vacature
-- Score 60-79: Zeer relevante ervaring, vergelijkbare functie
-- Score 0-59: NIET TONEN - onvoldoende match
-- Een "Senior Software Developer" vacature matcht ALLEEN met developers/programmeurs
-- Iemand in Insurance/Finance/Sales is GEEN match voor een IT development rol
-- Kijk naar de PRIMAIRE functie, niet naar bijzaken
-
-Geef ALLEEN kandidaten met score >= 60:
-[{"index": 0, "score": 85, "reason": "Korte reden"}]
-
-Geen matches? Antwoord: []
-Antwoord ALLEEN met JSON array.`;
-
-                const result = await model.generateContent(prompt);
-                const aiResponse = result.response.text().trim();
-                console.log('AI Matching - Response received:', aiResponse.substring(0, 200));
-
-                // Parse JSON from response
-                const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    const aiMatches = JSON.parse(jsonMatch[0]);
-                    console.log('AI Matching - Parsed matches:', aiMatches.length, 'candidates');
-                    matchedCVs = aiMatches
-                        .filter(m => m.score >= 60)
-                        .map(m => ({
-                            ...cvSummaries[m.index].cv.toObject(),
-                            matchScore: m.score,
-                            matchReason: m.reason
-                        }))
-                        .sort((a, b) => b.matchScore - a.matchScore)
-                        .slice(0, 15);
-                    console.log('AI Matching - After 60% filter:', matchedCVs.length, 'candidates');
-                }
-            } catch (aiError) {
-                console.error('AI matching error:', aiError.message || aiError);
-                // Fall back to keyword matching
-            }
-        }
-
-        if (matchedCVs.length === 0) {
-            console.log('AI Matching - Using FALLBACK keyword matching');
-        }
-
-        // Fallback: simple keyword matching if AI fails or not configured
-        if (matchedCVs.length === 0) {
-            const keywords = vacancyText
+        // Helper function to clean and tokenize text
+        const tokenize = (text) => {
+            return (text || '')
                 .toLowerCase()
                 .replace(/[^a-zA-Z0-9\s]/g, ' ')
                 .split(/\s+/)
-                .filter(word => word.length > 4)
-                .filter((word, index, self) => self.indexOf(word) === index);
+                .filter(word => word.length > 2 && !stopwords.has(word));
+        };
 
-            matchedCVs = cvs.map(cv => {
-                const cvText = (cv.fullText || `${cv.fullName} ${cv.jobTitle || ''} ${cv.skills || ''}`).toLowerCase();
-                let matchCount = 0;
-                const matchedKeywords = [];
-                keywords.forEach(keyword => {
-                    if (cvText.includes(keyword)) {
-                        matchCount++;
-                        matchedKeywords.push(keyword);
-                    }
-                });
-                const matchScore = keywords.length > 0 ? Math.round((matchCount / keywords.length) * 100) : 0;
-                return {
-                    ...cv.toObject(),
-                    matchScore,
-                    matchReason: matchedKeywords.length > 0 ? `Matcht op: ${matchedKeywords.slice(0, 5).join(', ')}` : ''
-                };
-            })
-            .filter(cv => cv.matchScore >= 60)
-            .sort((a, b) => b.matchScore - a.matchScore)
-            .slice(0, 15);
-        }
+        // Create TF-IDF instance
+        const tfidf = new TfIdf();
+
+        // Add vacancy as first document (index 0)
+        const vacancyTokens = tokenize(vacancyText);
+        tfidf.addDocument(vacancyTokens);
+
+        // Add all CVs
+        const cvTexts = cvs.map(cv => {
+            const text = `${cv.jobTitle || ''} ${cv.jobTitle || ''} ${cv.skills || ''} ${cv.skills || ''} ${cv.fullText || ''} ${cv.experience || ''}`;
+            return tokenize(text);
+        });
+        cvTexts.forEach(tokens => tfidf.addDocument(tokens));
+
+        // Get vacancy's important terms
+        const vacancyTerms = [];
+        tfidf.listTerms(0).slice(0, 30).forEach(item => {
+            vacancyTerms.push({ term: item.term, tfidf: item.tfidf });
+        });
+
+        // Calculate match scores for each CV
+        const matchedCVs = cvs.map((cv, index) => {
+            const cvDocIndex = index + 1; // CV documents start at index 1
+            let score = 0;
+            const matchedTerms = [];
+
+            // Calculate weighted score based on shared important terms
+            vacancyTerms.forEach(vacTerm => {
+                const cvTfidf = tfidf.tfidf(vacTerm.term, cvDocIndex);
+                if (cvTfidf > 0) {
+                    score += Math.min(vacTerm.tfidf, cvTfidf);
+                    matchedTerms.push(vacTerm.term);
+                }
+            });
+
+            // Bonus for job title match
+            const vacancyTitle = (vacancy.title || '').toLowerCase();
+            const cvTitle = (cv.jobTitle || '').toLowerCase();
+            const titleWords = tokenize(vacancyTitle);
+            const cvTitleWords = tokenize(cvTitle);
+            const titleOverlap = titleWords.filter(w => cvTitleWords.includes(w)).length;
+            if (titleOverlap > 0) {
+                score *= (1 + (titleOverlap * 0.3)); // 30% bonus per matching title word
+            }
+
+            // Normalize score to 0-100
+            const maxPossibleScore = vacancyTerms.reduce((sum, t) => sum + t.tfidf, 0) * 1.5;
+            const normalizedScore = Math.min(100, Math.round((score / maxPossibleScore) * 100));
+
+            return {
+                ...cv.toObject(),
+                matchScore: normalizedScore,
+                matchReason: matchedTerms.length > 0
+                    ? `Matcht op: ${matchedTerms.slice(0, 6).join(', ')}`
+                    : 'Geen specifieke match'
+            };
+        })
+        .filter(cv => cv.matchScore >= 30) // Minimum 30% match
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 15);
+
+        console.log('TF-IDF Matching - Found', matchedCVs.length, 'matches');
 
         res.json({
             success: true,
