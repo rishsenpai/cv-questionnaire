@@ -534,14 +534,13 @@
             z-index: 1000;
             top: calc(100% + 6px);
             right: 0;
-            min-width: 100px;
-            max-width: 200px;
+            min-width: 150px;
+            max-width: 320px;
             font-size: 12px;
-            line-height: 1.2;
+            line-height: 1.3;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(46, 196, 182, 0.3);
             transition: all 0.2s ease;
-            white-space: normal;
             word-break: break-word;
             text-align: left;
         }
@@ -968,6 +967,60 @@
             color: rgba(255, 255, 255, 0.6);
             font-size: 14px;
             margin: 0 16px;
+        }
+
+        /* Results actions */
+        .results-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Filter favorites button */
+        .filter-favorites-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-favorites-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .filter-favorites-btn.active {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fff;
+        }
+
+        .filter-favorites-btn.active .filter-heart {
+            color: #e53e3e;
+        }
+
+        body.light-mode .filter-favorites-btn {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #64748b;
+        }
+
+        body.light-mode .filter-favorites-btn:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .filter-favorites-btn.active {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #dc2626;
         }
 
         /* Sort dropdown */
@@ -1477,12 +1530,17 @@
                 <!-- Results -->
                 <div class="results-header">
                     <span class="results-count" id="resultsCount">0 kandidaten gevonden</span>
-                    <select class="sort-select" id="sortSelect" onchange="changeSort()">
-                        <option value="date-desc">Nieuwste eerst</option>
-                        <option value="date-asc">Oudste eerst</option>
-                        <option value="name-asc">Naam A-Z</option>
-                        <option value="name-desc">Naam Z-A</option>
-                    </select>
+                    <div class="results-actions">
+                        <button class="filter-favorites-btn" id="filterFavoritesBtn" onclick="toggleFavoritesFilter()" title="Toon alleen favorieten">
+                            <span class="filter-heart">🤍</span> Favorieten
+                        </button>
+                        <select class="sort-select" id="sortSelect" onchange="changeSort()">
+                            <option value="date-desc">Nieuwste eerst</option>
+                            <option value="date-asc">Oudste eerst</option>
+                            <option value="name-asc">Naam A-Z</option>
+                            <option value="name-desc">Naam Z-A</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div id="cvList" class="cv-grid">
@@ -1563,6 +1621,9 @@
 
         // Sorting
         let currentSort = 'date-desc';
+
+        // Favorites filter
+        let showFavoritesOnly = false;
 
         // Confirm dialog
         let confirmDialogResolve = null;
@@ -1679,8 +1740,12 @@
                     } else {
                         employerFavorites.push(cvId);
                     }
-                    // Re-render CVs to update UI (keep current page)
-                    renderCVs(filteredCVs);
+                    // Re-apply filters and render (handles favorites filter)
+                    if (showFavoritesOnly) {
+                        applyFiltersAndRender();
+                    } else {
+                        renderCVs(filteredCVs);
+                    }
                 } else {
                     const result = await response.json();
                     showAlert({ icon: '❌', title: 'Fout', message: result.message || 'Fout bij toevoegen/verwijderen favoriet' });
@@ -1695,10 +1760,10 @@
         function getNoteText(cvId) {
             const note = employerNotes.find(n => n.cvId === cvId);
             if (!note || !note.text) return '';
-            // Truncate if too long (max 150 chars)
+            // Truncate if too long (max 200 chars)
             const text = note.text;
-            if (text.length > 150) {
-                return text.substring(0, 147) + '...';
+            if (text.length > 200) {
+                return text.substring(0, 197) + '...';
             }
             return text;
         }
@@ -1775,6 +1840,12 @@
             const statusEl = document.getElementById('paymentStatus');
             const bannerEl = document.getElementById('upgradeBanner');
             const vacanciesTabBtn = document.getElementById('vacanciesTabBtn');
+            const filterFavoritesBtn = document.getElementById('filterFavoritesBtn');
+
+            // Hide favorites filter for basic users
+            if (filterFavoritesBtn) {
+                filterFavoritesBtn.style.display = hasFullAccess() ? 'flex' : 'none';
+            }
 
             const planLabels = {
                 basic: 'Basic',
@@ -2084,6 +2155,41 @@
             currentSort = document.getElementById('sortSelect').value;
             currentPage = 1;
             applySortAndRender();
+        }
+
+        // Toggle favorites filter
+        function toggleFavoritesFilter() {
+            showFavoritesOnly = !showFavoritesOnly;
+            const btn = document.getElementById('filterFavoritesBtn');
+            const heart = btn.querySelector('.filter-heart');
+
+            if (showFavoritesOnly) {
+                btn.classList.add('active');
+                heart.textContent = '❤️';
+            } else {
+                btn.classList.remove('active');
+                heart.textContent = '🤍';
+            }
+
+            currentPage = 1;
+            applyFiltersAndRender();
+        }
+
+        // Apply all filters (favorites) and then sort
+        function applyFiltersAndRender() {
+            let cvs = [...allCVs];
+
+            // Apply favorites filter
+            if (showFavoritesOnly) {
+                cvs = cvs.filter(cv => employerFavorites.includes(cv._id));
+            }
+
+            filteredCVs = cvs;
+            applySortAndRender();
+
+            // Update results count
+            const total = showFavoritesOnly ? `${filteredCVs.length} favorieten` : `${filteredCVs.length} kandidaten gevonden`;
+            document.getElementById('resultsCount').textContent = total;
         }
 
         function applySortAndRender() {
