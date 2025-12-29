@@ -662,6 +662,179 @@ app.get('/api/employer/cvs/:id/download', requireEmployer, async (req, res) => {
     }
 });
 
+// === EMPLOYER: Favorites ===
+
+// Get favorites for employer
+app.get('/api/employer/favorites', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan === 'basic') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Advanced of Premium voor favorieten'
+            });
+        }
+
+        await connectDB();
+        const employer = await Employer.findById(req.employer._id);
+        res.json({ success: true, data: employer.favorites || [] });
+    } catch (error) {
+        console.error('Error fetching favorites:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch favorites' });
+    }
+});
+
+// Add to favorites
+app.post('/api/employer/favorites/:cvId', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan === 'basic') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Advanced of Premium voor favorieten'
+            });
+        }
+
+        await connectDB();
+        const employer = await Employer.findById(req.employer._id);
+
+        if (!employer.favorites) {
+            employer.favorites = [];
+        }
+
+        const cvId = req.params.cvId;
+        if (!employer.favorites.includes(cvId)) {
+            employer.favorites.push(cvId);
+            await employer.save();
+        }
+
+        res.json({ success: true, message: 'Added to favorites' });
+    } catch (error) {
+        console.error('Error adding favorite:', error);
+        res.status(500).json({ success: false, message: 'Failed to add favorite' });
+    }
+});
+
+// Remove from favorites
+app.delete('/api/employer/favorites/:cvId', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan === 'basic') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Advanced of Premium voor favorieten'
+            });
+        }
+
+        await connectDB();
+        const employer = await Employer.findById(req.employer._id);
+
+        if (employer.favorites) {
+            employer.favorites = employer.favorites.filter(id => id.toString() !== req.params.cvId);
+            await employer.save();
+        }
+
+        res.json({ success: true, message: 'Removed from favorites' });
+    } catch (error) {
+        console.error('Error removing favorite:', error);
+        res.status(500).json({ success: false, message: 'Failed to remove favorite' });
+    }
+});
+
+// === EMPLOYER: Notes ===
+
+// Get notes for employer
+app.get('/api/employer/notes', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan === 'basic') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Advanced of Premium voor notities'
+            });
+        }
+
+        await connectDB();
+        const employer = await Employer.findById(req.employer._id);
+        res.json({ success: true, data: employer.notes || [] });
+    } catch (error) {
+        console.error('Error fetching notes:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch notes' });
+    }
+});
+
+// Save/update note for a CV
+app.post('/api/employer/notes/:cvId', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan === 'basic') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Advanced of Premium voor notities'
+            });
+        }
+
+        const { text } = req.body;
+        if (!text || !text.trim()) {
+            return res.status(400).json({ success: false, message: 'Note text is required' });
+        }
+
+        await connectDB();
+        const employer = await Employer.findById(req.employer._id);
+
+        if (!employer.notes) {
+            employer.notes = [];
+        }
+
+        const cvId = req.params.cvId;
+        const existingNoteIndex = employer.notes.findIndex(n => n.cvId.toString() === cvId);
+
+        if (existingNoteIndex >= 0) {
+            employer.notes[existingNoteIndex].text = text.trim();
+            employer.notes[existingNoteIndex].updatedAt = new Date();
+        } else {
+            employer.notes.push({
+                cvId,
+                text: text.trim(),
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+        }
+
+        await employer.save();
+        res.json({ success: true, message: 'Note saved' });
+    } catch (error) {
+        console.error('Error saving note:', error);
+        res.status(500).json({ success: false, message: 'Failed to save note' });
+    }
+});
+
+// Delete note for a CV
+app.delete('/api/employer/notes/:cvId', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan === 'basic') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Advanced of Premium voor notities'
+            });
+        }
+
+        await connectDB();
+        const employer = await Employer.findById(req.employer._id);
+
+        if (employer.notes) {
+            employer.notes = employer.notes.filter(n => n.cvId.toString() !== req.params.cvId);
+            await employer.save();
+        }
+
+        res.json({ success: true, message: 'Note deleted' });
+    } catch (error) {
+        console.error('Error deleting note:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete note' });
+    }
+});
+
 // === ADMIN: Employer Management ===
 
 // Get all employers (admin only)

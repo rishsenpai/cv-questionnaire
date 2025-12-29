@@ -31,7 +31,30 @@ const employerSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
-    }
+    },
+    favorites: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CV'
+    }],
+    notes: [{
+        cvId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'CV',
+            required: true
+        },
+        text: {
+            type: String,
+            required: true
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        },
+        updatedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, {
     timestamps: true
 });

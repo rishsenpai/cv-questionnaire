@@ -47,6 +47,19 @@
             margin-bottom: 30px;
         }
 
+        .forgot-password {
+            display: block;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .forgot-password:hover {
+            color: #2ec4b6;
+        }
+
         .login-input {
             width: 100%;
             background: rgba(255, 255, 255, 0.1);
@@ -466,6 +479,75 @@
         .cv-card:hover {
             background: rgba(255, 255, 255, 0.08);
             transform: translateY(-2px);
+        }
+
+        .cv-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .cv-card-actions-top {
+            display: flex;
+            gap: 8px;
+        }
+
+        .favorite-btn, .note-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+        }
+
+        .favorite-btn:hover, .note-btn:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .favorite-btn.active {
+            opacity: 1;
+            color: #e53e3e;
+        }
+
+        .note-btn.has-note {
+            opacity: 1;
+            color: #2ec4b6;
+        }
+
+        /* Note Modal */
+        .note-modal-content {
+            max-width: 500px;
+        }
+
+        .note-textarea {
+            width: 100%;
+            min-height: 150px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            color: #fff;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 16px;
+        }
+
+        .note-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .note-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .note-actions .btn {
+            padding: 10px 20px;
         }
 
         .cv-card .cv-actions {
@@ -1035,6 +1117,14 @@
             color: #1e293b;
         }
 
+        body.light-mode .forgot-password {
+            color: #64748b;
+        }
+
+        body.light-mode .forgot-password:hover {
+            color: #0d9488;
+        }
+
         body.light-mode .login-input::placeholder {
             color: #94a3b8;
         }
@@ -1078,6 +1168,16 @@
 
         body.light-mode .cv-card:hover {
             background: #f8fafc;
+        }
+
+        body.light-mode .note-textarea {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .note-textarea::placeholder {
+            color: #94a3b8;
         }
 
         body.light-mode .search-input,
@@ -1241,6 +1341,7 @@
                 <input type="password" class="login-input" id="passwordInput" placeholder="Wachtwoord" required>
                 <button type="submit" class="login-btn" id="loginBtn">Inloggen</button>
             </form>
+            <a href="#" class="forgot-password" onclick="showForgotPassword(event)">Wachtwoord vergeten?</a>
         </div>
     </div>
 
@@ -1403,10 +1504,28 @@
         </div>
     </div>
 
+    <!-- Note Modal -->
+    <div class="modal" id="noteModal">
+        <div class="modal-content note-modal-content">
+            <div class="modal-header">
+                <h2 id="noteModalTitle">Notitie</h2>
+                <button class="modal-close" onclick="closeNoteModal()">&times;</button>
+            </div>
+            <textarea class="note-textarea" id="noteText" placeholder="Schrijf hier je notitie over deze kandidaat..."></textarea>
+            <div class="note-actions">
+                <button class="btn btn-secondary" onclick="closeNoteModal()">Annuleren</button>
+                <button class="btn btn-primary" onclick="saveNote()">Opslaan</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let authToken = localStorage.getItem('employerToken');
         let currentPlan = 'basic';
         let allCVs = [];
+        let employerFavorites = [];
+        let employerNotes = [];
+        let currentNoteCV = null;
 
         // Plan check helpers
         function hasFullAccess() {
@@ -1451,13 +1570,148 @@
             document.getElementById('portal').classList.remove('active');
         }
 
+        function showForgotPassword(event) {
+            event.preventDefault();
+            alert('Om je wachtwoord te resetten, neem contact op met de beheerder via info@cvnow.nl of bel naar het supportnummer.');
+        }
+
         function showPortal() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('portal').classList.add('active');
             updatePaymentUI();
+            // Load favorites and notes first (for advanced/premium users)
+            if (hasFullAccess()) {
+                loadFavoritesAndNotes();
+            }
             searchCVs();
             if (isPremium()) {
                 loadVacancies();
+            }
+        }
+
+        // Load favorites and notes for employer
+        async function loadFavoritesAndNotes() {
+            try {
+                const [favResponse, notesResponse] = await Promise.all([
+                    fetch('/api/employer/favorites', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    }),
+                    fetch('/api/employer/notes', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    })
+                ]);
+
+                if (favResponse.ok) {
+                    const favResult = await favResponse.json();
+                    if (favResult.success) {
+                        employerFavorites = favResult.data || [];
+                    }
+                }
+
+                if (notesResponse.ok) {
+                    const notesResult = await notesResponse.json();
+                    if (notesResult.success) {
+                        employerNotes = notesResult.data || [];
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading favorites/notes:', error);
+            }
+        }
+
+        // Toggle favorite status
+        async function toggleFavorite(cvId) {
+            const isFavorite = employerFavorites.includes(cvId);
+
+            try {
+                const response = await fetch(`/api/employer/favorites/${cvId}`, {
+                    method: isFavorite ? 'DELETE' : 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    if (isFavorite) {
+                        employerFavorites = employerFavorites.filter(id => id !== cvId);
+                    } else {
+                        employerFavorites.push(cvId);
+                    }
+                    // Re-render CVs to update UI
+                    renderCVs(allCVs);
+                } else {
+                    const result = await response.json();
+                    alert(result.message || 'Fout bij toevoegen/verwijderen favoriet');
+                }
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+                alert('Fout bij verbinden met server');
+            }
+        }
+
+        // Open note modal
+        function openNoteModal(cvId, cvName) {
+            currentNoteCV = cvId;
+            document.getElementById('noteModalTitle').textContent = `Notitie - ${cvName}`;
+
+            // Find existing note
+            const existingNote = employerNotes.find(n => n.cvId === cvId);
+            document.getElementById('noteText').value = existingNote ? existingNote.text : '';
+
+            document.getElementById('noteModal').classList.add('active');
+            document.getElementById('noteText').focus();
+        }
+
+        function closeNoteModal() {
+            document.getElementById('noteModal').classList.remove('active');
+            currentNoteCV = null;
+        }
+
+        // Save note
+        async function saveNote() {
+            if (!currentNoteCV) return;
+
+            const text = document.getElementById('noteText').value.trim();
+
+            try {
+                if (text) {
+                    // Save/update note
+                    const response = await fetch(`/api/employer/notes/${currentNoteCV}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({ text })
+                    });
+
+                    if (response.ok) {
+                        const existingIndex = employerNotes.findIndex(n => n.cvId === currentNoteCV);
+                        if (existingIndex >= 0) {
+                            employerNotes[existingIndex].text = text;
+                        } else {
+                            employerNotes.push({ cvId: currentNoteCV, text });
+                        }
+                    } else {
+                        const result = await response.json();
+                        alert(result.message || 'Fout bij opslaan notitie');
+                        return;
+                    }
+                } else {
+                    // Delete note if text is empty
+                    const response = await fetch(`/api/employer/notes/${currentNoteCV}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+
+                    if (response.ok) {
+                        employerNotes = employerNotes.filter(n => n.cvId !== currentNoteCV);
+                    }
+                }
+
+                closeNoteModal();
+                renderCVs(allCVs);
+            } catch (error) {
+                console.error('Error saving note:', error);
+                alert('Fout bij verbinden met server');
             }
         }
 
@@ -1657,11 +1911,26 @@
                 }
 
                 // Advanced/Premium: full view
+                const isFavorite = employerFavorites.includes(cv._id);
+                const hasNote = employerNotes.some(n => n.cvId === cv._id);
+
                 return `
                     <div class="cv-card">
                         ${showMatchScore && cv.matchScore ? `<div class="match-score">${cv.matchScore}% match</div>` : ''}
-                        <div class="cv-name">${escapeHtml(cv.fullName)}</div>
-                        <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
+                        <div class="cv-card-header">
+                            <div>
+                                <div class="cv-name">${escapeHtml(cv.fullName)}</div>
+                                <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
+                            </div>
+                            <div class="cv-card-actions-top">
+                                <button class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite('${cv._id}')" title="${isFavorite ? 'Verwijder uit favorieten' : 'Toevoegen aan favorieten'}">
+                                    ${isFavorite ? '❤️' : '🤍'}
+                                </button>
+                                <button class="note-btn ${hasNote ? 'has-note' : ''}" onclick="openNoteModal('${cv._id}', '${escapeHtml(cv.fullName).replace(/'/g, "\\'")}')" title="${hasNote ? 'Notitie bewerken' : 'Notitie toevoegen'}">
+                                    📝
+                                </button>
+                            </div>
+                        </div>
                         <div class="cv-file-badge">📄 CV download beschikbaar</div>
                         <div class="cv-info">
                             ${cv.email ? `
@@ -1914,8 +2183,15 @@
             if (e.target.id === 'cvModal') closeModal();
         });
 
+        document.getElementById('noteModal').addEventListener('click', (e) => {
+            if (e.target.id === 'noteModal') closeNoteModal();
+        });
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
+            if (e.key === 'Escape') {
+                closeModal();
+                closeNoteModal();
+            }
         });
 
         // === VACANCY FUNCTIONS (Premium only) ===

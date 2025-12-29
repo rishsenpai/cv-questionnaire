@@ -506,6 +506,22 @@
             transform: none;
         }
 
+        .selection-toolbar .select-all-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .selection-toolbar .select-all-btn:hover {
+            transform: scale(1.05);
+        }
+
         .cv-header {
             display: flex;
             justify-content: space-between;
@@ -795,6 +811,184 @@
             font-size: 24px;
             margin-bottom: 10px;
             color: rgba(255, 255, 255, 0.8);
+        }
+
+        .empty-state p {
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+        }
+
+        .empty-state .btn {
+            margin-top: 16px;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+        }
+
+        .pagination-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            margin: 0 16px;
+        }
+
+        /* Sort dropdown */
+        .sort-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 180px;
+        }
+
+        .sort-select option {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        /* Custom Confirm Dialog */
+        .confirm-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .confirm-dialog-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .confirm-dialog {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+        }
+
+        .confirm-dialog-overlay.active .confirm-dialog {
+            transform: scale(1);
+        }
+
+        .confirm-dialog-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .confirm-dialog-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .confirm-dialog-message {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .confirm-dialog-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .confirm-dialog-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .confirm-dialog-btn.cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .confirm-dialog-btn.cancel:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .confirm-dialog-btn.confirm {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: #fff;
+        }
+
+        .confirm-dialog-btn.confirm:hover {
+            transform: scale(1.05);
+        }
+
+        .confirm-dialog-btn.confirm.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Export button */
+        .export-btn {
+            background: rgba(46, 196, 182, 0.2);
+            color: #2ec4b6;
+            border: 1px solid rgba(46, 196, 182, 0.3);
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .export-btn:hover {
+            background: rgba(46, 196, 182, 0.3);
         }
 
         /* LinkedIn-style CV Modal */
@@ -1596,7 +1790,8 @@
                 align-items: flex-start;
             }
 
-            .selection-toolbar .delete-selected-btn {
+            .selection-toolbar .delete-selected-btn,
+            .selection-toolbar .select-all-btn {
                 width: 100%;
             }
 
@@ -2044,6 +2239,15 @@
             background: rgba(239, 68, 68, 0.2);
         }
 
+        body.light-mode .selection-toolbar .select-all-btn {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        body.light-mode .selection-toolbar .select-all-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
         body.light-mode .upload-modal-content {
             background: #fff;
             border-color: #e2e8f0;
@@ -2276,6 +2480,59 @@
         body.light-mode .loading {
             color: #64748b;
         }
+
+        body.light-mode .pagination-btn {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .pagination-btn:hover:not(:disabled) {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #667eea;
+        }
+
+        body.light-mode .pagination-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        body.light-mode .pagination-info {
+            color: #64748b;
+        }
+
+        body.light-mode .sort-select {
+            background: #fff;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .sort-select option {
+            background: #fff;
+            color: #1e293b;
+        }
+
+        body.light-mode .confirm-dialog {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .confirm-dialog-title {
+            color: #1e293b;
+        }
+
+        body.light-mode .confirm-dialog-message {
+            color: #64748b;
+        }
+
+        body.light-mode .confirm-dialog-btn.cancel {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        body.light-mode .confirm-dialog-btn.cancel:hover {
+            background: #e2e8f0;
+        }
     </style>
 </head>
 <body>
@@ -2336,6 +2593,13 @@
                         <span class="results-counter" id="resultsCounter"></span>
                     </div>
                     <div class="toolbar-buttons">
+                        <select class="sort-select" id="sortSelect" onchange="handleSort()">
+                            <option value="date-desc">Nieuwste eerst</option>
+                            <option value="date-asc">Oudste eerst</option>
+                            <option value="name-asc">Naam A-Z</option>
+                            <option value="name-desc">Naam Z-A</option>
+                        </select>
+                        <button class="export-btn" onclick="exportToCSV()">📥 Export CSV</button>
                         <button class="add-btn" onclick="openAddModal()">+ CV Uploaden</button>
                         <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
                     </div>
@@ -2345,8 +2609,9 @@
                     <label class="select-all-label" for="selectAllCheckbox">
                         <input type="checkbox" class="select-all-checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
                         <span class="select-all-visual"></span>
-                        <span>Alles selecteren</span>
+                        <span>Pagina selecteren</span>
                     </label>
+                    <button class="select-all-btn" id="selectAllBtn" onclick="selectAllCVs()">Alles selecteren</button>
                     <span class="selection-count" id="selectionCount">0 geselecteerd</span>
                     <button class="delete-selected-btn" id="deleteSelectedBtn" onclick="deleteSelected()" disabled>
                         Verwijder geselecteerde
@@ -2359,6 +2624,8 @@
                         <p>CV's laden...</p>
                     </div>
                 </div>
+
+                <div class="pagination" id="pagination"></div>
             </div>
 
             <!-- Employers Tab -->
@@ -2566,8 +2833,14 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         let allCVs = [];
+        let filteredCVs = []; // CVs after search filter
         let selectedIds = new Set(); // Track selected CV IDs across renders
         let authToken = localStorage.getItem('adminToken');
+
+        // Pagination settings
+        let currentPage = 1;
+        const itemsPerPage = 12;
+        let currentSort = 'date-desc'; // Default sort
 
         // Client-side LinkedIn PDF Parser
         async function parseLinkedInPDF(file) {
@@ -2598,12 +2871,22 @@
                     fullText: fullText // Store all text for searching
                 };
 
-                // LinkedIn section headers to skip when looking for name
+                // LinkedIn section headers and common non-name words to skip
                 const skipWords = ['contact', 'linkedin', 'top skills', 'skills', 'experience',
                     'education', 'summary', 'about', 'www.', 'http', 'page ', 'languages',
                     'certifications', 'honors', 'awards', 'publications', 'projects',
                     'business development', 'change management', 'personal coaching',
-                    'communication', 'leadership', 'management', 'marketing', 'sales'];
+                    'communication', 'leadership', 'management', 'marketing', 'sales',
+                    // Common job/skill words that look like names
+                    'legal', 'research', 'social', 'media', 'certificate', 'professional',
+                    'digital', 'strategy', 'finance', 'banking', 'insurance', 'higher',
+                    'senior', 'junior', 'manager', 'director', 'analyst', 'consultant',
+                    'developer', 'engineer', 'designer', 'specialist', 'coordinator',
+                    'assistant', 'associate', 'executive', 'officer', 'advisor',
+                    'customer', 'service', 'support', 'technical', 'software', 'data',
+                    'product', 'project', 'program', 'operations', 'human', 'resources',
+                    'content', 'creative', 'brand', 'global', 'regional', 'national',
+                    'corporate', 'commercial', 'retail', 'wholesale', 'supply', 'chain'];
 
                 // Extract email
                 const emailMatch = fullText.match(/[\w.-]+@[\w.-]+\.\w+/);
@@ -2889,7 +3172,9 @@
 
                 if (result.success) {
                     allCVs = result.data;
-                    renderCVs(allCVs);
+                    filteredCVs = [...allCVs];
+                    currentPage = 1;
+                    applySortAndRender();
                     updateStats(allCVs);
                 } else {
                     cvList.innerHTML = `<div class="empty-state"><p>Fout bij laden: ${result.message}</p></div>`;
@@ -2899,21 +3184,58 @@
             }
         }
 
+        // Sort CVs based on current sort option
+        function sortCVs(cvs) {
+            const sorted = [...cvs];
+            switch (currentSort) {
+                case 'date-desc':
+                    return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                case 'date-asc':
+                    return sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                case 'name-asc':
+                    return sorted.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+                case 'name-desc':
+                    return sorted.sort((a, b) => (b.fullName || '').localeCompare(a.fullName || ''));
+                default:
+                    return sorted;
+            }
+        }
+
+        function handleSort() {
+            currentSort = document.getElementById('sortSelect').value;
+            currentPage = 1;
+            applySortAndRender();
+        }
+
+        function applySortAndRender() {
+            const sorted = sortCVs(filteredCVs);
+            renderCVs(sorted);
+        }
+
         function renderCVs(cvs) {
             const cvList = document.getElementById('cvList');
+            const paginationEl = document.getElementById('pagination');
 
             if (cvs.length === 0) {
                 cvList.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📄</div>
-                        <h2>Nog geen CV's</h2>
-                        <p>Ingediende CV's verschijnen hier</p>
+                        <h2>Geen CV's gevonden</h2>
+                        <p>Probeer een andere zoekopdracht of upload nieuwe CV's</p>
+                        <button class="btn add-btn" onclick="openAddModal()">+ CV Uploaden</button>
                     </div>
                 `;
+                paginationEl.innerHTML = '';
                 return;
             }
 
-            cvList.innerHTML = cvs.map(cv => `
+            // Calculate pagination
+            const totalPages = Math.ceil(cvs.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedCVs = cvs.slice(startIndex, endIndex);
+
+            cvList.innerHTML = paginatedCVs.map(cv => `
                 <div class="cv-card${selectedIds.has(cv._id) ? ' selected' : ''}" data-id="${cv._id}">
                     <div class="cv-checkbox-wrapper">
                         <input type="checkbox" class="cv-checkbox" id="cb-${cv._id}" data-id="${cv._id}" onchange="updateSelection()" ${selectedIds.has(cv._id) ? 'checked' : ''}>
@@ -2958,8 +3280,48 @@
                 </div>
             `).join('');
 
+            // Render pagination
+            renderPagination(cvs.length, totalPages);
+
             // Update selection toolbar visibility
             updateSelection();
+        }
+
+        function renderPagination(totalItems, totalPages) {
+            const paginationEl = document.getElementById('pagination');
+
+            if (totalPages <= 1) {
+                paginationEl.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // Previous button
+            html += `<button class="pagination-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Vorige</button>`;
+
+            // Page info
+            html += `<span class="pagination-info">Pagina ${currentPage} van ${totalPages} (${totalItems} items)</span>`;
+
+            // Page numbers (show max 5)
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, startPage + 4);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+
+            // Next button
+            html += `<button class="pagination-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Volgende →</button>`;
+
+            paginationEl.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            applySortAndRender();
+            // Scroll to top of CV list
+            document.getElementById('cvList').scrollIntoView({ behavior: 'smooth' });
         }
 
         function updateStats(cvs) {
@@ -3427,7 +3789,14 @@
         }
 
         async function deleteCV(id) {
-            if (!confirm('Weet je zeker dat je deze CV wilt verwijderen?')) return;
+            const confirmed = await showConfirmDialog({
+                icon: '🗑️',
+                title: 'CV Verwijderen',
+                message: 'Weet je zeker dat je deze CV wilt verwijderen? Dit kan niet ongedaan worden gemaakt.',
+                confirmText: 'Verwijderen'
+            });
+
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`/api/cvs/${id}`, {
@@ -3509,6 +3878,39 @@
             updateSelection();
         }
 
+        function selectAllCVs() {
+            // Select ALL CVs from filteredCVs (across all pages)
+            filteredCVs.forEach(cv => {
+                selectedIds.add(cv._id);
+            });
+
+            // Update checkboxes on current page to match
+            const checkboxes = document.querySelectorAll('.cv-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                const card = cb.closest('.cv-card');
+                card.classList.add('selected');
+            });
+
+            // Update select all checkbox
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+
+            // Update selection count and button state
+            const selectionCount = document.getElementById('selectionCount');
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            selectionCount.textContent = `${selectedIds.size} geselecteerd`;
+            deleteBtn.disabled = false;
+
+            // Update button text to show it worked
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            selectAllBtn.textContent = `Alle ${filteredCVs.length} geselecteerd`;
+            setTimeout(() => {
+                selectAllBtn.textContent = 'Alles selecteren';
+            }, 2000);
+        }
+
         async function deleteSelected() {
             // Use selectedIds Set to get all selected CVs (including filtered out ones)
             const ids = Array.from(selectedIds);
@@ -3519,7 +3921,14 @@
                 ? 'Weet je zeker dat je deze CV wilt verwijderen?'
                 : `Weet je zeker dat je ${ids.length} CV's wilt verwijderen?`;
 
-            if (!confirm(confirmMsg)) return;
+            const confirmed = await showConfirmDialog({
+                icon: '🗑️',
+                title: 'CV\'s Verwijderen',
+                message: confirmMsg + ' Dit kan niet ongedaan worden gemaakt.',
+                confirmText: 'Verwijderen'
+            });
+
+            if (!confirmed) return;
 
             const deleteBtn = document.getElementById('deleteSelectedBtn');
             deleteBtn.disabled = true;
@@ -3591,20 +4000,21 @@
                 clearBtn.classList.remove('visible');
             }
 
-            const filtered = allCVs.filter(cv =>
+            filteredCVs = allCVs.filter(cv =>
                 cv.fullName.toLowerCase().includes(query) ||
                 (cv.email && cv.email.toLowerCase().includes(query))
             );
 
             // Update results counter
             if (query.length > 0) {
-                resultsCounter.textContent = `${filtered.length} van ${allCVs.length} resultaten`;
+                resultsCounter.textContent = `${filteredCVs.length} van ${allCVs.length} resultaten`;
                 resultsCounter.classList.add('visible', 'filtered');
             } else {
                 resultsCounter.classList.remove('visible', 'filtered');
             }
 
-            renderCVs(filtered);
+            currentPage = 1;
+            applySortAndRender();
         });
 
         function clearSearch() {
@@ -3614,8 +4024,75 @@
             searchInput.value = '';
             clearBtn.classList.remove('visible');
             resultsCounter.classList.remove('visible', 'filtered');
-            renderCVs(allCVs);
+            filteredCVs = [...allCVs];
+            currentPage = 1;
+            applySortAndRender();
             searchInput.focus();
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if (filteredCVs.length === 0) {
+                showConfirmDialog({
+                    icon: '📄',
+                    title: 'Geen data',
+                    message: 'Er zijn geen CV\'s om te exporteren.',
+                    confirmText: 'OK',
+                    confirmClass: 'primary',
+                    showCancel: false
+                });
+                return;
+            }
+
+            const headers = ['Naam', 'Email', 'Telefoon', 'Functie', 'Locatie', 'Datum'];
+            const rows = filteredCVs.map(cv => [
+                cv.fullName || '',
+                cv.email || '',
+                cv.phone || '',
+                cv.jobTitle || '',
+                cv.location || '',
+                new Date(cv.createdAt).toLocaleDateString('nl-NL')
+            ]);
+
+            let csvContent = headers.join(';') + '\n';
+            rows.forEach(row => {
+                csvContent += row.map(field => `"${(field || '').replace(/"/g, '""')}"`).join(';') + '\n';
+            });
+
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `cv-export-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        // Custom Confirm Dialog
+        let confirmResolve = null;
+
+        function showConfirmDialog(options = {}) {
+            return new Promise((resolve) => {
+                confirmResolve = resolve;
+                document.getElementById('confirmIcon').textContent = options.icon || '⚠️';
+                document.getElementById('confirmTitle').textContent = options.title || 'Bevestigen';
+                document.getElementById('confirmMessage').textContent = options.message || 'Weet je het zeker?';
+
+                const confirmBtn = document.getElementById('confirmBtn');
+                confirmBtn.textContent = options.confirmText || 'Bevestigen';
+                confirmBtn.className = 'confirm-dialog-btn confirm' + (options.confirmClass ? ' ' + options.confirmClass : '');
+
+                const cancelBtn = document.querySelector('.confirm-dialog-btn.cancel');
+                cancelBtn.style.display = options.showCancel === false ? 'none' : 'inline-block';
+
+                document.getElementById('confirmDialog').classList.add('active');
+            });
+        }
+
+        function closeConfirmDialog(result) {
+            document.getElementById('confirmDialog').classList.remove('active');
+            if (confirmResolve) {
+                confirmResolve(result);
+                confirmResolve = null;
+            }
         }
 
         // Close modal on outside click
@@ -4017,5 +4494,18 @@
         // Initial auth check
         checkAuth();
     </script>
+
+    <!-- Custom Confirm Dialog -->
+    <div class="confirm-dialog-overlay" id="confirmDialog">
+        <div class="confirm-dialog">
+            <div class="confirm-dialog-icon" id="confirmIcon">⚠️</div>
+            <div class="confirm-dialog-title" id="confirmTitle">Bevestigen</div>
+            <div class="confirm-dialog-message" id="confirmMessage">Weet je het zeker?</div>
+            <div class="confirm-dialog-buttons">
+                <button class="confirm-dialog-btn cancel" onclick="closeConfirmDialog(false)">Annuleren</button>
+                <button class="confirm-dialog-btn confirm" id="confirmBtn" onclick="closeConfirmDialog(true)">Bevestigen</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
