@@ -1517,6 +1517,14 @@ function generateWordCV(formData) {
     return doc;
 }
 
+// Helper to extract first work experience entry for duplicate check
+function extractFirstExperience(experience) {
+    if (!experience) return '';
+    // Get first line or first ~100 chars as identifier
+    const firstLine = experience.split('\n')[0].trim().toLowerCase();
+    return firstLine.substring(0, 100);
+}
+
 // Submit CV endpoint
 app.post('/submit-cv', async (req, res) => {
     try {
@@ -1532,6 +1540,31 @@ app.post('/submit-cv', async (req, res) => {
 
         // Connect to database (for serverless)
         await connectDB();
+
+        // Check for duplicate CV (same name + same first experience entry)
+        if (mongoose.connection.readyState === 1) {
+            const nameLower = formData.fullName.trim().toLowerCase();
+            const firstExp = extractFirstExperience(formData.experience);
+
+            // Find existing CVs with same name (case-insensitive)
+            const existingCVs = await CV.find({
+                fullName: { $regex: new RegExp(`^${nameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+            });
+
+            // Check if any has the same first experience
+            const isDuplicate = existingCVs.some(cv => {
+                const existingFirstExp = extractFirstExperience(cv.experience);
+                return existingFirstExp === firstExp;
+            });
+
+            if (isDuplicate) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Er bestaat al een CV met deze naam en werkervaring. Neem contact op als je je CV wilt bijwerken.',
+                    duplicate: true
+                });
+            }
+        }
 
         // Save CV to database
         let savedCV = null;
@@ -1955,6 +1988,30 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'File size must be less than 10MB'
+            });
+        }
+
+        // Check for duplicate CV (same name + same first experience entry)
+        const cvName = fullName || fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+        const nameLower = cvName.trim().toLowerCase();
+        const firstExp = extractFirstExperience(experience);
+
+        const existingCVs = await CV.find({
+            fullName: { $regex: new RegExp(`^${nameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+        });
+
+        const duplicateCV = existingCVs.find(cv => {
+            const existingFirstExp = extractFirstExperience(cv.experience);
+            return existingFirstExp === firstExp;
+        });
+
+        if (duplicateCV) {
+            return res.status(409).json({
+                success: false,
+                message: `CV voor "${cvName}" met deze werkervaring bestaat al`,
+                duplicate: true,
+                existingCvId: duplicateCV._id,
+                existingCvName: duplicateCV.fullName
             });
         }
 

@@ -5,6 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CV Dashboard - Admin</title>
     <style>
+        :root {
+            /* Dark theme (default) */
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --bg-card-hover: rgba(255, 255, 255, 0.05);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-color-hover: rgba(102, 126, 234, 0.3);
+            --text-primary: #fff;
+            --text-secondary: rgba(255, 255, 255, 0.85);
+            --text-muted: rgba(255, 255, 255, 0.6);
+            --accent-color: #667eea;
+            --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --modal-bg: #1a1a2e;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f4f2ee;
+            --bg-secondary: #e8e6e1;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f9f9f9;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --border-color-hover: rgba(102, 126, 234, 0.4);
+            --text-primary: #191919;
+            --text-secondary: rgba(0, 0, 0, 0.85);
+            --text-muted: rgba(0, 0, 0, 0.6);
+            --accent-color: #0a66c2;
+            --accent-gradient: linear-gradient(135deg, #0a66c2 0%, #004182 100%);
+            --modal-bg: #ffffff;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,9 +46,10 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             min-height: 100vh;
-            color: #fff;
+            color: var(--text-primary);
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         /* Login Screen */
@@ -152,6 +186,45 @@
             text-transform: uppercase;
         }
 
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .theme-icon {
+            font-size: 16px;
+        }
+
+        .theme-switch {
+            width: 36px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .theme-switch-handle {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+
         .logout-btn {
             background: rgba(239, 68, 68, 0.2);
             border: none;
@@ -180,11 +253,16 @@
             margin-bottom: 20px;
         }
 
+        .search-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
         .search-box {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            padding: 12px 20px;
+            padding: 12px 40px 12px 20px;
             color: #fff;
             font-size: 14px;
             width: 300px;
@@ -192,6 +270,30 @@
 
         .search-box::placeholder {
             color: rgba(255, 255, 255, 0.5);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+            display: none;
+            transition: color 0.2s ease;
+        }
+
+        .search-clear:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .search-clear.visible {
+            display: block;
         }
 
         .toolbar-buttons {
@@ -502,57 +604,135 @@
         }
 
         .modal-content {
-            background: #1a1a2e;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
             max-width: 700px;
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
-            padding: 30px;
+            padding: 0;
+            box-shadow: var(--shadow);
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .modal-content > .modal-header {
+            background: transparent;
+            margin: 0;
+            padding: 24px;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            align-items: flex-start;
+            margin-bottom: 0;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header-info {
+            flex: 1;
+        }
+
+        .modal-header h2 {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        [data-theme="light"] .modal-header h2 {
+            background: none;
+            -webkit-text-fill-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        .modal-subtitle {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin: 6px 0 0 0;
+            font-weight: 400;
         }
 
         .modal-close {
             background: none;
             border: none;
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--text-muted);
             font-size: 28px;
             cursor: pointer;
-            transition: color 0.3s ease;
+            transition: all 0.2s ease;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .modal-close:hover {
-            color: #fff;
+            color: var(--text-primary);
+            background: var(--bg-card-hover);
         }
 
         .modal-section {
-            margin-bottom: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .modal-section:hover {
+            border-color: var(--border-color-hover);
+            background: var(--bg-card-hover);
         }
 
         .modal-section-title {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #667eea;
-            margin-bottom: 8px;
+            font-size: 13px;
             font-weight: 600;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 16px 20px 0;
         }
 
         .modal-section-content {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 16px;
-            border-radius: 8px;
+            padding: 12px 20px 16px;
             font-size: 14px;
-            line-height: 1.6;
+            line-height: 1.7;
             white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+
+        #modalBody {
+            padding: 16px;
+            max-height: calc(90vh - 120px);
+            overflow-y: auto;
+        }
+
+        #modalBody::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #modalBody::-webkit-scrollbar-track {
+            background: var(--bg-card);
+            border-radius: 3px;
+        }
+
+        #modalBody::-webkit-scrollbar-thumb {
+            background: var(--accent-gradient);
+            border-radius: 3px;
+        }
+
+        #modalBody::-webkit-scrollbar-thumb:hover {
+            opacity: 0.8;
         }
 
         .loading {
@@ -595,6 +775,29 @@
         /* Form Modal */
         .form-modal .modal-content {
             max-width: 600px;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+        }
+
+        .form-modal .modal-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .form-modal .modal-header h2 {
+            background: none;
+            -webkit-text-fill-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        .form-modal .modal-close {
+            color: var(--text-muted);
+        }
+
+        .form-modal .modal-close:hover {
+            color: var(--text-primary);
+            background: var(--bg-card-hover);
         }
 
         .form-grid {
@@ -989,6 +1192,74 @@
             width: 0%;
         }
 
+        .upload-errors {
+            display: none;
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: rgba(229, 62, 62, 0.15);
+            border: 1px solid rgba(229, 62, 62, 0.4);
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .upload-errors.show {
+            display: block;
+        }
+
+        .upload-errors-title {
+            color: #fc8181;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .upload-errors-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .upload-errors-list li {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .upload-errors-list li:last-child {
+            border-bottom: none;
+        }
+
+        .duplicate-info {
+            flex: 1;
+        }
+
+        .btn-view-duplicate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-view-duplicate:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
         /* Test Matching Styles */
         .test-matching-container {
             display: grid;
@@ -1097,6 +1368,495 @@
             border-radius: 3px;
             transition: width 0.5s ease;
         }
+
+        /* Light Mode Styles */
+        body.light-mode {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            color: #1e293b;
+        }
+
+        body.light-mode .login-screen {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+        }
+
+        body.light-mode .login-box {
+            background: #fff;
+            border-color: #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .login-box p {
+            color: #64748b;
+        }
+
+        body.light-mode .login-input {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .login-input::placeholder {
+            color: #94a3b8;
+        }
+
+        body.light-mode .header {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .header h1 {
+            color: #1e293b;
+        }
+
+        body.light-mode .stat-label {
+            color: #64748b;
+        }
+
+        body.light-mode .theme-toggle {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode .theme-toggle:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .theme-switch {
+            background: #2ec4b6;
+        }
+
+        body.light-mode .theme-switch-handle {
+            left: 18px;
+        }
+
+        body.light-mode .logout-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+
+        body.light-mode .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        body.light-mode .container {
+            color: #1e293b;
+        }
+
+        body.light-mode .search-box {
+            background: #fff;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .search-box::placeholder {
+            color: #94a3b8;
+        }
+
+        body.light-mode .search-clear {
+            color: #94a3b8;
+        }
+
+        body.light-mode .search-clear:hover {
+            color: #1e293b;
+        }
+
+        body.light-mode .cv-card {
+            background: #fff;
+            border-color: #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode .cv-card:hover {
+            background: #f8fafc;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .cv-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        body.light-mode .cv-checkbox-label {
+            border-color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        body.light-mode .cv-checkbox-label:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        body.light-mode .cv-name {
+            color: #1e293b;
+        }
+
+        body.light-mode .cv-title {
+            color: #0d9488;
+        }
+
+        body.light-mode .cv-info {
+            color: #64748b;
+        }
+
+        body.light-mode .cv-summary {
+            color: #64748b;
+        }
+
+        body.light-mode .btn-view {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        body.light-mode .btn-view:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        body.light-mode .btn-edit {
+            background: rgba(46, 196, 182, 0.1);
+            color: #0d9488;
+        }
+
+        body.light-mode .btn-edit:hover {
+            background: rgba(46, 196, 182, 0.2);
+        }
+
+        body.light-mode .btn-delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+
+        body.light-mode .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        body.light-mode .modal-content {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .modal-header {
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .modal-header h2,
+        body.light-mode #modalName {
+            color: #1e293b;
+        }
+
+        body.light-mode .modal-subtitle {
+            color: #64748b;
+        }
+
+        body.light-mode .modal-section h4 {
+            color: #1e293b;
+        }
+
+        body.light-mode .modal-section-content {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        body.light-mode .section-card {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .section-card:hover {
+            background: #f1f5f9;
+        }
+
+        body.light-mode .section-title {
+            color: #1e293b;
+        }
+
+        body.light-mode .section-text,
+        body.light-mode .section-card li {
+            color: #475569;
+        }
+
+        body.light-mode .experience-company,
+        body.light-mode .experience-location,
+        body.light-mode .education-school,
+        body.light-mode .education-location {
+            color: #64748b;
+        }
+
+        body.light-mode .skill-tag {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        body.light-mode .modal-close {
+            color: #64748b;
+        }
+
+        body.light-mode .modal-close:hover {
+            color: #1e293b;
+        }
+
+        body.light-mode .selection-toolbar {
+            background: rgba(102, 126, 234, 0.05);
+            border-color: rgba(102, 126, 234, 0.2);
+        }
+
+        body.light-mode .selection-toolbar .select-all-label {
+            color: #1e293b;
+        }
+
+        body.light-mode .selection-count {
+            color: #64748b;
+        }
+
+        body.light-mode .selection-toolbar .select-all-visual {
+            border-color: #cbd5e1;
+            background: #fff;
+        }
+
+        body.light-mode .selection-toolbar .select-all-label:hover .select-all-visual {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        body.light-mode .selection-toolbar .delete-selected-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+
+        body.light-mode .selection-toolbar .delete-selected-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        body.light-mode .upload-modal-content {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .upload-modal-content h2 {
+            color: #1e293b;
+        }
+
+        body.light-mode .form-group label {
+            color: #1e293b;
+        }
+
+        body.light-mode .form-group input,
+        body.light-mode .form-group select {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .form-group input::placeholder {
+            color: #94a3b8;
+        }
+
+        body.light-mode .dropzone {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        body.light-mode .dropzone:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        body.light-mode .dropzone p {
+            color: #64748b;
+        }
+
+        body.light-mode .result-item {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .result-item.success {
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        body.light-mode .result-item.error {
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        body.light-mode .error-list li {
+            color: #dc2626;
+        }
+
+        body.light-mode .test-matching-section {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .test-matching-section h3 {
+            color: #1e293b;
+        }
+
+        body.light-mode .test-matching-form input,
+        body.light-mode .test-matching-form textarea {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .test-match-item {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .test-match-name {
+            color: #1e293b;
+        }
+
+        body.light-mode .test-match-details {
+            color: #64748b;
+        }
+
+        body.light-mode .score-bar {
+            background: #e2e8f0;
+        }
+
+        /* Tabs in light mode */
+        body.light-mode .tab-btn {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .tab-btn:hover {
+            background: #e2e8f0;
+        }
+
+        body.light-mode .tab-btn.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: #fff;
+        }
+
+        /* Toolbar in light mode */
+        body.light-mode .toolbar {
+            color: #1e293b;
+        }
+
+        body.light-mode .refresh-btn {
+            background: #667eea;
+            color: #fff;
+        }
+
+        body.light-mode .add-btn {
+            background: #2ec4b6;
+            color: #fff;
+        }
+
+        /* CV card details */
+        body.light-mode .cv-status {
+            color: #1e293b;
+        }
+
+        body.light-mode .cv-status.sent {
+            background: rgba(34, 197, 94, 0.1);
+            color: #16a34a;
+        }
+
+        body.light-mode .cv-status.pending {
+            background: rgba(251, 191, 36, 0.1);
+            color: #d97706;
+        }
+
+        body.light-mode .cv-file-link {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        body.light-mode .cv-date {
+            color: #94a3b8;
+        }
+
+        body.light-mode .cv-location {
+            color: #64748b;
+        }
+
+        /* Employers tab light mode */
+        body.light-mode .employer-card {
+            background: #fff;
+            border-color: #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode .employer-card:hover {
+            background: #f8fafc;
+        }
+
+        body.light-mode .employer-name {
+            color: #1e293b;
+        }
+
+        body.light-mode .employer-info {
+            color: #64748b;
+        }
+
+        body.light-mode .employer-email {
+            color: #667eea;
+        }
+
+        body.light-mode .payment-badge {
+            color: #1e293b;
+        }
+
+        body.light-mode .payment-badge.basic {
+            background: rgba(251, 191, 36, 0.15);
+            color: #b45309;
+        }
+
+        body.light-mode .payment-badge.advanced {
+            background: rgba(46, 196, 182, 0.15);
+            color: #0d9488;
+        }
+
+        body.light-mode .payment-badge.premium {
+            background: rgba(168, 85, 247, 0.15);
+            color: #7c3aed;
+        }
+
+        /* CV card additional elements */
+        body.light-mode .cv-header {
+            color: #1e293b;
+        }
+
+        body.light-mode .cv-file-badge {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        body.light-mode .cv-details {
+            color: #64748b;
+        }
+
+        body.light-mode .cv-detail {
+            color: #64748b;
+        }
+
+        body.light-mode .cv-detail-icon {
+            color: #94a3b8;
+        }
+
+        body.light-mode .btn-download {
+            background: rgba(46, 196, 182, 0.1);
+            color: #0d9488;
+        }
+
+        body.light-mode .btn-download:hover {
+            background: rgba(46, 196, 182, 0.2);
+        }
+
+        body.light-mode .empty-state {
+            color: #64748b;
+        }
+
+        body.light-mode .empty-state h2 {
+            color: #1e293b;
+        }
+
+        body.light-mode .loading {
+            color: #64748b;
+        }
     </style>
 </head>
 <body>
@@ -1128,6 +1888,12 @@
                         <div class="stat-label">Vandaag</div>
                     </div>
                 </div>
+                <div class="theme-toggle" onclick="toggleTheme()" title="Wissel thema">
+                    <span class="theme-icon" id="themeIcon">🌙</span>
+                    <div class="theme-switch">
+                        <div class="theme-switch-handle" id="themeSwitchHandle"></div>
+                    </div>
+                </div>
                 <button class="logout-btn" onclick="logout()">Uitloggen</button>
             </div>
         </header>
@@ -1143,7 +1909,10 @@
             <!-- CV Tab -->
             <div class="tab-content active" id="cvTab">
                 <div class="toolbar">
-                    <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
+                    <div class="search-wrapper">
+                        <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
+                        <button type="button" class="search-clear" id="searchClear" onclick="clearSearch()">&times;</button>
+                    </div>
                     <div class="toolbar-buttons">
                         <button class="add-btn" onclick="openAddModal()">+ CV Uploaden</button>
                         <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
@@ -1173,7 +1942,10 @@
             <!-- Employers Tab -->
             <div class="tab-content" id="employersTab">
                 <div class="toolbar">
-                    <input type="text" class="search-box" placeholder="Zoeken op bedrijfsnaam..." id="employerSearchInput">
+                    <div class="search-wrapper">
+                        <input type="text" class="search-box" placeholder="Zoeken op bedrijfsnaam..." id="employerSearchInput">
+                        <button type="button" class="search-clear" id="employerSearchClear" onclick="clearEmployerSearch()">&times;</button>
+                    </div>
                     <div class="toolbar-buttons">
                         <button class="add-btn" onclick="openEmployerModal()">+ Werkgever Toevoegen</button>
                         <button class="refresh-btn" onclick="loadEmployers()">Vernieuwen</button>
@@ -1221,11 +1993,14 @@
         </div>
     </div>
 
-    <!-- Detail Modal -->
+    <!-- Detail Modal (LinkedIn-style) -->
     <div class="modal" id="cvModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalName">CV Details</h2>
+                <div class="modal-header-info">
+                    <h2 id="modalName">CV Details</h2>
+                    <p id="modalSubtitle" class="modal-subtitle"></p>
+                </div>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div id="modalBody"></div>
@@ -1267,9 +2042,14 @@
                     <div class="progress-text" id="progressText">Uploaden: 0 / 0</div>
                     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
                 </div>
+                <div class="upload-errors" id="uploadErrors">
+                    <div class="upload-errors-title">⚠️ Duplicaten overgeslagen:</div>
+                    <ul class="upload-errors-list" id="uploadErrorsList"></ul>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn-cancel" onclick="closeAddModal()">Annuleren</button>
                     <button type="submit" class="btn-submit" id="submitBtn">CV's Uploaden</button>
+                    <button type="button" class="btn-submit" id="closeUploadBtn" onclick="closeUploadAndRefresh()" style="display: none;">Sluiten</button>
                 </div>
             </form>
         </div>
@@ -1330,6 +2110,7 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         let allCVs = [];
+        let selectedIds = new Set(); // Track selected CV IDs across renders
         let authToken = localStorage.getItem('adminToken');
 
         // Client-side LinkedIn PDF Parser
@@ -1567,6 +2348,36 @@
             showLogin();
         }
 
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light-mode');
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Load saved theme on page load
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                if (themeIcon) themeIcon.textContent = '☀️';
+            }
+        }
+
+        // Load theme immediately
+        loadTheme();
+
         async function loadCVs() {
             const cvList = document.getElementById('cvList');
             cvList.innerHTML = `
@@ -1615,9 +2426,9 @@
             }
 
             cvList.innerHTML = cvs.map(cv => `
-                <div class="cv-card" data-id="${cv._id}">
+                <div class="cv-card${selectedIds.has(cv._id) ? ' selected' : ''}" data-id="${cv._id}">
                     <div class="cv-checkbox-wrapper">
-                        <input type="checkbox" class="cv-checkbox" id="cb-${cv._id}" data-id="${cv._id}" onchange="updateSelection()">
+                        <input type="checkbox" class="cv-checkbox" id="cb-${cv._id}" data-id="${cv._id}" onchange="updateSelection()" ${selectedIds.has(cv._id) ? 'checked' : ''}>
                         <label class="cv-checkbox-label" for="cb-${cv._id}"></label>
                     </div>
                     <div class="cv-header">
@@ -1631,10 +2442,12 @@
                         </span>
                     </div>
                     <div class="cv-details">
-                        <div class="cv-detail">
-                            <span class="cv-detail-icon">✉</span>
-                            <span>${escapeHtml(cv.email)}</span>
-                        </div>
+                        ${cv.email ? `
+                            <div class="cv-detail">
+                                <span class="cv-detail-icon">✉</span>
+                                <span>${escapeHtml(cv.email)}</span>
+                            </div>
+                        ` : ''}
                         ${cv.phone ? `
                             <div class="cv-detail">
                                 <span class="cv-detail-icon">📱</span>
@@ -1678,14 +2491,15 @@
             }
 
             document.getElementById('modalName').textContent = cv.fullName;
+            document.getElementById('modalSubtitle').textContent = cv.jobTitle || cv.location || '';
 
             const sections = [
-                { title: 'Contact', content: `Email: ${cv.email}\nTelefoon: ${cv.phone || '-'}\nLocatie: ${cv.location || '-'}\nGeboortedatum: ${cv.birthDate || '-'}` },
-                { title: 'Samenvatting', content: cv.summary },
-                { title: 'Talen', content: cv.languages },
+                { title: 'Over', content: cv.summary },
                 { title: 'Werkervaring', content: cv.experience },
                 { title: 'Opleiding', content: cv.education },
                 { title: 'Vaardigheden', content: cv.skills },
+                { title: 'Talen', content: cv.languages },
+                { title: 'Contact', content: `${cv.email || ''}\n${cv.phone || ''}\n${cv.location || ''}`.trim() },
                 { title: 'Prestaties', content: cv.achievements }
             ].filter(s => s.content);
 
@@ -1700,7 +2514,9 @@
         }
 
         function closeModal() {
-            document.getElementById('cvModal').classList.remove('active');
+            const cvModal = document.getElementById('cvModal');
+            cvModal.classList.remove('active');
+            cvModal.style.zIndex = '';  // Reset z-index
         }
 
         function openAddModal() {
@@ -1708,6 +2524,9 @@
             document.getElementById('fileList').innerHTML = '';
             document.getElementById('uploadProgress').style.display = 'none';
             document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('uploadErrors').classList.remove('show');
+            document.getElementById('uploadErrorsList').innerHTML = '';
+            document.getElementById('closeUploadBtn').style.display = 'none';
             document.getElementById('addModal').classList.add('active');
         }
 
@@ -1772,10 +2591,17 @@
             const progressDiv = document.getElementById('uploadProgress');
             const progressText = document.getElementById('progressText');
             const progressFill = document.getElementById('progressFill');
+            const errorsDiv = document.getElementById('uploadErrors');
+            const errorsList = document.getElementById('uploadErrorsList');
+
             progressDiv.style.display = 'block';
+            errorsDiv.classList.remove('show');
+            errorsList.innerHTML = '';
 
             let uploaded = 0;
             let failed = 0;
+            let duplicates = 0;
+            let duplicateMessages = [];
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -1833,6 +2659,15 @@
                     if (result.success) {
                         uploaded++;
                         console.log(`✓ ${file.name}: ${parsedData ? 'Data extracted' : 'Uploaded'} - ${fullName}, ${jobTitle || 'geen functie'}, ${location || 'geen locatie'}`);
+                    } else if (result.duplicate) {
+                        duplicates++;
+                        duplicateMessages.push({
+                            fileName: file.name,
+                            message: result.message,
+                            existingCvId: result.existingCvId,
+                            existingCvName: result.existingCvName
+                        });
+                        console.warn(`⚠ ${file.name}: ${result.message}`);
                     } else {
                         failed++;
                         console.error(`Failed to upload ${file.name}:`, result.message);
@@ -1844,19 +2679,103 @@
             }
 
             progressFill.style.width = '100%';
-            progressText.textContent = `Klaar! ${uploaded} geüpload (data automatisch geëxtraheerd), ${failed} mislukt`;
+            let statusMsg = `Klaar! ${uploaded} geüpload`;
+            if (duplicates > 0) statusMsg += `, ${duplicates} duplicaat${duplicates > 1 ? 'en' : ''} overgeslagen`;
+            if (failed > 0) statusMsg += `, ${failed} mislukt`;
+            progressText.textContent = statusMsg;
 
-            setTimeout(() => {
-                closeAddModal();
-                loadCVs();
-                // Reset progress
-                progressDiv.style.display = 'none';
-                progressFill.style.width = '0%';
-            }, 1500);
+            // Show duplicate errors if any
+            if (duplicateMessages.length > 0) {
+                errorsList.innerHTML = duplicateMessages.map(dup => `
+                    <li>
+                        <span class="duplicate-info">
+                            <strong>${dup.fileName}</strong>: ${dup.message}
+                        </span>
+                        ${dup.existingCvId ? `
+                            <button type="button" class="btn-view-duplicate" onclick="viewDuplicateCV('${dup.existingCvId}'); return false;">
+                                Bekijken
+                            </button>
+                        ` : ''}
+                    </li>
+                `).join('');
+                errorsDiv.classList.add('show');
+                // Show close button for manual closing
+                document.getElementById('closeUploadBtn').style.display = 'inline-block';
+            } else {
+                // Auto-close only if no duplicates
+                setTimeout(() => {
+                    closeAddModal();
+                    loadCVs();
+                    progressDiv.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1500);
+            }
 
             submitBtn.disabled = false;
             submitBtn.textContent = "CV's Uploaden";
         });
+
+        function closeUploadAndRefresh() {
+            closeAddModal();
+            loadCVs();
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('uploadErrors').classList.remove('show');
+            document.getElementById('uploadErrorsList').innerHTML = '';
+            document.getElementById('closeUploadBtn').style.display = 'none';
+        }
+
+        async function viewDuplicateCV(cvId) {
+            // Fetch the CV from server if not in allCVs (might not be loaded yet)
+            let cv = allCVs.find(c => c._id === cvId);
+
+            if (!cv) {
+                // Fetch from server
+                try {
+                    const response = await fetch(`/api/cvs/${cvId}`, {
+                        headers: { 'X-Admin-Token': token }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        cv = result.data;
+                    }
+                } catch (e) {
+                    console.error('Error fetching CV:', e);
+                }
+            }
+
+            if (!cv) {
+                alert('CV niet gevonden');
+                return;
+            }
+
+            // Show CV in view modal
+            document.getElementById('modalName').textContent = cv.fullName;
+            document.getElementById('modalSubtitle').textContent = cv.jobTitle || cv.location || '';
+
+            const sections = [
+                { title: 'Over', value: cv.summary },
+                { title: 'Werkervaring', value: cv.experience },
+                { title: 'Opleiding', value: cv.education },
+                { title: 'Vaardigheden', value: cv.skills },
+                { title: 'Contact', value: [cv.email, cv.phone, cv.location].filter(Boolean).join('\n') || null }
+            ];
+
+            const content = sections
+                .filter(s => s.value)
+                .map(s => `
+                    <div class="modal-section">
+                        <div class="modal-section-title">${s.title}</div>
+                        <div class="modal-section-content">${escapeHtml(s.value)}</div>
+                    </div>
+                `).join('');
+
+            document.getElementById('modalBody').innerHTML = content || '<p>Geen details beschikbaar</p>';
+
+            const cvModal = document.getElementById('cvModal');
+            cvModal.style.zIndex = '10001';  // Higher than addModal (1000)
+            cvModal.classList.add('active');
+        }
 
         function readFileAsBase64(file) {
             return new Promise((resolve, reject) => {
@@ -1938,6 +2857,15 @@
             const deleteBtn = document.getElementById('deleteSelectedBtn');
             const selectAllCheckbox = document.getElementById('selectAllCheckbox');
 
+            // Update selectedIds Set based on current checkbox states
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    selectedIds.add(cb.dataset.id);
+                } else {
+                    selectedIds.delete(cb.dataset.id);
+                }
+            });
+
             // Show/hide selection toolbar
             if (checkboxes.length > 0) {
                 selectionToolbar.classList.add('active');
@@ -1945,13 +2873,13 @@
                 selectionToolbar.classList.remove('active');
             }
 
-            // Update count
-            selectionCount.textContent = `${checked.length} geselecteerd`;
+            // Update count - show total selected (including filtered out)
+            selectionCount.textContent = `${selectedIds.size} geselecteerd`;
 
             // Enable/disable delete button
-            deleteBtn.disabled = checked.length === 0;
+            deleteBtn.disabled = selectedIds.size === 0;
 
-            // Update select all checkbox state
+            // Update select all checkbox state (for visible items only)
             selectAllCheckbox.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
             selectAllCheckbox.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
 
@@ -1978,8 +2906,8 @@
         }
 
         async function deleteSelected() {
-            const checked = document.querySelectorAll('.cv-checkbox:checked');
-            const ids = Array.from(checked).map(cb => cb.dataset.id);
+            // Use selectedIds Set to get all selected CVs (including filtered out ones)
+            const ids = Array.from(selectedIds);
 
             if (ids.length === 0) return;
 
@@ -2011,6 +2939,7 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    selectedIds.clear(); // Clear selection after successful delete
                     document.getElementById('selectAllCheckbox').checked = false;
                     loadCVs();
                 } else {
@@ -2045,12 +2974,30 @@
         // Search functionality
         document.getElementById('searchInput').addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
+            const clearBtn = document.getElementById('searchClear');
+
+            // Show/hide clear button
+            if (query.length > 0) {
+                clearBtn.classList.add('visible');
+            } else {
+                clearBtn.classList.remove('visible');
+            }
+
             const filtered = allCVs.filter(cv =>
                 cv.fullName.toLowerCase().includes(query) ||
-                cv.email.toLowerCase().includes(query)
+                (cv.email && cv.email.toLowerCase().includes(query))
             );
             renderCVs(filtered);
         });
+
+        function clearSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('searchClear');
+            searchInput.value = '';
+            clearBtn.classList.remove('visible');
+            renderCVs(allCVs);
+            searchInput.focus();
+        }
 
         // Close modal on outside click
         document.getElementById('cvModal').addEventListener('click', (e) => {
@@ -2290,12 +3237,30 @@
         // Employer search
         document.getElementById('employerSearchInput').addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
+            const clearBtn = document.getElementById('employerSearchClear');
+
+            // Show/hide clear button
+            if (query.length > 0) {
+                clearBtn.classList.add('visible');
+            } else {
+                clearBtn.classList.remove('visible');
+            }
+
             const filtered = allEmployers.filter(emp =>
                 emp.companyName.toLowerCase().includes(query) ||
                 emp.username.toLowerCase().includes(query)
             );
             renderEmployers(filtered);
         });
+
+        function clearEmployerSearch() {
+            const searchInput = document.getElementById('employerSearchInput');
+            const clearBtn = document.getElementById('employerSearchClear');
+            searchInput.value = '';
+            clearBtn.classList.remove('visible');
+            renderEmployers(allEmployers);
+            searchInput.focus();
+        }
 
         // Close employer modal on outside click
         document.getElementById('employerModal').addEventListener('click', (e) => {
