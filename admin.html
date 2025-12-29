@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CV Dashboard - Admin</title>
+    <title>ADMIN - CV Dashboard</title>
     <style>
         :root {
             /* Dark theme (default) */
@@ -338,6 +338,9 @@
             padding: 24px;
             transition: all 0.3s ease;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
         }
 
         .cv-card:hover {
@@ -521,6 +524,7 @@
 
         .cv-details {
             margin-bottom: 16px;
+            flex-grow: 1;
         }
 
         .cv-detail {
@@ -546,7 +550,8 @@
         .cv-actions {
             display: flex;
             gap: 10px;
-            margin-top: 16px;
+            margin-top: auto;
+            padding-top: 16px;
         }
 
         .btn {
@@ -772,6 +777,186 @@
             color: rgba(255, 255, 255, 0.8);
         }
 
+        /* LinkedIn-style CV Modal */
+        .linkedin-cv {
+            max-width: 900px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .linkedin-cv .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+        }
+
+        .linkedin-cv .modal-close:hover {
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+        }
+
+        .linkedin-layout {
+            display: flex;
+            min-height: 500px;
+            max-height: 85vh;
+        }
+
+        .linkedin-sidebar {
+            width: 220px;
+            background: #3d4f5f;
+            padding: 30px 20px;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .linkedin-sidebar-section {
+            margin-bottom: 28px;
+        }
+
+        .linkedin-sidebar-title {
+            color: #7eb8c9;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: capitalize;
+        }
+
+        .linkedin-sidebar-content {
+            color: #fff;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .linkedin-sidebar-content a {
+            color: #7eb8c9;
+            text-decoration: none;
+        }
+
+        .linkedin-sidebar-content a:hover {
+            text-decoration: underline;
+        }
+
+        .linkedin-sidebar-item {
+            margin-bottom: 6px;
+        }
+
+        .linkedin-main {
+            flex: 1;
+            padding: 40px 50px;
+            background: #fff;
+            overflow-y: auto;
+            color: #333;
+        }
+
+        .linkedin-name {
+            font-size: 32px;
+            font-weight: 400;
+            color: #333;
+            margin: 0 0 8px 0;
+            line-height: 1.2;
+        }
+
+        .linkedin-headline {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .linkedin-location {
+            font-size: 14px;
+            color: #7eb8c9;
+            margin-bottom: 30px;
+        }
+
+        .linkedin-section {
+            margin-bottom: 30px;
+        }
+
+        .linkedin-section-title {
+            font-size: 18px;
+            font-weight: 400;
+            color: #333;
+            margin-bottom: 16px;
+            padding-top: 16px;
+            position: relative;
+        }
+
+        .linkedin-section-title::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: #666;
+        }
+
+        .linkedin-section:first-of-type .linkedin-section-title {
+            padding-top: 0;
+        }
+
+        .linkedin-section:first-of-type .linkedin-section-title::before {
+            display: none;
+        }
+
+        .linkedin-section-content {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
+        .linkedin-summary-text {
+            font-style: italic;
+            color: #333;
+            line-height: 1.7;
+        }
+
+        .linkedin-summary-text::before {
+            content: '"';
+        }
+
+        .linkedin-summary-text::after {
+            content: '"';
+        }
+
+        .linkedin-experience-item {
+            margin-bottom: 24px;
+        }
+
+        .linkedin-experience-company {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .linkedin-experience-title {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .linkedin-experience-date {
+            font-size: 13px;
+            color: #666;
+            margin: 2px 0;
+        }
+
+        .linkedin-experience-location {
+            font-size: 13px;
+            color: #7eb8c9;
+            margin-bottom: 8px;
+        }
+
+        .linkedin-experience-description {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+        }
+
         /* Form Modal */
         .form-modal .modal-content {
             max-width: 600px;
@@ -902,6 +1087,28 @@
 
         .file-input:hover {
             border-color: #667eea;
+        }
+
+        /* Drag and drop overlay for modal */
+        .modal-content.drag-over {
+            position: relative;
+        }
+
+        .modal-content.drag-over::after {
+            content: '📄 Sleep bestanden hier';
+            position: absolute;
+            inset: 0;
+            background: rgba(102, 126, 234, 0.95);
+            border: 3px dashed #fff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+            font-weight: 600;
+            z-index: 100;
+            pointer-events: none;
         }
 
         .file-info {
@@ -1863,7 +2070,7 @@
     <!-- Login Screen -->
     <div class="login-screen" id="loginScreen">
         <div class="login-box">
-            <h1>CV Dashboard</h1>
+            <h1>ADMIN - CV Dashboard</h1>
             <p>Voer het admin wachtwoord in om door te gaan</p>
             <div class="login-error" id="loginError">Onjuist wachtwoord</div>
             <form id="loginForm">
@@ -1876,7 +2083,7 @@
     <!-- Dashboard -->
     <div class="dashboard" id="dashboard">
         <header class="header">
-            <h1>CV Dashboard</h1>
+            <h1>ADMIN - CV Dashboard</h1>
             <div class="header-right">
                 <div class="header-stats">
                     <div class="stat">
@@ -1995,15 +2202,46 @@
 
     <!-- Detail Modal (LinkedIn-style) -->
     <div class="modal" id="cvModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-header-info">
-                    <h2 id="modalName">CV Details</h2>
-                    <p id="modalSubtitle" class="modal-subtitle"></p>
+        <div class="modal-content linkedin-cv">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="linkedin-layout">
+                <!-- Left Sidebar -->
+                <div class="linkedin-sidebar">
+                    <div class="linkedin-sidebar-section">
+                        <div class="linkedin-sidebar-title">Contact</div>
+                        <div class="linkedin-sidebar-content" id="modalContact"></div>
+                    </div>
+                    <div class="linkedin-sidebar-section">
+                        <div class="linkedin-sidebar-title">Top Skills</div>
+                        <div class="linkedin-sidebar-content" id="modalSkills"></div>
+                    </div>
+                    <div class="linkedin-sidebar-section" id="modalLanguagesSection" style="display: none;">
+                        <div class="linkedin-sidebar-title">Languages</div>
+                        <div class="linkedin-sidebar-content" id="modalLanguages"></div>
+                    </div>
                 </div>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+                <!-- Main Content -->
+                <div class="linkedin-main">
+                    <h1 class="linkedin-name" id="modalName">Naam</h1>
+                    <div class="linkedin-headline" id="modalHeadline"></div>
+                    <div class="linkedin-location" id="modalLocation"></div>
+
+                    <div id="modalSummarySection" class="linkedin-section" style="display: none;">
+                        <div class="linkedin-section-title">Summary</div>
+                        <div class="linkedin-section-content" id="modalSummary"></div>
+                    </div>
+
+                    <div id="modalExperienceSection" class="linkedin-section" style="display: none;">
+                        <div class="linkedin-section-title">Experience</div>
+                        <div class="linkedin-section-content" id="modalExperience"></div>
+                    </div>
+
+                    <div id="modalEducationSection" class="linkedin-section" style="display: none;">
+                        <div class="linkedin-section-title">Education</div>
+                        <div class="linkedin-section-content" id="modalEducation"></div>
+                    </div>
+                </div>
             </div>
-            <div id="modalBody"></div>
         </div>
     </div>
 
@@ -2238,25 +2476,57 @@
                 let currentSection = '';
                 let sectionContent = { experience: [], education: [], skills: [], summary: [] };
 
+                // Section headers that end the current section
+                const sectionHeaders = ['experience', 'werkervaring', 'education', 'opleiding',
+                    'skills', 'top skills', 'vaardigheden', 'summary', 'about', 'samenvatting',
+                    'contact', 'languages', 'talen', 'certifications', 'honors', 'awards'];
+
                 for (const line of lines) {
                     const lineLower = line.toLowerCase();
 
-                    if (lineLower === 'experience' || lineLower === 'werkervaring') {
-                        currentSection = 'experience';
-                    } else if (lineLower === 'education' || lineLower === 'opleiding') {
-                        currentSection = 'education';
-                    } else if (lineLower === 'skills' || lineLower === 'top skills' || lineLower === 'vaardigheden') {
-                        currentSection = 'skills';
-                    } else if (lineLower === 'summary' || lineLower === 'about' || lineLower === 'samenvatting') {
-                        currentSection = 'summary';
+                    // Check if this is a section header
+                    if (sectionHeaders.includes(lineLower)) {
+                        if (lineLower === 'experience' || lineLower === 'werkervaring') {
+                            currentSection = 'experience';
+                        } else if (lineLower === 'education' || lineLower === 'opleiding') {
+                            currentSection = 'education';
+                        } else if (lineLower === 'skills' || lineLower === 'top skills' || lineLower === 'vaardigheden') {
+                            currentSection = 'skills';
+                        } else if (lineLower === 'summary' || lineLower === 'about' || lineLower === 'samenvatting') {
+                            currentSection = 'summary';
+                        } else {
+                            // Other section header - stop current section
+                            currentSection = '';
+                        }
                     } else if (currentSection && sectionContent[currentSection]) {
-                        sectionContent[currentSection].push(line);
+                        // For skills section, apply strict filtering
+                        if (currentSection === 'skills') {
+                            // Skip if it's the person's name
+                            if (line === result.fullName) continue;
+                            // Skip if it contains "|" (job title pattern)
+                            if (line.includes('|')) continue;
+                            // Skip if too long (real skills are usually short)
+                            if (line.length > 35) continue;
+                            // Skip if it looks like a job title/company
+                            if (lineLower.includes('chairman') || lineLower.includes('director') ||
+                                lineLower.includes('manager') || lineLower.includes('ceo') ||
+                                lineLower.includes('founder') || lineLower.includes('partner')) continue;
+                            // Skip if contains location indicators
+                            if (lineLower.includes('netherlands') || lineLower.includes('amsterdam') ||
+                                lineLower.includes('caribbean')) continue;
+                            // Skip numbers and dates
+                            if (/^\d|january|february|march|april|may|june|july|august|september|october|november|december/i.test(line)) continue;
+                            // Valid skill - add it
+                            sectionContent.skills.push(line);
+                        } else {
+                            sectionContent[currentSection].push(line);
+                        }
                     }
                 }
 
                 if (sectionContent.experience.length) result.experience = sectionContent.experience.slice(0, 20).join('\n');
                 if (sectionContent.education.length) result.education = sectionContent.education.slice(0, 10).join('\n');
-                if (sectionContent.skills.length) result.skills = sectionContent.skills.slice(0, 15).join(', ');
+                if (sectionContent.skills.length) result.skills = sectionContent.skills.slice(0, 8).join(', ');
                 if (sectionContent.summary.length) result.summary = sectionContent.summary.slice(0, 5).join(' ');
 
                 console.log('Parsed LinkedIn PDF:', result);
@@ -2490,27 +2760,73 @@
                 return;
             }
 
-            document.getElementById('modalName').textContent = cv.fullName;
-            document.getElementById('modalSubtitle').textContent = cv.jobTitle || cv.location || '';
-
-            const sections = [
-                { title: 'Over', content: cv.summary },
-                { title: 'Werkervaring', content: cv.experience },
-                { title: 'Opleiding', content: cv.education },
-                { title: 'Vaardigheden', content: cv.skills },
-                { title: 'Talen', content: cv.languages },
-                { title: 'Contact', content: `${cv.email || ''}\n${cv.phone || ''}\n${cv.location || ''}`.trim() },
-                { title: 'Prestaties', content: cv.achievements }
-            ].filter(s => s.content);
-
-            document.getElementById('modalBody').innerHTML = sections.map(section => `
-                <div class="modal-section">
-                    <div class="modal-section-title">${section.title}</div>
-                    <div class="modal-section-content">${escapeHtml(section.content)}</div>
-                </div>
-            `).join('');
-
+            populateLinkedInModal(cv);
             document.getElementById('cvModal').classList.add('active');
+        }
+
+        function populateLinkedInModal(cv) {
+            // Main header
+            document.getElementById('modalName').textContent = cv.fullName || 'Onbekend';
+            document.getElementById('modalHeadline').textContent = cv.jobTitle || '';
+            document.getElementById('modalLocation').textContent = cv.location || '';
+
+            // Sidebar - Contact
+            let contactHtml = '';
+            if (cv.linkedinUrl) {
+                contactHtml += `<div class="linkedin-sidebar-item"><a href="${escapeHtml(cv.linkedinUrl)}" target="_blank">${escapeHtml(cv.linkedinUrl)}</a><br><span style="color: #7eb8c9;">(LinkedIn)</span></div>`;
+            }
+            if (cv.email) {
+                contactHtml += `<div class="linkedin-sidebar-item">${escapeHtml(cv.email)}</div>`;
+            }
+            if (cv.phone) {
+                contactHtml += `<div class="linkedin-sidebar-item">${escapeHtml(cv.phone)}</div>`;
+            }
+            document.getElementById('modalContact').innerHTML = contactHtml || '<div style="color: rgba(255,255,255,0.5);">Geen contactgegevens</div>';
+
+            // Sidebar - Skills
+            let skillsHtml = '';
+            if (cv.skills) {
+                const skillsList = cv.skills.split(',').map(s => s.trim()).filter(s => s).slice(0, 6);
+                skillsHtml = skillsList.map(skill => `<div class="linkedin-sidebar-item">${escapeHtml(skill)}</div>`).join('');
+            }
+            document.getElementById('modalSkills').innerHTML = skillsHtml || '<div style="color: rgba(255,255,255,0.5);">Geen vaardigheden</div>';
+
+            // Sidebar - Languages
+            const languagesSection = document.getElementById('modalLanguagesSection');
+            if (cv.languages) {
+                const langList = cv.languages.split(',').map(s => s.trim()).filter(s => s);
+                document.getElementById('modalLanguages').innerHTML = langList.map(lang => `<div class="linkedin-sidebar-item">${escapeHtml(lang)}</div>`).join('');
+                languagesSection.style.display = 'block';
+            } else {
+                languagesSection.style.display = 'none';
+            }
+
+            // Main - Summary
+            const summarySection = document.getElementById('modalSummarySection');
+            if (cv.summary) {
+                document.getElementById('modalSummary').innerHTML = `<span class="linkedin-summary-text">${escapeHtml(cv.summary)}</span>`;
+                summarySection.style.display = 'block';
+            } else {
+                summarySection.style.display = 'none';
+            }
+
+            // Main - Experience
+            const experienceSection = document.getElementById('modalExperienceSection');
+            if (cv.experience) {
+                document.getElementById('modalExperience').innerHTML = escapeHtml(cv.experience);
+                experienceSection.style.display = 'block';
+            } else {
+                experienceSection.style.display = 'none';
+            }
+
+            // Main - Education
+            const educationSection = document.getElementById('modalEducationSection');
+            if (cv.education) {
+                document.getElementById('modalEducation').innerHTML = escapeHtml(cv.education);
+                educationSection.style.display = 'block';
+            } else {
+                educationSection.style.display = 'none';
+            }
         }
 
         function closeModal() {
@@ -2560,6 +2876,61 @@
             const totalMB = (totalSize / (1024 * 1024)).toFixed(2);
             html = `<div style="color: #2ec4b6; margin-bottom: 8px; font-size: 13px;">${files.length} bestand(en) geselecteerd (${totalMB} MB totaal)</div>` + html;
             fileList.innerHTML = html;
+        });
+
+        // Drag and drop for entire modal
+        const addModal = document.getElementById('addModal');
+        const addModalContent = addModal.querySelector('.modal-content');
+
+        addModalContent.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            addModalContent.classList.add('drag-over');
+        });
+
+        addModalContent.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            addModalContent.classList.add('drag-over');
+        });
+
+        addModalContent.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Only remove if we're leaving the modal content entirely
+            if (!addModalContent.contains(e.relatedTarget)) {
+                addModalContent.classList.remove('drag-over');
+            }
+        });
+
+        addModalContent.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            addModalContent.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                // Filter for allowed file types
+                const allowedTypes = ['.pdf', '.doc', '.docx'];
+                const validFiles = Array.from(files).filter(file => {
+                    const ext = '.' + file.name.split('.').pop().toLowerCase();
+                    return allowedTypes.includes(ext);
+                });
+
+                if (validFiles.length === 0) {
+                    alert('Alleen PDF en Word bestanden zijn toegestaan');
+                    return;
+                }
+
+                // Create a new FileList-like object and set to input
+                const fileInput = document.getElementById('cvFileInput');
+                const dataTransfer = new DataTransfer();
+                validFiles.forEach(file => dataTransfer.items.add(file));
+                fileInput.files = dataTransfer.files;
+
+                // Trigger change event to update file list display
+                fileInput.dispatchEvent(new Event('change'));
+            }
         });
 
         // Bulk upload CV form handler
@@ -2749,28 +3120,8 @@
                 return;
             }
 
-            // Show CV in view modal
-            document.getElementById('modalName').textContent = cv.fullName;
-            document.getElementById('modalSubtitle').textContent = cv.jobTitle || cv.location || '';
-
-            const sections = [
-                { title: 'Over', value: cv.summary },
-                { title: 'Werkervaring', value: cv.experience },
-                { title: 'Opleiding', value: cv.education },
-                { title: 'Vaardigheden', value: cv.skills },
-                { title: 'Contact', value: [cv.email, cv.phone, cv.location].filter(Boolean).join('\n') || null }
-            ];
-
-            const content = sections
-                .filter(s => s.value)
-                .map(s => `
-                    <div class="modal-section">
-                        <div class="modal-section-title">${s.title}</div>
-                        <div class="modal-section-content">${escapeHtml(s.value)}</div>
-                    </div>
-                `).join('');
-
-            document.getElementById('modalBody').innerHTML = content || '<p>Geen details beschikbaar</p>';
+            // Use shared LinkedIn modal function
+            populateLinkedInModal(cv);
 
             const cvModal = document.getElementById('cvModal');
             cvModal.style.zIndex = '10001';  // Higher than addModal (1000)
@@ -2941,6 +3292,9 @@
                 if (result.success) {
                     selectedIds.clear(); // Clear selection after successful delete
                     document.getElementById('selectAllCheckbox').checked = false;
+                    // Clear search filter
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('searchClear').classList.remove('visible');
                     loadCVs();
                 } else {
                     alert('Fout bij verwijderen: ' + result.message);
