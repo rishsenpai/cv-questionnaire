@@ -2678,9 +2678,24 @@
                 const emailMatch = fullText.match(/[\w.-]+@[\w.-]+\.\w+/);
                 if (emailMatch) result.email = emailMatch[0];
 
-                // Extract phone
-                const phoneMatch = fullText.match(/(\+\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/);
-                if (phoneMatch) result.phone = phoneMatch[0].trim();
+                // Extract phone - be strict to avoid LinkedIn IDs
+                // Look for phone patterns: +31... or 06-... or (0)6... formats
+                // Must have at least 10 digits total or start with +
+                const phonePatterns = [
+                    /\+\d{1,3}[-.\s]?\d{1,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}/,  // International: +31 6 12345678
+                    /\b0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b/,              // Dutch: 06-12345678 or 020-1234567
+                    /\(\d{1,4}\)[-.\s]?\d{3,4}[-.\s]?\d{3,4}/                // With area code: (020) 1234567
+                ];
+                for (const pattern of phonePatterns) {
+                    const phoneMatch = fullText.match(pattern);
+                    if (phoneMatch) {
+                        const phone = phoneMatch[0].trim();
+                        // Skip if it looks like a LinkedIn ID (8 digits, no formatting)
+                        if (/^\d{7,9}$/.test(phone.replace(/[-.\s]/g, '')) && !phone.includes('+')) continue;
+                        result.phone = phone;
+                        break;
+                    }
+                }
 
                 // Only try to find name from PDF text if filename didn't provide a valid name
                 const skipWords = ['contact', 'linkedin', 'top skills', 'skills', 'experience',
@@ -2718,47 +2733,314 @@
                     }
                 }
 
-                // Find job title - look for line with "|" separators (common in LinkedIn headlines)
-                // or the line right after the name
-                let foundName = false;
+                // LinkedIn CV structure is consistent: Name -> Job Title -> Location
+                // Find the name in lines, then take next line as job title and line after that as location
+                const fullNameLowerSimple = result.fullName.toLowerCase();
+                const fullNameNormalizedSimple = fullNameLowerSimple.replace(/-/g, ' ');
+
+                // Section headers to skip
+                const sectionHeadersSimple = ['experience', 'werkervaring', 'ervaring', 'education', 'opleiding',
+                    'samenvatting', 'summary', 'about', 'skills', 'vaardigheden', 'certifications', 'languages', 'talen'];
+
+                let nameLineIdx = -1;
                 for (let i = 0; i < Math.min(30, lines.length); i++) {
-                    const line = lines[i];
-                    const lineLower = line.toLowerCase();
-
-                    if (line === result.fullName) {
-                        foundName = true;
-                        continue;
-                    }
-
-                    // Job title often contains "|" separators in LinkedIn
-                    if (foundName && !result.jobTitle && line.includes('|')) {
-                        result.jobTitle = line;
-                        continue;
-                    }
-
-                    // Location detection - look for city, region, country pattern
-                    if (!result.location) {
-                        if ((lineLower.includes('netherlands') ||
-                            lineLower.includes('nederland') ||
-                            lineLower.includes('belgium') ||
-                            lineLower.includes('germany') ||
-                            lineLower.includes('suriname') ||
-                            lineLower.includes('united states') ||
-                            lineLower.includes('united kingdom')) &&
-                            line.includes(',')) {
-                            result.location = line;
-                        }
+                    const lineLower = lines[i].toLowerCase();
+                    const lineNormalized = lineLower.replace(/-/g, ' ');
+                    if (lineLower === fullNameLowerSimple || lineNormalized === fullNameNormalizedSimple) {
+                        nameLineIdx = i;
+                        break;
                     }
                 }
 
-                // If no job title with "|" found, take line after name
+                if (nameLineIdx !== -1 && nameLineIdx + 1 < lines.length) {
+                    // Generic approach: scan lines after name, find the first that looks like a location
+                    // Everything between name and location is the job title
+
+                    // Known cities/locations list for detection (comprehensive Dutch cities)
+                    const knownLocations = ['amsterdam', 'rotterdam', 'den haag', 'the hague', 's-gravenhage', 'utrecht',
+                        'eindhoven', 'groningen', 'tilburg', 'almere', 'breda', 'nijmegen', 'haarlem',
+                        'arnhem', 'amersfoort', 'apeldoorn', 'hoofddorp', 'maastricht', 'leiden',
+                        'dordrecht', 'zoetermeer', 'zwolle', 'deventer', 'delft', 'alkmaar', 'heerlen',
+                        'venlo', 'leeuwarden', 'hilversum', 'enschede', 'hoorn', 'zaandam', 'amstelveen',
+                        'capelle', 'helmond', 'oss', 'ede', 'gouda', 'katwijk', 'veenendaal', 'zeist',
+                        'harderwijk', 'barneveld', 'doetinchem', 'hoogeveen', 'hengelo', 'purmerend',
+                        'schiedam', 'spijkenisse', 'vlaardingen', 'woerden', 'rijswijk', 'nieuwegein',
+                        'lelystad', 'alphen', 'roosendaal', 'terneuzen', 'middelburg', 'goes', 'vlissingen',
+                        'bergen op zoom', 'den bosch', "'s-hertogenbosch", 'waalwijk', 'boxtel', 'veghel',
+                        'uden', 'cuijk', 'venray', 'roermond', 'sittard', 'geleen', 'kerkrade', 'weert',
+                        'emmen', 'assen', 'meppel', 'hoogeveen', 'coevorden', 'almelo', 'oldenzaal',
+                        'rijssen', 'kampen', 'steenwijk', 'sneek', 'heerenveen', 'drachten', 'dokkum',
+                        'den helder', 'heerhugowaard', 'beverwijk', 'ijmuiden', 'velsen', 'castricum',
+                        'heemskerk', 'uithoorn', 'aalsmeer', 'haarlemmermeer', 'diemen', 'weesp',
+                        'bussum', 'naarden', 'huizen', 'laren', 'blaricum', 'soest', 'baarn', 'bunschoten',
+                        'wageningen', 'veenendaal', 'rhenen', 'culemborg', 'tiel', 'gorinchem', 'sliedrecht'];
+
+                    // Function to check if a line looks like a location
+                    // Be strict - only match known cities or clear location patterns
+                    const looksLikeLocation = (line) => {
+                        if (!line || line.length < 2 || line.length > 60) return false;
+                        const lineLower = line.toLowerCase().trim();
+
+                        // Check against known locations (exact match or starts with city name + separator)
+                        if (knownLocations.some(loc =>
+                            lineLower === loc ||
+                            lineLower.startsWith(loc + ',') ||
+                            lineLower.startsWith(loc + ' ') ||
+                            lineLower.startsWith(loc + '-')  // For "Arnhem-Nijmegen" style
+                        )) return true;
+
+                        // Contains country/region indicators (including English "Region")
+                        if (/\b(netherlands|nederland|belgium|belgië|germany|duitsland)\b/i.test(line)) return true;
+                        if (/\b(randstad|area|regio|region|omgeving|provincie)\b/i.test(line)) return true;
+
+                        // "City, Country" pattern - but only if the city part is in our known list
+                        if (line.includes(',')) {
+                            const cityPart = line.split(',')[0].trim().toLowerCase();
+                            if (knownLocations.some(loc => cityPart === loc || cityPart.startsWith(loc))) return true;
+                        }
+
+                        // DO NOT match generic "Word, Word" patterns - too many false positives
+                        return false;
+                    };
+
+                    // Scan lines after name to find location
+                    let jobTitleParts = [];
+                    let locationLineIdx = -1;
+
+                    for (let i = nameLineIdx + 1; i < Math.min(nameLineIdx + 6, lines.length); i++) {
+                        const line = lines[i];
+                        const lineLower = line.toLowerCase();
+
+                        // Stop at section headers
+                        if (sectionHeadersSimple.some(h => lineLower === h)) break;
+                        // Skip empty or invalid lines
+                        if (!line || line.length < 2) continue;
+                        // Skip email/contact
+                        if (line.includes('@')) continue;
+
+                        // If this looks like a location, we found it
+                        if (looksLikeLocation(line)) {
+                            locationLineIdx = i;
+                            break;
+                        }
+
+                        // Otherwise, it's part of the job title
+                        jobTitleParts.push(line);
+                    }
+
+                    // Combine job title parts
+                    let jobTitleLine = jobTitleParts.join(' ');
+
+                    // Helper to detect LinkedIn profile IDs
+                    const isLinkedInId = (str) => {
+                        if (!str) return false;
+                        // Patterns: "luca-b472bab9", "name-12345678", "name-name-15295a125"
+                        return /^[a-z]+-[a-z0-9]+$/i.test(str) ||
+                               /^[a-z]+-[a-z]+-[\w]+$/i.test(str) ||
+                               /^[\w-]+-\d{5,}$/.test(str) ||
+                               /^\d{6,}$/.test(str);
+                    };
+
+                    // Set job title if we don't have one yet
+                    if (!result.jobTitle && jobTitleLine &&
+                        !sectionHeadersSimple.some(h => jobTitleLine.toLowerCase() === h) &&
+                        !jobTitleLine.includes('@') &&
+                        !isLinkedInId(jobTitleLine) &&
+                        jobTitleLine !== '--' && jobTitleLine !== '—' &&
+                        jobTitleLine.length > 3) {
+                        result.jobTitle = jobTitleLine;
+                    }
+
+                    // Set location if found
+                    if (!result.location && locationLineIdx !== -1 && locationLineIdx < lines.length) {
+                        result.location = lines[locationLineIdx];
+                    }
+                }
+
+                // Fallback: If no job title found above, search more thoroughly
                 if (!result.jobTitle && result.fullName) {
-                    const nameIndex = lines.indexOf(result.fullName);
-                    if (nameIndex !== -1 && nameIndex + 1 < lines.length) {
-                        const nextLine = lines[nameIndex + 1];
-                        if (!skipWords.some(skip => nextLine.toLowerCase().includes(skip)) &&
-                            nextLine.length > 5 && nextLine.length < 150) {
-                            result.jobTitle = nextLine;
+                    // Extended section headers, industries, languages, and non-job-title words to skip
+                    const sectionHeaders = ['experience', 'werkervaring', 'ervaring', 'education', 'opleiding',
+                        'opleidingen', 'skills', 'vaardigheden', 'summary', 'samenvatting', 'about', 'over',
+                        'languages', 'talen', 'contact', 'contactgegevens', 'certifications', 'certificaten',
+                        'honors', 'awards', 'publications', 'projects', 'top skills', 'belangrijkste vaardigheden',
+                        'beschikbaar', 'available', 'looking for', 'open to', 'seeking', 'zoekend',
+                        // LinkedIn industries/branches
+                        'verzekeringen', 'insurance', 'financiële dienstverlening', 'financial services',
+                        'bankwezen', 'banking', 'gezondheidszorg', 'healthcare', 'detailhandel', 'retail',
+                        'productie', 'manufacturing', 'technologie', 'technology', 'telecommunicatie',
+                        'telecommunications', 'transport', 'logistiek', 'logistics', 'bouw', 'construction',
+                        'vastgoed', 'real estate', 'horeca', 'hospitality', 'media', 'entertainment',
+                        'overheid', 'government', 'non-profit', 'juridisch', 'legal', 'consulting',
+                        'human resources', 'hr', 'marketing', 'reclame', 'advertising',
+                        // Language names (not job titles)
+                        'engels', 'english', 'nederlands', 'dutch', 'frans', 'french', 'duits', 'german',
+                        'spaans', 'spanish', 'italiaans', 'italian', 'portugees', 'portuguese',
+                        'native or bilingual', 'professional working', 'limited working', 'elementary',
+                        'native', 'bilingual', 'fluent', 'intermediate', 'basic', 'beginner',
+                        'moedertaal', 'vloeiend', 'goed', 'basis', 'aansprakelijkheid'];
+
+                    // Common cities/locations to skip as job titles
+                    const locationWords = ['amsterdam', 'rotterdam', 'den haag', 'the hague', 'utrecht',
+                        'eindhoven', 'groningen', 'tilburg', 'almere', 'breda', 'nijmegen', 'haarlem',
+                        'arnhem', 'zaanstad', 'amersfoort', 'apeldoorn', 'hoofddorp', 'maastricht',
+                        'leiden', 'dordrecht', 'zoetermeer', 'zwolle', 'deventer', 'delft', 'alkmaar',
+                        'heerlen', 'venlo', 'leeuwarden', 'hilversum', 'enschede', 'schiedam', 'spijkenisse',
+                        'randstad', 'noord-holland', 'zuid-holland', 'noord-brabant', 'gelderland', 'overijssel',
+                        'netherlands', 'nederland', 'belgium', 'belgië', 'germany', 'duitsland', 'suriname'];
+
+                    // Company name indicators (endings that suggest a company, not a job title)
+                    const companyIndicators = ['consulting', 'consultancy', 'b.v.', 'bv', 'n.v.', 'nv',
+                        'llc', 'inc', 'ltd', 'gmbh', 'group', 'holding', 'services', 'solutions',
+                        'partners', 'agency', 'bureau', 'studio', 'labs', 'technologies', 'tech'];
+
+                    // First try: find name in lines and take next valid line (case-insensitive)
+                    // Normalize names by replacing hyphens with spaces for flexible matching
+                    const fullNameLower = result.fullName.toLowerCase();
+                    const fullNameNormalized = fullNameLower.replace(/-/g, ' ');
+                    let nameIndex = lines.findIndex(l => {
+                        const lineLower = l.toLowerCase();
+                        const lineNormalized = lineLower.replace(/-/g, ' ');
+                        return lineLower === fullNameLower || lineNormalized === fullNameNormalized;
+                    });
+                    console.log(`Job title search - fullName: "${result.fullName}", nameIndex: ${nameIndex}`);
+                    console.log(`Lines around potential name:`, nameIndex >= 0 ? lines.slice(nameIndex, nameIndex + 5) : 'not found');
+                    if (nameIndex !== -1) {
+                        let foundJobTitle = '';
+                        let foundCompany = '';
+                        let foundLocation = '';
+                        let jobTitleLineIndex = -1;
+
+                        for (let j = nameIndex + 1; j < Math.min(nameIndex + 8, lines.length); j++) {
+                            const nextLine = lines[j];
+                            const nextLineLower = nextLine.toLowerCase();
+
+                            // Stop at section headers - don't look into experience/education
+                            if (sectionHeaders.some(h => nextLineLower === h)) break;
+
+                            // Skip contact info and LinkedIn IDs
+                            if (nextLine.includes('@') || nextLine.match(/^\+?\d/) || nextLineLower.includes('linkedin')) continue;
+                            if (nextLine.length <= 3 || nextLine.length > 100) continue;
+                            if (nextLineLower === fullNameLower) continue;
+                            // Skip LinkedIn profile IDs (pattern like "name-12345678" or "name-name-15295a125")
+                            if (/^[a-z]+-[a-z]+-[\w]*\d{4,}[\w]*$/i.test(nextLine) || /^[\w-]+-\d{5,}$/.test(nextLine) || /^\d{6,}$/.test(nextLine)) continue;
+
+                            // FIRST check if line contains "at" or "bij" - this is almost certainly a job title
+                            // Do this BEFORE location check because company names might contain country names
+                            if (nextLineLower.includes(' at ') || nextLineLower.includes(' bij ')) {
+                                if (!foundJobTitle) {
+                                    foundJobTitle = nextLine;
+                                    jobTitleLineIndex = j;
+                                }
+                                continue;
+                            }
+
+                            // Check if this is explicitly a location line (only if not a job title)
+                            // Use word boundary checks to avoid matching company names like "Nationale-Nederlanden"
+                            const isExplicitLocation =
+                                // Country names as standalone words (not part of company names)
+                                /\bnederland(s)?\b/i.test(nextLine) || /\bnetherlands\b/i.test(nextLine) ||
+                                /\bbelgi[eë]\b/i.test(nextLine) || /\bbelgium\b/i.test(nextLine) ||
+                                /\bduitsland\b/i.test(nextLine) || /\bgermany\b/i.test(nextLine) ||
+                                /\bsuriname\b/i.test(nextLine) ||
+                                // Known cities/regions as exact match or start of line
+                                locationWords.some(loc => nextLineLower === loc || nextLineLower.startsWith(loc + ',') || nextLineLower.startsWith(loc + ' ')) ||
+                                // Location patterns
+                                nextLineLower.includes(' area') || nextLineLower.includes('regio') || nextLineLower.includes('omgeving') ||
+                                // City, Country format
+                                (nextLine.includes(',') && nextLine.length < 50);
+
+                            if (isExplicitLocation && !foundLocation) {
+                                foundLocation = nextLine;
+                                continue;
+                            }
+
+                            // Check if it's a company name
+                            const isCompany = companyIndicators.some(c => nextLineLower.endsWith(c) || nextLineLower.endsWith(c + '.'));
+
+                            if (isCompany && !foundCompany) {
+                                foundCompany = nextLine;
+                            } else if (!foundJobTitle && !isCompany) {
+                                foundJobTitle = nextLine;
+                                jobTitleLineIndex = j;
+                            }
+                        }
+
+                        // If we found a job title but no location, check the line RIGHT AFTER the job title
+                        // In LinkedIn format: Name -> JobTitle -> Location -> Experience
+                        if (!foundLocation && jobTitleLineIndex !== -1 && jobTitleLineIndex + 1 < lines.length) {
+                            const potentialLocation = lines[jobTitleLineIndex + 1];
+                            const potentialLocationLower = potentialLocation.toLowerCase();
+
+                            // If it's not a section header, not contact info, and is short, assume it's location
+                            if (!sectionHeaders.some(h => potentialLocationLower === h) &&
+                                !potentialLocation.includes('@') &&
+                                !potentialLocationLower.includes('linkedin') &&
+                                potentialLocation.length > 3 &&
+                                potentialLocation.length < 60 &&
+                                !companyIndicators.some(c => potentialLocationLower.endsWith(c))) {
+                                foundLocation = potentialLocation;
+                            }
+                        }
+
+                        // Combine job title with company if both found
+                        if (!result.jobTitle && foundJobTitle) {
+                            result.jobTitle = foundCompany ? `${foundJobTitle} bij ${foundCompany}` : foundJobTitle;
+                        }
+
+                        // Set location from header area
+                        if (foundLocation) {
+                            result.location = foundLocation;
+                        }
+                    }
+
+                    // Second try: look in first 15 lines for a line that looks like a job title
+                    if (!result.jobTitle) {
+                        console.log('Job title first try failed, trying second approach...');
+                        for (let j = 0; j < Math.min(15, lines.length); j++) {
+                            const line = lines[j];
+                            const lineLower = line.toLowerCase();
+                            if (sectionHeaders.some(h => lineLower === h || lineLower.includes(h))) {
+                                console.log(`  Line ${j} skipped (section header): "${line}"`);
+                                continue;
+                            }
+                            if (line.includes('@') || line.match(/^\+?\d/) || lineLower.includes('linkedin')) {
+                                console.log(`  Line ${j} skipped (contact): "${line}"`);
+                                continue;
+                            }
+                            // Skip LinkedIn profile IDs (pattern like "name-12345678" or "name-name-15295a125")
+                            if (/^[a-z]+-[a-z]+-[\w]*\d{4,}[\w]*$/i.test(line) || /^[\w-]+-\d{5,}$/.test(line) || /^\d{6,}$/.test(line)) {
+                                console.log(`  Line ${j} skipped (LinkedIn ID): "${line}"`);
+                                continue;
+                            }
+                            if (line.length <= 5 || line.length > 100) {
+                                console.log(`  Line ${j} skipped (length ${line.length}): "${line}"`);
+                                continue;
+                            }
+                            if (lineLower === fullNameLower) {
+                                console.log(`  Line ${j} skipped (is name): "${line}"`);
+                                continue;
+                            }
+                            // Skip if it looks like a location (contains common location words and comma)
+                            if (line.includes(',') && (lineLower.includes('netherlands') || lineLower.includes('nederland') ||
+                                lineLower.includes('holland') || lineLower.includes('belgium'))) {
+                                console.log(`  Line ${j} skipped (location): "${line}"`);
+                                continue;
+                            }
+                            // Skip if it's just a city/location name
+                            if (locationWords.some(loc => lineLower === loc || lineLower.startsWith(loc + ','))) {
+                                console.log(`  Line ${j} skipped (city): "${line}"`);
+                                continue;
+                            }
+                            // Skip if it looks like a company name
+                            if (companyIndicators.some(c => lineLower.endsWith(c) || lineLower.endsWith(c + '.'))) {
+                                console.log(`  Line ${j} skipped (company): "${line}"`);
+                                continue;
+                            }
+                            // Found a potential job title
+                            console.log(`  Line ${j} SELECTED as job title: "${line}"`);
+                            result.jobTitle = line;
+                            break;
                         }
                     }
                 }
@@ -2899,6 +3181,55 @@
                     educationItems: sectionContent.education.length,
                     experienceItems: sectionContent.experience.length
                 });
+
+                // Validation function - check if value is valid (not empty, not just special chars, not LinkedIn ID)
+                const isValidValue = (val) => {
+                    if (!val || typeof val !== 'string') return false;
+                    const trimmed = val.trim();
+                    if (trimmed.length < 3) return false;
+                    // Check if it's mostly special characters (/, -, _, etc.)
+                    const cleaned = trimmed.replace(/[\s\-_\/\\|\.,:;'"()]+/g, '');
+                    if (cleaned.length < 2) return false;
+                    // Check if it's a LinkedIn profile ID
+                    if (/^[a-z]+-[a-z0-9]+$/i.test(trimmed) ||
+                        /^[a-z]+-[a-z]+-[\w]+$/i.test(trimmed) ||
+                        /^[\w-]+-\d{5,}$/.test(trimmed) ||
+                        /^\d{6,}$/.test(trimmed)) return false;
+                    return true;
+                };
+
+                // If job title is invalid, try to get from most recent experience
+                if (!isValidValue(result.jobTitle) && sectionContent.experience.length > 0) {
+                    console.log('Job title invalid, looking in experience section...');
+                    // Experience format is typically: Company, Duration, Job Title, Period, Location
+                    // Look for a line that looks like a job title (not a date, not a duration, not a company)
+                    for (let i = 0; i < Math.min(10, sectionContent.experience.length); i++) {
+                        const line = sectionContent.experience[i];
+                        const lineLower = line.toLowerCase();
+                        // Skip dates, durations, locations
+                        if (/^\d{4}|^\w+ \d{4}|present|heden|jaar|month|maand/i.test(line)) continue;
+                        if (/^\d+ (jaar|year|month|maand)/i.test(line)) continue;
+                        if (line.includes(',') && line.length < 40) continue; // Likely location
+                        // Skip if it looks like a company name (ends with common suffixes)
+                        if (/\b(b\.?v\.?|n\.?v\.?|llc|inc|ltd|gmbh|group|holding)\b/i.test(line)) continue;
+                        // This might be a job title
+                        if (line.length > 5 && line.length < 100 && isValidValue(line)) {
+                            result.jobTitle = line;
+                            console.log('Found job title from experience:', line);
+                            break;
+                        }
+                    }
+                }
+
+                // If job title still invalid, clear it
+                if (!isValidValue(result.jobTitle)) {
+                    result.jobTitle = '';
+                }
+
+                // If location is invalid, clear it
+                if (!isValidValue(result.location)) {
+                    result.location = '';
+                }
 
                 console.log('Parsed LinkedIn PDF:', result);
                 return result;
@@ -3773,9 +4104,9 @@
                         const updateData = {
                             fullName: parsedData.fullName || cv.fullName,
                             jobTitle: parsedData.jobTitle || cv.jobTitle,
-                            location: parsedData.location || cv.location,
+                            location: parsedData.location || cv.location,  // Keep old location if no new one found
                             email: parsedData.email || cv.email,
-                            phone: parsedData.phone || cv.phone,
+                            phone: parsedData.phone || '',  // Don't keep old invalid phone numbers
                             summary: parsedData.summary || cv.summary,
                             experience: parsedData.experience || cv.experience,
                             education: parsedData.education || cv.education,
