@@ -101,6 +101,34 @@
             border-color: #667eea;
         }
 
+        .password-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-input-wrapper .login-input {
+            padding-right: 50px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            padding: 4px;
+            font-size: 18px;
+            transition: color 0.2s ease;
+            margin-bottom: 16px;
+        }
+
+        .password-toggle:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
         .login-btn {
             width: 100%;
             background: #667eea;
@@ -818,6 +846,336 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Skeleton Loaders */
+        .skeleton-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .skeleton-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            min-height: 280px;
+        }
+
+        .skeleton-line {
+            background: linear-gradient(90deg,
+                rgba(255, 255, 255, 0.06) 25%,
+                rgba(255, 255, 255, 0.12) 50%,
+                rgba(255, 255, 255, 0.06) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        .skeleton-line.title {
+            height: 24px;
+            width: 70%;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-line.subtitle {
+            height: 16px;
+            width: 50%;
+            margin-bottom: 20px;
+        }
+
+        .skeleton-line.text {
+            height: 14px;
+            width: 90%;
+            margin-bottom: 12px;
+        }
+
+        .skeleton-line.text-short {
+            height: 14px;
+            width: 60%;
+            margin-bottom: 12px;
+        }
+
+        .skeleton-line.badge {
+            height: 24px;
+            width: 80px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .skeleton-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 16px;
+        }
+
+        .skeleton-btn {
+            flex: 1;
+            height: 40px;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        [data-theme="light"] .skeleton-card {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        [data-theme="light"] .skeleton-line {
+            background: linear-gradient(90deg,
+                #e2e8f0 25%,
+                #f1f5f9 50%,
+                #e2e8f0 75%);
+            background-size: 200% 100%;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 11000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 380px;
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            animation: toast-slide-in 0.3s ease;
+            position: relative;
+        }
+
+        .toast.hiding {
+            animation: toast-slide-out 0.3s ease forwards;
+        }
+
+        @keyframes toast-slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes toast-slide-out {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+            color: #fff;
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            color: #fff;
+        }
+
+        .toast.success {
+            border-color: rgba(46, 196, 182, 0.3);
+            background: linear-gradient(135deg, #1e293b 0%, rgba(46, 196, 182, 0.1) 100%);
+        }
+
+        .toast.success .toast-icon {
+            color: #2ec4b6;
+        }
+
+        .toast.error {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: linear-gradient(135deg, #1e293b 0%, rgba(239, 68, 68, 0.1) 100%);
+        }
+
+        .toast.error .toast-icon {
+            color: #ef4444;
+        }
+
+        .toast.warning {
+            border-color: rgba(251, 191, 36, 0.3);
+            background: linear-gradient(135deg, #1e293b 0%, rgba(251, 191, 36, 0.1) 100%);
+        }
+
+        .toast.warning .toast-icon {
+            color: #fbbf24;
+        }
+
+        .toast.info {
+            border-color: rgba(102, 126, 234, 0.3);
+            background: linear-gradient(135deg, #1e293b 0%, rgba(102, 126, 234, 0.1) 100%);
+        }
+
+        .toast.info .toast-icon {
+            color: #667eea;
+        }
+
+        [data-theme="light"] .toast {
+            background: #fff;
+            border-color: #e2e8f0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        [data-theme="light"] .toast-title {
+            color: #1e293b;
+        }
+
+        [data-theme="light"] .toast-message {
+            color: #64748b;
+        }
+
+        [data-theme="light"] .toast.success {
+            background: linear-gradient(135deg, #fff 0%, rgba(46, 196, 182, 0.08) 100%);
+        }
+
+        [data-theme="light"] .toast.error {
+            background: linear-gradient(135deg, #fff 0%, rgba(239, 68, 68, 0.08) 100%);
+        }
+
+        [data-theme="light"] .toast.warning {
+            background: linear-gradient(135deg, #fff 0%, rgba(251, 191, 36, 0.08) 100%);
+        }
+
+        [data-theme="light"] .toast.info {
+            background: linear-gradient(135deg, #fff 0%, rgba(102, 126, 234, 0.08) 100%);
+        }
+
+        @media (max-width: 480px) {
+            .toast-container {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+        }
+
+        /* Session Timeout Warning */
+        .session-warning-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 12000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .session-warning-overlay.active {
+            display: flex;
+        }
+
+        .session-warning-dialog {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 400px;
+            text-align: center;
+            animation: session-warning-pop 0.3s ease;
+        }
+
+        @keyframes session-warning-pop {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .session-warning-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .session-warning-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fbbf24;
+            margin-bottom: 12px;
+        }
+
+        .session-warning-message {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .session-warning-timer {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ef4444;
+            margin: 16px 0;
+        }
+
+        .session-warning-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .session-warning-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .session-warning-btn.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .session-warning-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        [data-theme="light"] .session-warning-dialog {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        [data-theme="light"] .session-warning-message {
+            color: #64748b;
+        }
+
         .empty-state {
             text-align: center;
             padding: 80px 20px;
@@ -884,6 +1242,159 @@
             color: rgba(255, 255, 255, 0.6);
             font-size: 14px;
             margin: 0 16px;
+        }
+
+        .items-per-page {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 16px;
+        }
+
+        .items-per-page label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+        }
+
+        .items-per-page select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .items-per-page select option {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        /* Filters Panel */
+        .filters-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .filters-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .filters-toggle.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.4);
+            color: #667eea;
+        }
+
+        .filters-panel {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            animation: filters-slide-down 0.2s ease;
+        }
+
+        .filters-panel.active {
+            display: block;
+        }
+
+        @keyframes filters-slide-down {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .filters-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+        }
+
+        .filter-group input[type="date"] {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .filter-group input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-apply-btn {
+            background: #667eea;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .filter-clear-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        [data-theme="light"] .filters-toggle {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #64748b;
+        }
+
+        [data-theme="light"] .filters-panel {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+
+        [data-theme="light"] .filter-group label {
+            color: #64748b;
+        }
+
+        [data-theme="light"] .filter-group input[type="date"] {
+            background: #fff;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        [data-theme="light"] .filter-group input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: none;
         }
 
         /* Sort dropdown */
@@ -1668,6 +2179,37 @@
             .form-actions button {
                 width: 100%;
             }
+
+            .pagination {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .pagination-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            .pagination-info {
+                width: 100%;
+                text-align: center;
+                margin: 8px 0;
+            }
+
+            .items-per-page {
+                width: 100%;
+                justify-content: center;
+                margin-left: 0;
+                margin-top: 8px;
+            }
+
+            .skeleton-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .employer-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .test-matching-form {
@@ -2343,7 +2885,10 @@
             <p>Voer het admin wachtwoord in om door te gaan</p>
             <div class="login-error" id="loginError">Onjuist wachtwoord</div>
             <form id="loginForm">
-                <input type="password" class="login-input" id="passwordInput" placeholder="Wachtwoord" required>
+                <div class="password-input-wrapper">
+                    <input type="password" class="login-input" id="passwordInput" placeholder="Wachtwoord" required aria-label="Wachtwoord">
+                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility('passwordInput', this)" aria-label="Toon wachtwoord" title="Toon/verberg wachtwoord">👁️</button>
+                </div>
                 <button type="submit" class="login-btn" id="loginBtn">Inloggen</button>
             </form>
         </div>
@@ -2364,22 +2909,22 @@
                         <div class="stat-label">Vandaag</div>
                     </div>
                 </div>
-                <div class="theme-toggle" onclick="toggleTheme()" title="Wissel thema">
+                <div class="theme-toggle" onclick="toggleTheme()" title="Wissel thema" role="switch" aria-checked="false" aria-label="Wissel tussen licht en donker thema" tabindex="0">
                     <span class="theme-icon" id="themeIcon">🌙</span>
                     <div class="theme-switch">
                         <div class="theme-switch-handle" id="themeSwitchHandle"></div>
                     </div>
                 </div>
-                <button class="logout-btn" onclick="logout()">Uitloggen</button>
+                <button class="logout-btn" onclick="logout()" aria-label="Uitloggen">Uitloggen</button>
             </div>
         </header>
 
         <div class="container">
             <!-- Tabs -->
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('cvs')">CV's</button>
-                <button class="tab-btn" onclick="switchTab('employers')">Werkgevers</button>
-                <button class="tab-btn" onclick="switchTab('testMatching')">Test Matching</button>
+                <button class="tab-btn active" onclick="switchTab('cvs')" role="tab" aria-selected="true">CV's</button>
+                <button class="tab-btn" onclick="switchTab('employers')" role="tab" aria-selected="false">Werkgevers</button>
+                <button class="tab-btn" onclick="switchTab('testMatching')" role="tab" aria-selected="false">Test Matching</button>
             </div>
 
             <!-- CV Tab -->
@@ -2387,21 +2932,45 @@
                 <div class="toolbar">
                     <div class="search-wrapper">
                         <div class="search-input-wrapper">
-                            <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
-                            <button type="button" class="search-clear" id="searchClear" onclick="clearSearch()">&times;</button>
+                            <input type="text" class="search-box" placeholder="Zoeken op naam of email... (Ctrl+K)" id="searchInput">
+                            <button type="button" class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Zoekopdracht wissen">&times;</button>
                         </div>
                         <span class="results-counter" id="resultsCounter"></span>
                     </div>
                     <div class="toolbar-buttons">
+                        <button class="filters-toggle" id="filtersToggle" onclick="toggleFilters()" aria-label="Filters tonen/verbergen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                            </svg>
+                            Filters
+                        </button>
                         <select class="sort-select" id="sortSelect" onchange="handleSort()">
                             <option value="date-desc">Nieuwste eerst</option>
                             <option value="date-asc">Oudste eerst</option>
                             <option value="name-asc">Naam A-Z</option>
                             <option value="name-desc">Naam Z-A</option>
                         </select>
-                        <button class="export-btn" onclick="exportToCSV()">📥 Export CSV</button>
-                        <button class="add-btn" onclick="openAddModal()">+ CV Uploaden</button>
-                        <button class="refresh-btn" onclick="loadCVs()">Vernieuwen</button>
+                        <button class="export-btn" onclick="exportToCSV()" aria-label="Exporteer naar CSV">📥 Export CSV</button>
+                        <button class="add-btn" onclick="openAddModal()" aria-label="CV uploaden">+ CV Uploaden</button>
+                        <button class="refresh-btn" onclick="loadCVs()" aria-label="Vernieuwen">Vernieuwen</button>
+                    </div>
+                </div>
+
+                <!-- Filters Panel -->
+                <div class="filters-panel" id="filtersPanel">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="filterDateFrom">Datum van</label>
+                            <input type="date" id="filterDateFrom">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterDateTo">Datum tot</label>
+                            <input type="date" id="filterDateTo">
+                        </div>
+                        <div class="filter-actions">
+                            <button class="filter-apply-btn" onclick="applyFilters()">Toepassen</button>
+                            <button class="filter-clear-btn" onclick="clearFilters()">Wissen</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2437,13 +3006,13 @@
                     <div class="search-wrapper">
                         <div class="search-input-wrapper">
                             <input type="text" class="search-box" placeholder="Zoeken op bedrijfsnaam..." id="employerSearchInput">
-                            <button type="button" class="search-clear" id="employerSearchClear" onclick="clearEmployerSearch()">&times;</button>
+                            <button type="button" class="search-clear" id="employerSearchClear" onclick="clearEmployerSearch()" aria-label="Zoekopdracht wissen">&times;</button>
                         </div>
                         <span class="results-counter" id="employerResultsCounter"></span>
                     </div>
                     <div class="toolbar-buttons">
-                        <button class="add-btn" onclick="openEmployerModal()">+ Werkgever Toevoegen</button>
-                        <button class="refresh-btn" onclick="loadEmployers()">Vernieuwen</button>
+                        <button class="add-btn" onclick="openEmployerModal()" aria-label="Werkgever toevoegen">+ Werkgever Toevoegen</button>
+                        <button class="refresh-btn" onclick="loadEmployers()" aria-label="Vernieuwen">Vernieuwen</button>
                     </div>
                 </div>
 
@@ -2591,6 +3160,150 @@
         // Set PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+        // Password visibility toggle
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+                button.setAttribute('aria-label', 'Verberg wachtwoord');
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+                button.setAttribute('aria-label', 'Toon wachtwoord');
+            }
+        }
+
+        // Toast notification system
+        const Toast = {
+            icons: {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ'
+            },
+            show(type, title, message, duration = 4000) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `
+                    <span class="toast-icon">${this.icons[type] || 'ℹ'}</span>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        ${message ? `<div class="toast-message">${message}</div>` : ''}
+                    </div>
+                    <button class="toast-close" onclick="this.parentElement.remove()" aria-label="Sluiten">&times;</button>
+                `;
+                container.appendChild(toast);
+
+                if (duration > 0) {
+                    setTimeout(() => {
+                        toast.classList.add('hiding');
+                        setTimeout(() => toast.remove(), 300);
+                    }, duration);
+                }
+                return toast;
+            },
+            success(title, message, duration) { return this.show('success', title, message, duration); },
+            error(title, message, duration) { return this.show('error', title, message, duration); },
+            warning(title, message, duration) { return this.show('warning', title, message, duration); },
+            info(title, message, duration) { return this.show('info', title, message, duration); }
+        };
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape - close modals
+            if (e.key === 'Escape') {
+                const modal = document.querySelector('.modal.active');
+                const confirmDialog = document.querySelector('.confirm-dialog-overlay.active');
+                const cvViewer = document.getElementById('cvViewerModal');
+                if (cvViewer && cvViewer.classList.contains('active')) {
+                    CVViewer.close();
+                } else if (confirmDialog) {
+                    closeConfirmDialog(false);
+                } else if (modal) {
+                    const closeBtn = modal.querySelector('.modal-close');
+                    if (closeBtn) closeBtn.click();
+                }
+            }
+            // Ctrl+K or / - focus search (when not in input)
+            if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName))) {
+                e.preventDefault();
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            }
+            // Ctrl+N - new CV upload (when dashboard visible)
+            if (e.key === 'n' && (e.ctrlKey || e.metaKey) && document.getElementById('dashboard').classList.contains('active')) {
+                e.preventDefault();
+                openAddModal();
+            }
+        });
+
+        // Session timeout manager
+        const SessionManager = {
+            timeout: 15 * 60 * 1000, // 15 minutes
+            warningTime: 60 * 1000, // Show warning 60 seconds before timeout
+            timer: null,
+            warningTimer: null,
+            countdownInterval: null,
+
+            init() {
+                if (!authToken) return;
+                this.resetTimer();
+                ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+                    document.addEventListener(event, () => this.resetTimer(), { passive: true });
+                });
+            },
+
+            resetTimer() {
+                clearTimeout(this.timer);
+                clearTimeout(this.warningTimer);
+                clearInterval(this.countdownInterval);
+                this.hideWarning();
+
+                // Set warning timer
+                this.warningTimer = setTimeout(() => this.showWarning(), this.timeout - this.warningTime);
+
+                // Set logout timer
+                this.timer = setTimeout(() => this.sessionExpired(), this.timeout);
+            },
+
+            showWarning() {
+                const overlay = document.getElementById('sessionWarningOverlay');
+                const timerEl = document.getElementById('sessionTimer');
+                let seconds = 60;
+
+                overlay.classList.add('active');
+                timerEl.textContent = seconds;
+
+                this.countdownInterval = setInterval(() => {
+                    seconds--;
+                    timerEl.textContent = seconds;
+                    if (seconds <= 0) {
+                        clearInterval(this.countdownInterval);
+                    }
+                }, 1000);
+            },
+
+            hideWarning() {
+                document.getElementById('sessionWarningOverlay').classList.remove('active');
+            },
+
+            extend() {
+                this.resetTimer();
+                Toast.success('Sessie verlengd', 'Je sessie is met 15 minuten verlengd.');
+            },
+
+            sessionExpired() {
+                this.hideWarning();
+                Toast.warning('Sessie verlopen', 'Je bent uitgelogd wegens inactiviteit.');
+                setTimeout(() => logout(), 1000);
+            }
+        };
+
         let allCVs = [];
         let filteredCVs = []; // CVs after search filter
         let selectedIds = new Set(); // Track selected CV IDs across renders
@@ -2598,8 +3311,38 @@
 
         // Pagination settings
         let currentPage = 1;
-        const itemsPerPage = 12;
+        let itemsPerPage = parseInt(localStorage.getItem('adminItemsPerPage')) || 12;
         let currentSort = 'date-desc'; // Default sort
+        let dateFilterFrom = null;
+        let dateFilterTo = null;
+
+        // Filters panel functions
+        function toggleFilters() {
+            const panel = document.getElementById('filtersPanel');
+            const toggle = document.getElementById('filtersToggle');
+            panel.classList.toggle('active');
+            toggle.classList.toggle('active');
+        }
+
+        function applyFilters() {
+            const fromInput = document.getElementById('filterDateFrom');
+            const toInput = document.getElementById('filterDateTo');
+            dateFilterFrom = fromInput.value ? new Date(fromInput.value) : null;
+            dateFilterTo = toInput.value ? new Date(toInput.value + 'T23:59:59') : null;
+            currentPage = 1;
+            applySearchFilter();
+            Toast.success('Filters toegepast', dateFilterFrom || dateFilterTo ? 'Datumfilter actief' : '');
+        }
+
+        function clearFilters() {
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            dateFilterFrom = null;
+            dateFilterTo = null;
+            currentPage = 1;
+            applySearchFilter();
+            Toast.info('Filters gewist');
+        }
 
         // Extract name from filename (most reliable source)
         function extractNameFromFilename(filename) {
@@ -3274,6 +4017,7 @@
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').classList.add('active');
             loadCVs();
+            SessionManager.init();
         }
 
         // Login form handler
@@ -3350,14 +4094,32 @@
         // Load theme immediately
         loadTheme();
 
+        // Generate skeleton loader HTML
+        function getSkeletonLoader(count = 6) {
+            let html = '<div class="skeleton-grid">';
+            for (let i = 0; i < count; i++) {
+                html += `
+                    <div class="skeleton-card">
+                        <div class="skeleton-line title"></div>
+                        <div class="skeleton-line subtitle"></div>
+                        <div class="skeleton-line badge"></div>
+                        <div class="skeleton-line text"></div>
+                        <div class="skeleton-line text"></div>
+                        <div class="skeleton-line text-short"></div>
+                        <div class="skeleton-actions">
+                            <div class="skeleton-line skeleton-btn"></div>
+                            <div class="skeleton-line skeleton-btn"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
         async function loadCVs() {
             const cvList = document.getElementById('cvList');
-            cvList.innerHTML = `
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>CV's laden...</p>
-                </div>
-            `;
+            cvList.innerHTML = getSkeletonLoader(6);
 
             try {
                 const response = await fetch('/api/cvs', {
@@ -3521,7 +4283,27 @@
             // Last button
             html += `<button class="pagination-btn" onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} title="Laatste pagina">Laatste ⏭</button>`;
 
+            // Items per page selector
+            html += `
+                <div class="items-per-page">
+                    <label for="itemsPerPageSelect">Per pagina:</label>
+                    <select id="itemsPerPageSelect" onchange="changeItemsPerPage(this.value)" aria-label="Items per pagina">
+                        <option value="12" ${itemsPerPage === 12 ? 'selected' : ''}>12</option>
+                        <option value="24" ${itemsPerPage === 24 ? 'selected' : ''}>24</option>
+                        <option value="48" ${itemsPerPage === 48 ? 'selected' : ''}>48</option>
+                        <option value="96" ${itemsPerPage === 96 ? 'selected' : ''}>96</option>
+                    </select>
+                </div>
+            `;
+
             paginationEl.innerHTML = html;
+        }
+
+        function changeItemsPerPage(value) {
+            itemsPerPage = parseInt(value);
+            localStorage.setItem('adminItemsPerPage', value);
+            currentPage = 1;
+            applySortAndRender();
         }
 
         function goToPage(page) {
@@ -4244,13 +5026,34 @@
                 clearBtn.classList.remove('visible');
             }
 
-            filteredCVs = allCVs.filter(cv =>
-                cv.fullName.toLowerCase().includes(query) ||
-                (cv.email && cv.email.toLowerCase().includes(query))
-            );
+            applySearchFilter();
+        });
+
+        function applySearchFilter() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const clearBtn = document.getElementById('searchClear');
+            const resultsCounter = document.getElementById('resultsCounter');
+
+            filteredCVs = allCVs.filter(cv => {
+                // Text search filter
+                const matchesSearch = !query ||
+                    cv.fullName.toLowerCase().includes(query) ||
+                    (cv.email && cv.email.toLowerCase().includes(query));
+
+                // Date filter
+                let matchesDate = true;
+                if (dateFilterFrom || dateFilterTo) {
+                    const cvDate = new Date(cv.createdAt);
+                    if (dateFilterFrom && cvDate < dateFilterFrom) matchesDate = false;
+                    if (dateFilterTo && cvDate > dateFilterTo) matchesDate = false;
+                }
+
+                return matchesSearch && matchesDate;
+            });
 
             // Update results counter
-            if (query.length > 0) {
+            const hasFilters = query.length > 0 || dateFilterFrom || dateFilterTo;
+            if (hasFilters) {
                 resultsCounter.textContent = `${filteredCVs.length} van ${allCVs.length} resultaten`;
                 resultsCounter.classList.add('visible', 'filtered');
             } else {
@@ -4259,18 +5062,14 @@
 
             currentPage = 1;
             applySortAndRender();
-        });
+        }
 
         function clearSearch() {
             const searchInput = document.getElementById('searchInput');
             const clearBtn = document.getElementById('searchClear');
-            const resultsCounter = document.getElementById('resultsCounter');
             searchInput.value = '';
             clearBtn.classList.remove('visible');
-            resultsCounter.classList.remove('visible', 'filtered');
-            filteredCVs = [...allCVs];
-            currentPage = 1;
-            applySortAndRender();
+            applySearchFilter();
             searchInput.focus();
         }
 
@@ -4744,6 +5543,24 @@
             <div class="confirm-dialog-buttons">
                 <button class="confirm-dialog-btn cancel" onclick="closeConfirmDialog(false)">Annuleren</button>
                 <button class="confirm-dialog-btn confirm" id="confirmBtn" onclick="closeConfirmDialog(true)">Bevestigen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Session Timeout Warning -->
+    <div class="session-warning-overlay" id="sessionWarningOverlay">
+        <div class="session-warning-dialog">
+            <div class="session-warning-icon">⏰</div>
+            <div class="session-warning-title">Sessie Verloopt</div>
+            <div class="session-warning-message">Je sessie verloopt binnenkort wegens inactiviteit.</div>
+            <div class="session-warning-timer" id="sessionTimer">60</div>
+            <div class="session-warning-message">seconden</div>
+            <div class="session-warning-buttons">
+                <button class="session-warning-btn primary" onclick="SessionManager.extend()">Sessie Verlengen</button>
+                <button class="session-warning-btn secondary" onclick="logout()">Uitloggen</button>
             </div>
         </div>
     </div>

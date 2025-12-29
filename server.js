@@ -1482,34 +1482,6 @@ async function parseLinkedInPDF(base64Data) {
             }
         }
 
-        // Legacy fallback code for edge cases
-        if (!result.jobTitle && nameLineIndex >= 0) {
-            let foundJobTitle = '';
-            let foundLocation = '';
-            let jobTitleLineIndex = -1;
-            const potentialLocationLower = '';
-
-                // If it's not a section header, not contact info, and is short, assume it's location
-                if (!sectionHeaders.some(h => potentialLocationLower === h) &&
-                    !potentialLocation.includes('@') &&
-                    !potentialLocationLower.includes('linkedin') &&
-                    potentialLocation.length > 3 &&
-                    potentialLocation.length < 60 &&
-                    !companyIndicators.some(c => potentialLocationLower.endsWith(c))) {
-                    foundLocation = potentialLocation;
-                }
-            }
-
-            // Combine job title with company if both found
-            if (!result.jobTitle && foundJobTitle) {
-                result.jobTitle = foundCompany ? `${foundJobTitle} bij ${foundCompany}` : foundJobTitle;
-            }
-
-            // Set location from header area
-            if (foundLocation) {
-                result.location = foundLocation;
-            }
-        }
 
         // Parse through all lines
         for (let i = 0; i < lines.length; i++) {
