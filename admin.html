@@ -254,6 +254,12 @@
         }
 
         .search-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .search-input-wrapper {
             position: relative;
             display: inline-block;
         }
@@ -294,6 +300,20 @@
 
         .search-clear.visible {
             display: block;
+        }
+
+        .results-counter {
+            display: none;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .results-counter.visible {
+            display: block;
+        }
+
+        .results-counter.filtered {
+            color: #2ec4b6;
         }
 
         .toolbar-buttons {
@@ -1478,6 +1498,190 @@
             .test-matching-container {
                 grid-template-columns: 1fr;
             }
+
+            .linkedin-layout {
+                flex-direction: column;
+            }
+
+            .linkedin-sidebar {
+                width: 100%;
+                padding: 20px;
+            }
+
+            .linkedin-main {
+                padding: 24px;
+            }
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                padding: 16px 20px;
+                align-items: flex-start;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .header-right {
+                width: 100%;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .header-stats {
+                gap: 16px;
+            }
+
+            .stat-value {
+                font-size: 20px;
+            }
+
+            .stat-label {
+                font-size: 10px;
+            }
+
+            .theme-toggle {
+                padding: 4px 8px;
+            }
+
+            .logout-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .container {
+                padding: 16px;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab-btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .search-wrapper {
+                width: 100%;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .toolbar-buttons {
+                width: 100%;
+                justify-content: stretch;
+            }
+
+            .toolbar-buttons button {
+                flex: 1;
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .selection-toolbar {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .selection-toolbar .delete-selected-btn {
+                width: 100%;
+            }
+
+            .cv-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cv-card {
+                padding: 16px;
+                min-height: auto;
+            }
+
+            .cv-header {
+                padding-left: 32px;
+            }
+
+            .cv-name {
+                font-size: 16px;
+            }
+
+            .cv-actions {
+                flex-wrap: wrap;
+            }
+
+            .cv-actions .btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            /* LinkedIn modal mobile */
+            .linkedin-cv {
+                max-width: 100%;
+                margin: 8px;
+                border-radius: 12px;
+            }
+
+            .linkedin-layout {
+                flex-direction: column;
+                max-height: 90vh;
+            }
+
+            .linkedin-sidebar {
+                width: 100%;
+                padding: 16px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .linkedin-sidebar-section {
+                margin-bottom: 0;
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .linkedin-main {
+                padding: 20px;
+            }
+
+            .linkedin-name {
+                font-size: 24px;
+            }
+
+            .linkedin-section-title {
+                font-size: 16px;
+            }
+
+            /* Upload modal mobile */
+            .form-modal .modal-content {
+                margin: 8px;
+                padding: 20px;
+                max-height: 95vh;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .form-actions button {
+                width: 100%;
+            }
         }
 
         .test-matching-form {
@@ -1664,6 +1868,14 @@
 
         body.light-mode .search-clear:hover {
             color: #1e293b;
+        }
+
+        body.light-mode .results-counter {
+            color: #64748b;
+        }
+
+        body.light-mode .results-counter.filtered {
+            color: #0d9488;
         }
 
         body.light-mode .cv-card {
@@ -2117,8 +2329,11 @@
             <div class="tab-content active" id="cvTab">
                 <div class="toolbar">
                     <div class="search-wrapper">
-                        <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
-                        <button type="button" class="search-clear" id="searchClear" onclick="clearSearch()">&times;</button>
+                        <div class="search-input-wrapper">
+                            <input type="text" class="search-box" placeholder="Zoeken op naam of email..." id="searchInput">
+                            <button type="button" class="search-clear" id="searchClear" onclick="clearSearch()">&times;</button>
+                        </div>
+                        <span class="results-counter" id="resultsCounter"></span>
                     </div>
                     <div class="toolbar-buttons">
                         <button class="add-btn" onclick="openAddModal()">+ CV Uploaden</button>
@@ -2150,8 +2365,11 @@
             <div class="tab-content" id="employersTab">
                 <div class="toolbar">
                     <div class="search-wrapper">
-                        <input type="text" class="search-box" placeholder="Zoeken op bedrijfsnaam..." id="employerSearchInput">
-                        <button type="button" class="search-clear" id="employerSearchClear" onclick="clearEmployerSearch()">&times;</button>
+                        <div class="search-input-wrapper">
+                            <input type="text" class="search-box" placeholder="Zoeken op bedrijfsnaam..." id="employerSearchInput">
+                            <button type="button" class="search-clear" id="employerSearchClear" onclick="clearEmployerSearch()">&times;</button>
+                        </div>
+                        <span class="results-counter" id="employerResultsCounter"></span>
                     </div>
                     <div class="toolbar-buttons">
                         <button class="add-btn" onclick="openEmployerModal()">+ Werkgever Toevoegen</button>
@@ -2783,19 +3001,54 @@
             }
             document.getElementById('modalContact').innerHTML = contactHtml || '<div style="color: rgba(255,255,255,0.5);">Geen contactgegevens</div>';
 
-            // Sidebar - Skills
+            // Sidebar - Skills (better parsing)
             let skillsHtml = '';
             if (cv.skills) {
-                const skillsList = cv.skills.split(',').map(s => s.trim()).filter(s => s).slice(0, 6);
-                skillsHtml = skillsList.map(skill => `<div class="linkedin-sidebar-item">${escapeHtml(skill)}</div>`).join('');
+                // Split on bullets, commas, or newlines
+                let skillsList = cv.skills
+                    .split(/[•\n]/)
+                    .map(s => s.trim())
+                    .filter(s => s && s.length > 1);
+
+                // If still has category headers like "Frontend:", clean them up
+                skillsList = skillsList.flatMap(skill => {
+                    if (skill.includes(':')) {
+                        const parts = skill.split(':');
+                        const category = parts[0].trim();
+                        const items = parts.slice(1).join(':').split(',').map(s => s.trim()).filter(s => s);
+                        if (items.length > 0) {
+                            return items;
+                        }
+                        return [category];
+                    }
+                    return skill.split(',').map(s => s.trim()).filter(s => s);
+                }).slice(0, 8);
+
+                skillsHtml = skillsList.map(skill => `<div class="linkedin-sidebar-item">• ${escapeHtml(skill)}</div>`).join('');
             }
             document.getElementById('modalSkills').innerHTML = skillsHtml || '<div style="color: rgba(255,255,255,0.5);">Geen vaardigheden</div>';
 
-            // Sidebar - Languages
+            // Sidebar - Languages (better parsing)
             const languagesSection = document.getElementById('modalLanguagesSection');
             if (cv.languages) {
-                const langList = cv.languages.split(',').map(s => s.trim()).filter(s => s);
-                document.getElementById('modalLanguages').innerHTML = langList.map(lang => `<div class="linkedin-sidebar-item">${escapeHtml(lang)}</div>`).join('');
+                // Try to split languages intelligently
+                let langText = cv.languages;
+                // Split on common language names followed by parentheses or on newlines
+                let langList = langText
+                    .split(/(?=Nederlands|Engels|English|Duits|German|Frans|French|Spaans|Spanish|Italiaans|Italian|Portugees|Portuguese|Russisch|Russian|Chinees|Chinese|Japans|Japanese|Arabisch|Arabic)/gi)
+                    .map(s => s.trim())
+                    .filter(s => s);
+
+                // If that didn't work, try splitting on commas or newlines
+                if (langList.length <= 1) {
+                    langList = langText.split(/[,\n]/).map(s => s.trim()).filter(s => s);
+                }
+
+                document.getElementById('modalLanguages').innerHTML = langList.map(lang => {
+                    // Clean up and format each language entry
+                    const cleaned = escapeHtml(lang).replace(/\)(\w)/g, ')<br>$1');
+                    return `<div class="linkedin-sidebar-item" style="margin-bottom: 10px;">${cleaned}</div>`;
+                }).join('');
                 languagesSection.style.display = 'block';
             } else {
                 languagesSection.style.display = 'none';
@@ -3329,6 +3582,7 @@
         document.getElementById('searchInput').addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
             const clearBtn = document.getElementById('searchClear');
+            const resultsCounter = document.getElementById('resultsCounter');
 
             // Show/hide clear button
             if (query.length > 0) {
@@ -3341,14 +3595,25 @@
                 cv.fullName.toLowerCase().includes(query) ||
                 (cv.email && cv.email.toLowerCase().includes(query))
             );
+
+            // Update results counter
+            if (query.length > 0) {
+                resultsCounter.textContent = `${filtered.length} van ${allCVs.length} resultaten`;
+                resultsCounter.classList.add('visible', 'filtered');
+            } else {
+                resultsCounter.classList.remove('visible', 'filtered');
+            }
+
             renderCVs(filtered);
         });
 
         function clearSearch() {
             const searchInput = document.getElementById('searchInput');
             const clearBtn = document.getElementById('searchClear');
+            const resultsCounter = document.getElementById('resultsCounter');
             searchInput.value = '';
             clearBtn.classList.remove('visible');
+            resultsCounter.classList.remove('visible', 'filtered');
             renderCVs(allCVs);
             searchInput.focus();
         }
@@ -3592,6 +3857,7 @@
         document.getElementById('employerSearchInput').addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
             const clearBtn = document.getElementById('employerSearchClear');
+            const resultsCounter = document.getElementById('employerResultsCounter');
 
             // Show/hide clear button
             if (query.length > 0) {
@@ -3604,14 +3870,25 @@
                 emp.companyName.toLowerCase().includes(query) ||
                 emp.username.toLowerCase().includes(query)
             );
+
+            // Update results counter
+            if (query.length > 0) {
+                resultsCounter.textContent = `${filtered.length} van ${allEmployers.length} resultaten`;
+                resultsCounter.classList.add('visible', 'filtered');
+            } else {
+                resultsCounter.classList.remove('visible', 'filtered');
+            }
+
             renderEmployers(filtered);
         });
 
         function clearEmployerSearch() {
             const searchInput = document.getElementById('employerSearchInput');
             const clearBtn = document.getElementById('employerSearchClear');
+            const resultsCounter = document.getElementById('employerResultsCounter');
             searchInput.value = '';
             clearBtn.classList.remove('visible');
+            resultsCounter.classList.remove('visible', 'filtered');
             renderEmployers(allEmployers);
             searchInput.focus();
         }

@@ -725,6 +725,197 @@
             white-space: pre-wrap;
         }
 
+        /* LinkedIn-style CV Modal */
+        .linkedin-cv {
+            max-width: 900px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .linkedin-cv .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .linkedin-cv .modal-close:hover {
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+        }
+
+        .linkedin-layout {
+            display: flex;
+            min-height: 500px;
+            max-height: 85vh;
+        }
+
+        .linkedin-sidebar {
+            width: 220px;
+            background: #3d4f5f;
+            padding: 30px 20px;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .linkedin-sidebar-section {
+            margin-bottom: 28px;
+        }
+
+        .linkedin-sidebar-title {
+            color: #7eb8c9;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: capitalize;
+        }
+
+        .linkedin-sidebar-content {
+            color: #fff;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .linkedin-sidebar-content a {
+            color: #7eb8c9;
+            text-decoration: none;
+        }
+
+        .linkedin-sidebar-content a:hover {
+            text-decoration: underline;
+        }
+
+        .linkedin-sidebar-item {
+            margin-bottom: 6px;
+        }
+
+        .linkedin-main {
+            flex: 1;
+            padding: 40px 50px;
+            background: #fff;
+            overflow-y: auto;
+            color: #333;
+        }
+
+        .linkedin-name {
+            font-size: 32px;
+            font-weight: 400;
+            color: #333;
+            margin: 0 0 8px 0;
+            line-height: 1.2;
+        }
+
+        .linkedin-headline {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .linkedin-location {
+            font-size: 14px;
+            color: #7eb8c9;
+            margin-bottom: 30px;
+        }
+
+        .linkedin-section {
+            margin-bottom: 30px;
+        }
+
+        .linkedin-section-title {
+            font-size: 18px;
+            font-weight: 400;
+            color: #333;
+            margin-bottom: 16px;
+            padding-top: 16px;
+            position: relative;
+        }
+
+        .linkedin-section-title::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: #666;
+        }
+
+        .linkedin-section:first-of-type .linkedin-section-title {
+            padding-top: 0;
+        }
+
+        .linkedin-section:first-of-type .linkedin-section-title::before {
+            display: none;
+        }
+
+        .linkedin-section-content {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
+        .linkedin-summary-text {
+            font-style: italic;
+            color: #333;
+            line-height: 1.7;
+        }
+
+        .linkedin-summary-text::before {
+            content: '"';
+        }
+
+        .linkedin-summary-text::after {
+            content: '"';
+        }
+
+        @media (max-width: 768px) {
+            .linkedin-cv {
+                max-width: 100%;
+                margin: 8px;
+                border-radius: 12px;
+            }
+
+            .linkedin-layout {
+                flex-direction: column;
+                max-height: 90vh;
+            }
+
+            .linkedin-sidebar {
+                width: 100%;
+                padding: 16px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .linkedin-sidebar-section {
+                margin-bottom: 0;
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .linkedin-main {
+                padding: 20px;
+            }
+
+            .linkedin-name {
+                font-size: 24px;
+            }
+
+            .linkedin-section-title {
+                font-size: 16px;
+            }
+        }
+
         .locked-content {
             text-align: center;
             padding: 30px;
@@ -1167,14 +1358,48 @@
         </div>
     </div>
 
-    <!-- Detail Modal -->
+    <!-- Detail Modal (LinkedIn-style) -->
     <div class="modal" id="cvModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalName">CV Details</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-content linkedin-cv">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="linkedin-layout">
+                <!-- Left Sidebar -->
+                <div class="linkedin-sidebar">
+                    <div class="linkedin-sidebar-section">
+                        <div class="linkedin-sidebar-title">Contact</div>
+                        <div class="linkedin-sidebar-content" id="modalContact"></div>
+                    </div>
+                    <div class="linkedin-sidebar-section">
+                        <div class="linkedin-sidebar-title">Top Skills</div>
+                        <div class="linkedin-sidebar-content" id="modalSkills"></div>
+                    </div>
+                    <div class="linkedin-sidebar-section" id="modalLanguagesSection" style="display: none;">
+                        <div class="linkedin-sidebar-title">Languages</div>
+                        <div class="linkedin-sidebar-content" id="modalLanguages"></div>
+                    </div>
+                </div>
+                <!-- Main Content -->
+                <div class="linkedin-main">
+                    <h1 class="linkedin-name" id="modalName">Naam</h1>
+                    <div class="linkedin-headline" id="modalHeadline"></div>
+                    <div class="linkedin-location" id="modalLocation"></div>
+
+                    <div id="modalSummarySection" class="linkedin-section" style="display: none;">
+                        <div class="linkedin-section-title">Summary</div>
+                        <div class="linkedin-section-content" id="modalSummary"></div>
+                    </div>
+
+                    <div id="modalExperienceSection" class="linkedin-section" style="display: none;">
+                        <div class="linkedin-section-title">Experience</div>
+                        <div class="linkedin-section-content" id="modalExperience"></div>
+                    </div>
+
+                    <div id="modalEducationSection" class="linkedin-section" style="display: none;">
+                        <div class="linkedin-section-title">Education</div>
+                        <div class="linkedin-section-content" id="modalEducation"></div>
+                    </div>
+                </div>
             </div>
-            <div id="modalBody"></div>
         </div>
     </div>
 
@@ -1461,7 +1686,6 @@
                         ${showMatchScore && cv.matchReason ? `
                             <div class="match-keywords">${escapeHtml(cv.matchReason)}</div>
                         ` : ''}
-                        ${cv.summary ? `<div class="cv-summary">${escapeHtml(cv.summary)}</div>` : ''}
                         <div class="cv-actions">
                             <button class="btn btn-view" onclick="viewCV('${cv._id}')">Bekijken</button>
                             <button class="btn btn-download" onclick="downloadCV('${cv._id}')">Download CV</button>
@@ -1485,45 +1709,103 @@
                 return;
             }
 
+            // Populate LinkedIn-style modal
             document.getElementById('modalName').textContent = cv.fullName;
+            document.getElementById('modalHeadline').textContent = cv.jobTitle || '';
+            document.getElementById('modalLocation').textContent = cv.location || '';
 
-            let sections = [];
-
-            sections.push({
-                title: 'Contact',
-                content: `Email: ${cv.email}\nTelefoon: ${cv.phone || '-'}\nLocatie: ${cv.location || '-'}`
-            });
-
-            if (cv.summary) {
-                sections.push({ title: 'Samenvatting', content: cv.summary });
+            // Sidebar - Contact
+            let contactHtml = '';
+            if (cv.linkedinUrl) {
+                contactHtml += `<div class="linkedin-sidebar-item"><a href="${escapeHtml(cv.linkedinUrl)}" target="_blank">${escapeHtml(cv.linkedinUrl)}</a><br><span style="color: #7eb8c9;">(LinkedIn)</span></div>`;
             }
-
-            if (cv.languages) {
-                sections.push({ title: 'Talen', content: cv.languages });
+            if (cv.email) {
+                contactHtml += `<div class="linkedin-sidebar-item">${escapeHtml(cv.email)}</div>`;
             }
-
-            if (cv.experience) {
-                sections.push({ title: 'Werkervaring', content: cv.experience });
+            if (cv.phone) {
+                contactHtml += `<div class="linkedin-sidebar-item">${escapeHtml(cv.phone)}</div>`;
             }
+            document.getElementById('modalContact').innerHTML = contactHtml || '<div style="color: rgba(255,255,255,0.5);">Geen contactgegevens</div>';
 
-            if (cv.education) {
-                sections.push({ title: 'Opleiding', content: cv.education });
-            }
-
+            // Sidebar - Skills (better parsing)
+            let skillsHtml = '';
             if (cv.skills) {
-                sections.push({ title: 'Vaardigheden', content: cv.skills });
+                // Split on bullets, commas, or newlines
+                let skillsList = cv.skills
+                    .split(/[•\n]/)
+                    .map(s => s.trim())
+                    .filter(s => s && s.length > 1);
+
+                // If still has category headers like "Frontend:", clean them up
+                skillsList = skillsList.flatMap(skill => {
+                    if (skill.includes(':')) {
+                        const parts = skill.split(':');
+                        const category = parts[0].trim();
+                        const items = parts.slice(1).join(':').split(',').map(s => s.trim()).filter(s => s);
+                        if (items.length > 0) {
+                            return items;
+                        }
+                        return [category];
+                    }
+                    return skill.split(',').map(s => s.trim()).filter(s => s);
+                }).slice(0, 8);
+
+                skillsHtml = skillsList.map(skill => `<div class="linkedin-sidebar-item">• ${escapeHtml(skill)}</div>`).join('');
+            }
+            document.getElementById('modalSkills').innerHTML = skillsHtml || '<div style="color: rgba(255,255,255,0.5);">Geen vaardigheden</div>';
+
+            // Sidebar - Languages (better parsing)
+            const languagesSection = document.getElementById('modalLanguagesSection');
+            if (cv.languages) {
+                // Try to split languages intelligently
+                let langText = cv.languages;
+                // Split on common language names followed by parentheses or on newlines
+                let langList = langText
+                    .split(/(?=Nederlands|Engels|English|Duits|German|Frans|French|Spaans|Spanish|Italiaans|Italian|Portugees|Portuguese|Russisch|Russian|Chinees|Chinese|Japans|Japanese|Arabisch|Arabic)/gi)
+                    .map(s => s.trim())
+                    .filter(s => s);
+
+                // If that didn't work, try splitting on commas or newlines
+                if (langList.length <= 1) {
+                    langList = langText.split(/[,\n]/).map(s => s.trim()).filter(s => s);
+                }
+
+                document.getElementById('modalLanguages').innerHTML = langList.map(lang => {
+                    // Clean up and format each language entry
+                    const cleaned = escapeHtml(lang).replace(/\)(\w)/g, ')<br>$1');
+                    return `<div class="linkedin-sidebar-item" style="margin-bottom: 10px;">${cleaned}</div>`;
+                }).join('');
+                languagesSection.style.display = 'block';
+            } else {
+                languagesSection.style.display = 'none';
             }
 
-            if (cv.achievements) {
-                sections.push({ title: 'Prestaties', content: cv.achievements });
+            // Main content - Summary
+            const summarySection = document.getElementById('modalSummarySection');
+            if (cv.summary) {
+                document.getElementById('modalSummary').innerHTML = `<div class="linkedin-summary-text">${escapeHtml(cv.summary)}</div>`;
+                summarySection.style.display = 'block';
+            } else {
+                summarySection.style.display = 'none';
             }
 
-            document.getElementById('modalBody').innerHTML = sections.map(section => `
-                <div class="modal-section">
-                    <div class="modal-section-title">${section.title}</div>
-                    <div class="modal-section-content">${escapeHtml(section.content)}</div>
-                </div>
-            `).join('');
+            // Main content - Experience
+            const experienceSection = document.getElementById('modalExperienceSection');
+            if (cv.experience) {
+                document.getElementById('modalExperience').textContent = cv.experience;
+                experienceSection.style.display = 'block';
+            } else {
+                experienceSection.style.display = 'none';
+            }
+
+            // Main content - Education
+            const educationSection = document.getElementById('modalEducationSection');
+            if (cv.education) {
+                document.getElementById('modalEducation').textContent = cv.education;
+                educationSection.style.display = 'block';
+            } else {
+                educationSection.style.display = 'none';
+            }
 
             document.getElementById('cvModal').classList.add('active');
         }
