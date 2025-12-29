@@ -1559,10 +1559,10 @@
             try {
                 const [favResponse, notesResponse] = await Promise.all([
                     fetch('/api/employer/favorites', {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
+                        headers: { 'X-Employer-Token': authToken }
                     }),
                     fetch('/api/employer/notes', {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
+                        headers: { 'X-Employer-Token': authToken }
                     })
                 ]);
 
@@ -1591,7 +1591,7 @@
             try {
                 const response = await fetch(`/api/employer/favorites/${cvId}`, {
                     method: isFavorite ? 'DELETE' : 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                    headers: { 'X-Employer-Token': authToken }
                 });
 
                 if (response.ok) {
@@ -1643,7 +1643,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${authToken}`
+                            'X-Employer-Token': authToken
                         },
                         body: JSON.stringify({ text })
                     });
@@ -1664,7 +1664,7 @@
                     // Delete note if text is empty
                     const response = await fetch(`/api/employer/notes/${currentNoteCV}`, {
                         method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${authToken}` }
+                        headers: { 'X-Employer-Token': authToken }
                     });
 
                     if (response.ok) {
@@ -2080,6 +2080,11 @@
             const cv = allCVs.find(c => c._id === cvId);
             if (!cv) {
                 showAlert({ icon: '❌', title: 'Niet Gevonden', message: 'CV niet gevonden' });
+                return;
+            }
+
+            // Prevent double-clicking while loading
+            if (!CVViewer.startLoading(cv.fullName)) {
                 return;
             }
 

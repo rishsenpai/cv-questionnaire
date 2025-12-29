@@ -5,6 +5,7 @@
 
 const CVViewer = {
     currentPdfUrl: null,
+    isLoading: false,
 
     /**
      * Initialize the viewer - call this on page load
@@ -47,6 +48,10 @@ const CVViewer = {
                     </div>
                 </div>
                 <div class="cv-viewer-body">
+                    <div id="cvViewerLoading" class="cv-viewer-loading">
+                        <div class="cv-viewer-spinner"></div>
+                        <p>CV laden...</p>
+                    </div>
                     <iframe id="cvViewerFrame" class="cv-viewer-frame"></iframe>
                     <div id="cvViewerFallback" class="cv-viewer-fallback" style="display: none;">
                         <div class="cv-viewer-fallback-content">
@@ -61,18 +66,63 @@ const CVViewer = {
     },
 
     /**
+     * Check if viewer is currently loading
+     * @returns {boolean}
+     */
+    isBusy() {
+        return this.isLoading;
+    },
+
+    /**
+     * Start loading state (call before async operations)
+     * @param {string} name - Optional name to display while loading
+     */
+    startLoading(name) {
+        if (this.isLoading) {
+            return false;
+        }
+        this.isLoading = true;
+
+        const modal = document.getElementById('cvViewerModal');
+        const loading = document.getElementById('cvViewerLoading');
+        const frame = document.getElementById('cvViewerFrame');
+        const fallback = document.getElementById('cvViewerFallback');
+        const nameEl = document.getElementById('cvViewerName');
+
+        nameEl.textContent = name || 'CV laden...';
+        loading.style.display = 'flex';
+        frame.style.display = 'none';
+        fallback.style.display = 'none';
+
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        return true;
+    },
+
+    /**
      * Open the viewer with a CV
      * @param {Object} cv - CV object with fileData, fullName, etc.
      */
     open(cv) {
+        // If not already loading, set loading state
+        if (!this.isLoading) {
+            this.isLoading = true;
+        }
         this.currentCV = cv;
 
         const modal = document.getElementById('cvViewerModal');
         const frame = document.getElementById('cvViewerFrame');
         const fallback = document.getElementById('cvViewerFallback');
+        const loading = document.getElementById('cvViewerLoading');
         const nameEl = document.getElementById('cvViewerName');
 
         nameEl.textContent = cv.fullName || 'CV';
+
+        // Show loading state initially
+        loading.style.display = 'flex';
+        frame.style.display = 'none';
+        fallback.style.display = 'none';
 
         // Clean up previous blob URL
         if (this.currentPdfUrl) {
@@ -92,15 +142,21 @@ const CVViewer = {
                 const blob = new Blob([byteArray], { type: 'application/pdf' });
                 this.currentPdfUrl = URL.createObjectURL(blob);
 
+                // Listen for iframe load to hide loading spinner
+                frame.onload = () => {
+                    loading.style.display = 'none';
+                    frame.style.display = 'block';
+                };
+
                 frame.src = this.currentPdfUrl;
-                frame.style.display = 'block';
-                fallback.style.display = 'none';
             } catch (e) {
                 console.error('Error loading PDF:', e);
+                loading.style.display = 'none';
                 this.showFallback(cv);
             }
         } else {
             // No PDF data, show fallback with parsed info
+            loading.style.display = 'none';
             this.showFallback(cv);
         }
 
@@ -159,6 +215,9 @@ const CVViewer = {
         const modal = document.getElementById('cvViewerModal');
         modal.classList.remove('active');
         document.body.style.overflow = '';
+
+        // Reset loading state
+        this.isLoading = false;
 
         // Clean up blob URL
         if (this.currentPdfUrl) {
@@ -291,6 +350,36 @@ const cvViewerStyles = `
     .cv-viewer-body {
         flex: 1;
         overflow: hidden;
+        position: relative;
+    }
+
+    .cv-viewer-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .cv-viewer-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #eee;
+        border-top-color: #1a1a2e;
+        border-radius: 50%;
+        animation: cv-viewer-spin 0.8s linear infinite;
+        margin-bottom: 12px;
+    }
+
+    @keyframes cv-viewer-spin {
+        to { transform: rotate(360deg); }
     }
 
     .cv-viewer-frame {

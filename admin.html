@@ -3209,6 +3209,11 @@
         }
 
         async function viewCV(cvId) {
+            // Prevent double-clicking while loading
+            if (!CVViewer.startLoading()) {
+                return;
+            }
+
             // Fetch full CV data including fileData for PDF viewing
             try {
                 const response = await fetch(`/api/cvs/${cvId}`, {
@@ -3216,6 +3221,7 @@
                 });
 
                 if (!response.ok) {
+                    CVViewer.close();
                     alert('Fout bij ophalen CV');
                     return;
                 }
@@ -3227,6 +3233,7 @@
                 CVViewer.open(cv);
             } catch (error) {
                 console.error('Error fetching CV:', error);
+                CVViewer.close();
                 alert('Fout bij ophalen CV');
             }
         }
@@ -3493,6 +3500,11 @@
         }
 
         async function viewDuplicateCV(cvId) {
+            // Prevent double-clicking while loading
+            if (!CVViewer.startLoading()) {
+                return;
+            }
+
             // Always fetch full CV from server to get fileData for PDF display
             try {
                 const response = await fetch(`/api/cvs/${cvId}`, {
@@ -3502,10 +3514,12 @@
                     const result = await response.json();
                     CVViewer.open(result.data);
                 } else {
+                    CVViewer.close();
                     alert('CV niet gevonden');
                 }
             } catch (e) {
                 console.error('Error fetching CV:', e);
+                CVViewer.close();
                 alert('Fout bij ophalen CV');
             }
         }
