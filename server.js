@@ -2097,6 +2097,57 @@ app.delete('/api/cvs/:id', requireAdmin, async (req, res) => {
     }
 });
 
+// Update CV by ID (protected) - for re-parsing
+app.put('/api/cvs/:id', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not connected'
+            });
+        }
+
+        const updateData = req.body;
+
+        // Only allow updating specific fields
+        const allowedFields = ['fullName', 'jobTitle', 'location', 'email', 'phone',
+                               'summary', 'experience', 'education', 'skills', 'fullText', 'languages'];
+        const filteredData = {};
+        for (const field of allowedFields) {
+            if (updateData[field] !== undefined) {
+                filteredData[field] = updateData[field];
+            }
+        }
+
+        const cv = await CV.findByIdAndUpdate(
+            req.params.id,
+            { $set: filteredData },
+            { new: true }
+        );
+
+        if (!cv) {
+            return res.status(404).json({
+                success: false,
+                message: 'CV not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'CV updated successfully',
+            cv: cv
+        });
+    } catch (error) {
+        console.error('Error updating CV:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update CV'
+        });
+    }
+});
+
 // Bulk delete CVs (protected)
 app.post('/api/cvs/bulk-delete', requireAdmin, async (req, res) => {
     try {

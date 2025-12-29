@@ -959,6 +959,66 @@
             content: '"';
         }
 
+        /* LinkedIn-style formatting classes */
+        .linkedin-company {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 16px;
+            margin-bottom: 4px;
+        }
+
+        .linkedin-company:first-child {
+            margin-top: 0;
+        }
+
+        .linkedin-job-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .linkedin-date {
+            font-size: 13px;
+            color: #666;
+            margin: 2px 0;
+        }
+
+        .linkedin-location {
+            font-size: 13px;
+            color: #7eb8c9;
+            margin-bottom: 8px;
+        }
+
+        .linkedin-description {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            margin-top: 4px;
+        }
+
+        .linkedin-institution {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 12px;
+            margin-bottom: 4px;
+        }
+
+        .linkedin-institution:first-child {
+            margin-top: 0;
+        }
+
+        .linkedin-degree {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .linkedin-field {
+            font-size: 13px;
+            color: #666;
+        }
+
         @media (max-width: 768px) {
             .linkedin-cv {
                 max-width: 100%;
@@ -1038,6 +1098,151 @@
         .empty-state h2 {
             margin-bottom: 8px;
             color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+        }
+
+        .pagination-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            margin: 0 16px;
+        }
+
+        /* Sort dropdown */
+        .sort-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 180px;
+        }
+
+        .sort-select option {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        /* Custom Confirm Dialog */
+        .confirm-dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .confirm-dialog-overlay.active {
+            display: flex;
+        }
+
+        .confirm-dialog {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .confirm-dialog-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .confirm-dialog-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .confirm-dialog-message {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .confirm-dialog-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .confirm-dialog-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .confirm-dialog-btn.cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .confirm-dialog-btn.cancel:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .confirm-dialog-btn.confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .confirm-dialog-btn.confirm:hover {
+            transform: scale(1.05);
+        }
+
+        .confirm-dialog-btn.confirm.danger {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
         }
 
         @media (max-width: 768px) {
@@ -1327,6 +1532,39 @@
         body.light-mode .tab-btn .tooltip::after {
             border-color: transparent transparent #7c3aed transparent;
         }
+
+        body.light-mode .sort-select {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .sort-select option {
+            background: #fff;
+            color: #1e293b;
+        }
+
+        body.light-mode .confirm-dialog {
+            background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .confirm-dialog-title {
+            color: #1e293b;
+        }
+
+        body.light-mode .confirm-dialog-message {
+            color: #64748b;
+        }
+
+        body.light-mode .confirm-dialog-btn.cancel {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.light-mode .confirm-dialog-btn.cancel:hover {
+            background: #cbd5e1;
+        }
     </style>
 </head>
 <body>
@@ -1411,6 +1649,12 @@
                 <!-- Results -->
                 <div class="results-header">
                     <span class="results-count" id="resultsCount">0 kandidaten gevonden</span>
+                    <select class="sort-select" id="sortSelect" onchange="changeSort()">
+                        <option value="date-desc">Nieuwste eerst</option>
+                        <option value="date-asc">Oudste eerst</option>
+                        <option value="name-asc">Naam A-Z</option>
+                        <option value="name-desc">Naam Z-A</option>
+                    </select>
                 </div>
 
                 <div id="cvList" class="cv-grid">
@@ -1419,6 +1663,8 @@
                         <p>CV's laden...</p>
                     </div>
                 </div>
+
+                <div id="pagination" class="pagination"></div>
             </div>
 
             <!-- Vacancies Tab (Premium only) -->
@@ -1459,51 +1705,6 @@
         </div>
     </div>
 
-    <!-- Detail Modal (LinkedIn-style) -->
-    <div class="modal" id="cvModal">
-        <div class="modal-content linkedin-cv">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-            <div class="linkedin-layout">
-                <!-- Left Sidebar -->
-                <div class="linkedin-sidebar">
-                    <div class="linkedin-sidebar-section">
-                        <div class="linkedin-sidebar-title">Contact</div>
-                        <div class="linkedin-sidebar-content" id="modalContact"></div>
-                    </div>
-                    <div class="linkedin-sidebar-section">
-                        <div class="linkedin-sidebar-title">Top Skills</div>
-                        <div class="linkedin-sidebar-content" id="modalSkills"></div>
-                    </div>
-                    <div class="linkedin-sidebar-section" id="modalLanguagesSection" style="display: none;">
-                        <div class="linkedin-sidebar-title">Languages</div>
-                        <div class="linkedin-sidebar-content" id="modalLanguages"></div>
-                    </div>
-                </div>
-                <!-- Main Content -->
-                <div class="linkedin-main">
-                    <h1 class="linkedin-name" id="modalName">Naam</h1>
-                    <div class="linkedin-headline" id="modalHeadline"></div>
-                    <div class="linkedin-location" id="modalLocation"></div>
-
-                    <div id="modalSummarySection" class="linkedin-section" style="display: none;">
-                        <div class="linkedin-section-title">Summary</div>
-                        <div class="linkedin-section-content" id="modalSummary"></div>
-                    </div>
-
-                    <div id="modalExperienceSection" class="linkedin-section" style="display: none;">
-                        <div class="linkedin-section-title">Experience</div>
-                        <div class="linkedin-section-content" id="modalExperience"></div>
-                    </div>
-
-                    <div id="modalEducationSection" class="linkedin-section" style="display: none;">
-                        <div class="linkedin-section-title">Education</div>
-                        <div class="linkedin-section-content" id="modalEducation"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Note Modal -->
     <div class="modal" id="noteModal">
         <div class="modal-content note-modal-content">
@@ -1523,9 +1724,20 @@
         let authToken = localStorage.getItem('employerToken');
         let currentPlan = 'basic';
         let allCVs = [];
+        let filteredCVs = [];
         let employerFavorites = [];
         let employerNotes = [];
         let currentNoteCV = null;
+
+        // Pagination settings
+        let currentPage = 1;
+        const itemsPerPage = 12;
+
+        // Sorting
+        let currentSort = 'date-desc';
+
+        // Confirm dialog
+        let confirmDialogResolve = null;
 
         // Plan check helpers
         function hasFullAccess() {
@@ -1572,7 +1784,11 @@
 
         function showForgotPassword(event) {
             event.preventDefault();
-            alert('Om je wachtwoord te resetten, neem contact op met de beheerder via info@cvnow.nl of bel naar het supportnummer.');
+            showAlert({
+                icon: '🔑',
+                title: 'Wachtwoord Resetten',
+                message: 'Om je wachtwoord te resetten, neem contact op met de beheerder via info@cvnow.nl of bel naar het supportnummer.'
+            });
         }
 
         function showPortal() {
@@ -1635,15 +1851,15 @@
                     } else {
                         employerFavorites.push(cvId);
                     }
-                    // Re-render CVs to update UI
-                    renderCVs(allCVs);
+                    // Re-render CVs to update UI (keep current page)
+                    renderCVs(filteredCVs);
                 } else {
                     const result = await response.json();
-                    alert(result.message || 'Fout bij toevoegen/verwijderen favoriet');
+                    showAlert({ icon: '❌', title: 'Fout', message: result.message || 'Fout bij toevoegen/verwijderen favoriet' });
                 }
             } catch (error) {
                 console.error('Error toggling favorite:', error);
-                alert('Fout bij verbinden met server');
+                showAlert({ icon: '❌', title: 'Verbindingsfout', message: 'Fout bij verbinden met server' });
             }
         }
 
@@ -1692,7 +1908,7 @@
                         }
                     } else {
                         const result = await response.json();
-                        alert(result.message || 'Fout bij opslaan notitie');
+                        showAlert({ icon: '❌', title: 'Fout', message: result.message || 'Fout bij opslaan notitie' });
                         return;
                     }
                 } else {
@@ -1708,10 +1924,10 @@
                 }
 
                 closeNoteModal();
-                renderCVs(allCVs);
+                renderCVs(filteredCVs);
             } catch (error) {
                 console.error('Error saving note:', error);
-                alert('Fout bij verbinden met server');
+                showAlert({ icon: '❌', title: 'Verbindingsfout', message: 'Fout bij verbinden met server' });
             }
         }
 
@@ -1859,9 +2075,11 @@
 
                 if (result.success) {
                     allCVs = result.data;
+                    filteredCVs = allCVs;
                     currentPlan = result.plan || 'basic';
+                    currentPage = 1; // Reset to first page on new search
                     updatePaymentUI();
-                    renderCVs(allCVs);
+                    renderCVs(filteredCVs);
                     document.getElementById('resultsCount').textContent = `${result.count} kandidaten gevonden`;
                 } else {
                     cvList.innerHTML = `<div class="empty-state"><p>Fout bij laden</p></div>`;
@@ -1882,10 +2100,26 @@
                         <p>Probeer andere zoektermen</p>
                     </div>
                 `;
+                // Clear pagination for empty results
+                if (!showMatchScore) {
+                    document.getElementById('pagination').innerHTML = '';
+                }
                 return;
             }
 
-            cvList.innerHTML = cvs.map((cv, index) => {
+            // Apply pagination only for main CV list, not match results
+            let displayCVs = cvs;
+            let totalPages = 1;
+            if (!showMatchScore) {
+                totalPages = Math.ceil(cvs.length / itemsPerPage);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                displayCVs = cvs.slice(startIndex, startIndex + itemsPerPage);
+                renderPagination(cvs.length, totalPages);
+            }
+
+            cvList.innerHTML = displayCVs.map((cv, index) => {
+                // Calculate correct index for "Kandidaat #X" display
+                const displayIndex = showMatchScore ? index : ((currentPage - 1) * itemsPerPage) + index;
                 const skills = cv.skills ? cv.skills.split(',').slice(0, 4).map(s => s.trim()) : [];
                 const yearsExp = cv.yearsExperience; // Now comes from server
 
@@ -1894,7 +2128,7 @@
                     return `
                         <div class="cv-card">
                             ${showMatchScore && cv.matchScore ? `<div class="match-score">${cv.matchScore}% match</div>` : ''}
-                            <div class="cv-name cv-name-anonymous">Kandidaat #${index + 1}</div>
+                            <div class="cv-name cv-name-anonymous">Kandidaat #${displayIndex + 1}</div>
                             <div class="cv-title">${escapeHtml(cv.jobTitle || 'Geen functie opgegeven')}</div>
                             ${yearsExp ? `
                                 <div class="cv-info">
@@ -1964,123 +2198,167 @@
             }).join('');
         }
 
-        function viewCV(cvId) {
+        function renderPagination(totalItems, totalPages) {
+            const paginationEl = document.getElementById('pagination');
+
+            if (totalPages <= 1) {
+                paginationEl.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // First button
+            html += `<button class="pagination-btn" onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''} title="Eerste pagina">⏮ Eerste</button>`;
+
+            // Previous button
+            html += `<button class="pagination-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Vorige</button>`;
+
+            // Page info
+            html += `<span class="pagination-info">Pagina ${currentPage} van ${totalPages} (${totalItems} items)</span>`;
+
+            // Page numbers (show max 5)
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, startPage + 4);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+
+            // Next button
+            html += `<button class="pagination-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Volgende →</button>`;
+
+            // Last button
+            html += `<button class="pagination-btn" onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} title="Laatste pagina">Laatste ⏭</button>`;
+
+            paginationEl.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderCVs(filteredCVs);
+            // Scroll to top of CV list
+            document.getElementById('cvList').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Sorting functions
+        function changeSort() {
+            currentSort = document.getElementById('sortSelect').value;
+            currentPage = 1;
+            applySortAndRender();
+        }
+
+        function applySortAndRender() {
+            // Sort the filteredCVs
+            const sorted = [...filteredCVs].sort((a, b) => {
+                switch (currentSort) {
+                    case 'date-desc':
+                        return new Date(b.createdAt) - new Date(a.createdAt);
+                    case 'date-asc':
+                        return new Date(a.createdAt) - new Date(b.createdAt);
+                    case 'name-asc':
+                        return (a.fullName || '').localeCompare(b.fullName || '');
+                    case 'name-desc':
+                        return (b.fullName || '').localeCompare(a.fullName || '');
+                    default:
+                        return 0;
+                }
+            });
+            filteredCVs = sorted;
+            renderCVs(filteredCVs);
+        }
+
+        // Custom Confirm Dialog functions
+        function showConfirmDialog({ icon = '⚠️', title = 'Bevestigen', message = 'Weet je het zeker?', confirmText = 'Bevestigen', danger = false }) {
+            return new Promise((resolve) => {
+                confirmDialogResolve = resolve;
+                document.getElementById('confirmDialogIcon').textContent = icon;
+                document.getElementById('confirmDialogTitle').textContent = title;
+                document.getElementById('confirmDialogMessage').textContent = message;
+
+                const confirmBtn = document.getElementById('confirmDialogConfirmBtn');
+                confirmBtn.textContent = confirmText;
+                confirmBtn.classList.toggle('danger', danger);
+
+                document.getElementById('confirmDialogOverlay').classList.add('active');
+            });
+        }
+
+        function closeConfirmDialog(result) {
+            document.getElementById('confirmDialogOverlay').classList.remove('active');
+            if (confirmDialogResolve) {
+                confirmDialogResolve(result);
+                confirmDialogResolve = null;
+            }
+        }
+
+        function showAlert({ icon = 'ℹ️', title = 'Melding', message = '' }) {
+            return new Promise((resolve) => {
+                confirmDialogResolve = resolve;
+                document.getElementById('confirmDialogIcon').textContent = icon;
+                document.getElementById('confirmDialogTitle').textContent = title;
+                document.getElementById('confirmDialogMessage').textContent = message;
+
+                // Hide cancel button, change confirm to OK
+                const buttons = document.querySelector('.confirm-dialog-buttons');
+                const confirmBtn = document.getElementById('confirmDialogConfirmBtn');
+                confirmBtn.textContent = 'OK';
+                confirmBtn.classList.remove('danger');
+
+                // Hide cancel button temporarily
+                const cancelBtn = buttons.querySelector('.cancel');
+                cancelBtn.style.display = 'none';
+
+                document.getElementById('confirmDialogOverlay').classList.add('active');
+
+                // Restore cancel button visibility after closing
+                const originalResolve = confirmDialogResolve;
+                confirmDialogResolve = (result) => {
+                    cancelBtn.style.display = '';
+                    originalResolve(result);
+                };
+            });
+        }
+
+        async function viewCV(cvId) {
             // Block viewing for basic users
             if (currentPlan === 'basic') {
-                alert('Upgrade naar Advanced om CV details te bekijken');
+                showAlert({ icon: '🔒', title: 'Upgrade Vereist', message: 'Upgrade naar Advanced om CV details te bekijken' });
                 return;
             }
 
             // Find CV in the loaded data
             const cv = allCVs.find(c => c._id === cvId);
             if (!cv) {
-                alert('CV niet gevonden');
+                showAlert({ icon: '❌', title: 'Niet Gevonden', message: 'CV niet gevonden' });
                 return;
             }
 
-            // Populate LinkedIn-style modal
-            document.getElementById('modalName').textContent = cv.fullName;
-            document.getElementById('modalHeadline').textContent = cv.jobTitle || '';
-            document.getElementById('modalLocation').textContent = cv.location || '';
+            // Fetch the PDF data from download endpoint
+            try {
+                const response = await fetch(`/api/employer/cvs/${cvId}/download`, {
+                    headers: { 'X-Employer-Token': authToken }
+                });
+                const result = await response.json();
 
-            // Sidebar - Contact
-            let contactHtml = '';
-            if (cv.linkedinUrl) {
-                contactHtml += `<div class="linkedin-sidebar-item"><a href="${escapeHtml(cv.linkedinUrl)}" target="_blank">${escapeHtml(cv.linkedinUrl)}</a><br><span style="color: #7eb8c9;">(LinkedIn)</span></div>`;
-            }
-            if (cv.email) {
-                contactHtml += `<div class="linkedin-sidebar-item">${escapeHtml(cv.email)}</div>`;
-            }
-            if (cv.phone) {
-                contactHtml += `<div class="linkedin-sidebar-item">${escapeHtml(cv.phone)}</div>`;
-            }
-            document.getElementById('modalContact').innerHTML = contactHtml || '<div style="color: rgba(255,255,255,0.5);">Geen contactgegevens</div>';
-
-            // Sidebar - Skills (better parsing)
-            let skillsHtml = '';
-            if (cv.skills) {
-                // Split on bullets, commas, or newlines
-                let skillsList = cv.skills
-                    .split(/[•\n]/)
-                    .map(s => s.trim())
-                    .filter(s => s && s.length > 1);
-
-                // If still has category headers like "Frontend:", clean them up
-                skillsList = skillsList.flatMap(skill => {
-                    if (skill.includes(':')) {
-                        const parts = skill.split(':');
-                        const category = parts[0].trim();
-                        const items = parts.slice(1).join(':').split(',').map(s => s.trim()).filter(s => s);
-                        if (items.length > 0) {
-                            return items;
-                        }
-                        return [category];
-                    }
-                    return skill.split(',').map(s => s.trim()).filter(s => s);
-                }).slice(0, 8);
-
-                skillsHtml = skillsList.map(skill => `<div class="linkedin-sidebar-item">• ${escapeHtml(skill)}</div>`).join('');
-            }
-            document.getElementById('modalSkills').innerHTML = skillsHtml || '<div style="color: rgba(255,255,255,0.5);">Geen vaardigheden</div>';
-
-            // Sidebar - Languages (better parsing)
-            const languagesSection = document.getElementById('modalLanguagesSection');
-            if (cv.languages) {
-                // Try to split languages intelligently
-                let langText = cv.languages;
-                // Split on common language names followed by parentheses or on newlines
-                let langList = langText
-                    .split(/(?=Nederlands|Engels|English|Duits|German|Frans|French|Spaans|Spanish|Italiaans|Italian|Portugees|Portuguese|Russisch|Russian|Chinees|Chinese|Japans|Japanese|Arabisch|Arabic)/gi)
-                    .map(s => s.trim())
-                    .filter(s => s);
-
-                // If that didn't work, try splitting on commas or newlines
-                if (langList.length <= 1) {
-                    langList = langText.split(/[,\n]/).map(s => s.trim()).filter(s => s);
+                if (result.success && result.data) {
+                    // Merge CV metadata with file data
+                    const cvWithFile = {
+                        ...cv,
+                        fileData: result.data.fileData,
+                        fileType: result.data.fileType,
+                        fileName: result.data.fileName
+                    };
+                    CVViewer.open(cvWithFile);
+                } else {
+                    // No file data, open with CV metadata only (will show fallback)
+                    CVViewer.open(cv);
                 }
-
-                document.getElementById('modalLanguages').innerHTML = langList.map(lang => {
-                    // Clean up and format each language entry
-                    const cleaned = escapeHtml(lang).replace(/\)(\w)/g, ')<br>$1');
-                    return `<div class="linkedin-sidebar-item" style="margin-bottom: 10px;">${cleaned}</div>`;
-                }).join('');
-                languagesSection.style.display = 'block';
-            } else {
-                languagesSection.style.display = 'none';
+            } catch (error) {
+                console.error('Error fetching CV file:', error);
+                // Still try to open with CV metadata (fallback view)
+                CVViewer.open(cv);
             }
-
-            // Main content - Summary
-            const summarySection = document.getElementById('modalSummarySection');
-            if (cv.summary) {
-                document.getElementById('modalSummary').innerHTML = `<div class="linkedin-summary-text">${escapeHtml(cv.summary)}</div>`;
-                summarySection.style.display = 'block';
-            } else {
-                summarySection.style.display = 'none';
-            }
-
-            // Main content - Experience
-            const experienceSection = document.getElementById('modalExperienceSection');
-            if (cv.experience) {
-                document.getElementById('modalExperience').textContent = cv.experience;
-                experienceSection.style.display = 'block';
-            } else {
-                experienceSection.style.display = 'none';
-            }
-
-            // Main content - Education
-            const educationSection = document.getElementById('modalEducationSection');
-            if (cv.education) {
-                document.getElementById('modalEducation').textContent = cv.education;
-                educationSection.style.display = 'block';
-            } else {
-                educationSection.style.display = 'none';
-            }
-
-            document.getElementById('cvModal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('cvModal').classList.remove('active');
         }
 
         async function downloadCV(id) {
@@ -2095,7 +2373,7 @@
                 }
 
                 if (response.status === 403) {
-                    alert('Advanced of Premium account vereist om CV\'s te downloaden');
+                    showAlert({ icon: '🔒', title: 'Upgrade Vereist', message: 'Advanced of Premium account vereist om CV\'s te downloaden' });
                     return;
                 }
 
@@ -2116,10 +2394,10 @@
                     link.click();
                     URL.revokeObjectURL(link.href);
                 } else {
-                    alert('Fout bij downloaden: ' + result.message);
+                    showAlert({ icon: '❌', title: 'Download Mislukt', message: 'Fout bij downloaden: ' + result.message });
                 }
             } catch (error) {
-                alert('Fout bij downloaden');
+                showAlert({ icon: '❌', title: 'Download Mislukt', message: 'Fout bij downloaden' });
             }
         }
 
@@ -2179,17 +2457,13 @@
         });
 
         // Close modal
-        document.getElementById('cvModal').addEventListener('click', (e) => {
-            if (e.target.id === 'cvModal') closeModal();
-        });
-
         document.getElementById('noteModal').addEventListener('click', (e) => {
             if (e.target.id === 'noteModal') closeNoteModal();
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                closeModal();
+                CVViewer.close();
                 closeNoteModal();
             }
         });
@@ -2293,10 +2567,10 @@
                     // Auto-match the new vacancy
                     setTimeout(() => matchVacancy(result.data._id, data.title), 500);
                 } else {
-                    alert('Fout: ' + result.message);
+                    showAlert({ icon: '❌', title: 'Fout', message: 'Fout: ' + result.message });
                 }
             } catch (error) {
-                alert('Fout bij toevoegen');
+                showAlert({ icon: '❌', title: 'Fout', message: 'Fout bij toevoegen vacature' });
             }
 
             submitBtn.disabled = false;
@@ -2346,7 +2620,15 @@
         }
 
         async function deleteVacancy(id) {
-            if (!confirm('Weet je zeker dat je deze vacature wilt verwijderen?')) return;
+            const confirmed = await showConfirmDialog({
+                icon: '🗑️',
+                title: 'Vacature Verwijderen',
+                message: 'Weet je zeker dat je deze vacature wilt verwijderen?',
+                confirmText: 'Verwijderen',
+                danger: true
+            });
+
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`/api/employer/vacancies/${id}`, {
@@ -2364,10 +2646,10 @@
                     loadVacancies();
                     document.getElementById('matchResults').style.display = 'none';
                 } else {
-                    alert('Fout: ' + result.message);
+                    showAlert({ icon: '❌', title: 'Fout', message: 'Fout: ' + result.message });
                 }
             } catch (error) {
-                alert('Fout bij verwijderen');
+                showAlert({ icon: '❌', title: 'Fout', message: 'Fout bij verwijderen vacature' });
             }
         }
 
@@ -2403,5 +2685,19 @@
         // Init
         checkAuth();
     </script>
+
+    <!-- Custom Confirm Dialog -->
+    <div class="confirm-dialog-overlay" id="confirmDialogOverlay">
+        <div class="confirm-dialog">
+            <div class="confirm-dialog-icon" id="confirmDialogIcon">⚠️</div>
+            <div class="confirm-dialog-title" id="confirmDialogTitle">Bevestigen</div>
+            <div class="confirm-dialog-message" id="confirmDialogMessage">Weet je het zeker?</div>
+            <div class="confirm-dialog-buttons">
+                <button class="confirm-dialog-btn cancel" onclick="closeConfirmDialog(false)">Annuleren</button>
+                <button class="confirm-dialog-btn confirm" id="confirmDialogConfirmBtn" onclick="closeConfirmDialog(true)">Bevestigen</button>
+            </div>
+        </div>
+    </div>
+<script src="cv-viewer.js"></script>
 </body>
 </html>

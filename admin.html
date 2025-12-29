@@ -506,6 +506,28 @@
             transform: none;
         }
 
+        .selection-toolbar .reparse-btn {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .selection-toolbar .reparse-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .selection-toolbar .reparse-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .selection-toolbar .select-all-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -1169,6 +1191,96 @@
             font-size: 14px;
             color: #333;
             line-height: 1.6;
+        }
+
+        /* LinkedIn-style Experience Entries */
+        .linkedin-experience-entry {
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .linkedin-experience-entry:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .linkedin-company {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .linkedin-duration-total {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .linkedin-role {
+            margin-bottom: 16px;
+            padding-left: 0;
+        }
+
+        .linkedin-role:not(:first-child) {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(0,0,0,0.1);
+        }
+
+        .linkedin-job-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .linkedin-date {
+            font-size: 13px;
+            color: #666;
+            margin: 2px 0;
+        }
+
+        .linkedin-location {
+            font-size: 13px;
+            color: #7eb8c9;
+            margin-bottom: 8px;
+        }
+
+        .linkedin-description {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            margin-top: 8px;
+        }
+
+        /* LinkedIn-style Education Entries */
+        .linkedin-education-entry {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .linkedin-education-entry:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .linkedin-institution {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .linkedin-degree {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .linkedin-field {
+            font-size: 13px;
+            color: #666;
         }
 
         /* Form Modal */
@@ -2239,6 +2351,15 @@
             background: rgba(239, 68, 68, 0.2);
         }
 
+        body.light-mode .selection-toolbar .reparse-btn {
+            background: rgba(56, 161, 105, 0.1);
+            color: #2f855a;
+        }
+
+        body.light-mode .selection-toolbar .reparse-btn:hover {
+            background: rgba(56, 161, 105, 0.2);
+        }
+
         body.light-mode .selection-toolbar .select-all-btn {
             background: rgba(102, 126, 234, 0.1);
             color: #667eea;
@@ -2616,6 +2737,9 @@
                     <button class="delete-selected-btn" id="deleteSelectedBtn" onclick="deleteSelected()" disabled>
                         Verwijder geselecteerde
                     </button>
+                    <button class="reparse-btn" id="reparseBtn" onclick="reparseAllCVs()">
+                        Herverwerken
+                    </button>
                 </div>
 
                 <div id="cvList" class="cv-grid">
@@ -2828,6 +2952,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="cv-viewer.js"></script>
     <script>
         // Set PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -2882,16 +3007,24 @@
 
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                console.log(`PDF has ${pdf.numPages} pages`);
 
                 let fullText = '';
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
                     const pageText = textContent.items.map(item => item.str).join(' ');
+                    console.log(`Page ${i} text length: ${pageText.length}`);
+                    console.log(`Page ${i} first 200 chars:`, pageText.substring(0, 200));
                     fullText += pageText + '\n';
                 }
 
                 const lines = fullText.split(/\s{2,}|\n/).map(l => l.trim()).filter(l => l && l.length > 1);
+
+                console.log('=== PDF PARSING DEBUG ===');
+                console.log('Full text length:', fullText.length);
+                console.log('Number of lines:', lines.length);
+                console.log('First 30 lines:', lines.slice(0, 30));
 
                 const result = {
                     fullName: nameFromFilename || '', // Use filename as primary source
@@ -2903,6 +3036,7 @@
                     experience: '',
                     education: '',
                     skills: '',
+                    languages: '',
                     fullText: fullText // Store all text for searching
                 };
 
@@ -2997,29 +3131,78 @@
 
                 // Extract sections
                 let currentSection = '';
-                let sectionContent = { experience: [], education: [], skills: [], summary: [] };
+                let sectionContent = { experience: [], education: [], skills: [], summary: [], languages: [] };
 
-                // Section headers that end the current section
-                const sectionHeaders = ['experience', 'werkervaring', 'education', 'opleiding',
-                    'skills', 'top skills', 'vaardigheden', 'summary', 'about', 'samenvatting',
-                    'contact', 'languages', 'talen', 'certifications', 'honors', 'awards'];
+                // Helper function to detect section headers (more flexible matching)
+                const detectSection = (line) => {
+                    const lineLower = line.toLowerCase().trim();
+
+                    // Experience section (English + Dutch variations)
+                    if (lineLower === 'experience' || lineLower === 'werkervaring' ||
+                        lineLower === 'ervaring' || // Dutch LinkedIn!
+                        lineLower === 'work experience' || lineLower === 'employment history' ||
+                        lineLower === 'professional experience' || lineLower === 'career history' ||
+                        lineLower.startsWith('experience') && lineLower.length < 20 ||
+                        lineLower.startsWith('ervaring') && lineLower.length < 15) {
+                        return 'experience';
+                    }
+
+                    // Education section (English + Dutch variations)
+                    if (lineLower === 'education' || lineLower === 'opleiding' ||
+                        lineLower === 'opleidingen' || lineLower === 'academic background' ||
+                        lineLower.startsWith('education') && lineLower.length < 20 ||
+                        lineLower.startsWith('opleiding') && lineLower.length < 15) {
+                        return 'education';
+                    }
+
+                    // Skills section (English + Dutch variations)
+                    if (lineLower === 'skills' || lineLower === 'top skills' ||
+                        lineLower === 'vaardigheden' || lineLower === 'competenties' ||
+                        lineLower === 'key skills' || lineLower === 'technical skills' ||
+                        lineLower === 'belangrijkste vaardigheden' || // Dutch LinkedIn!
+                        lineLower.startsWith('skills') && lineLower.length < 20 ||
+                        lineLower.includes('vaardigheden') && lineLower.length < 30) {
+                        return 'skills';
+                    }
+
+                    // Summary section (English + Dutch variations)
+                    if (lineLower === 'summary' || lineLower === 'about' ||
+                        lineLower === 'samenvatting' || lineLower === 'profile' ||
+                        lineLower === 'profiel' || lineLower === 'professional summary' ||
+                        lineLower === 'over' || // Dutch "About"
+                        lineLower.startsWith('summary') && lineLower.length < 20 ||
+                        lineLower.startsWith('about') && lineLower.length < 15) {
+                        return 'summary';
+                    }
+
+                    // Languages section
+                    if (lineLower === 'languages' || lineLower === 'talen') {
+                        return 'languages';
+                    }
+
+                    // Section headers that end current section
+                    if (lineLower === 'contact' || lineLower === 'contactgegevens' ||
+                        lineLower === 'certifications' || lineLower === 'certificaten' ||
+                        lineLower === 'honors' || lineLower === 'awards' ||
+                        lineLower === 'publications' || lineLower === 'projects' ||
+                        lineLower === 'volunteering' || lineLower === 'interests' ||
+                        lineLower === 'references' || lineLower === 'page ') {
+                        return 'stop';
+                    }
+
+                    return null;
+                };
 
                 for (const line of lines) {
-                    const lineLower = line.toLowerCase();
+                    const lineLower = line.toLowerCase(); // Define lineLower for use in filtering
+                    const detectedSection = detectSection(line);
 
-                    // Check if this is a section header
-                    if (sectionHeaders.includes(lineLower)) {
-                        if (lineLower === 'experience' || lineLower === 'werkervaring') {
-                            currentSection = 'experience';
-                        } else if (lineLower === 'education' || lineLower === 'opleiding') {
-                            currentSection = 'education';
-                        } else if (lineLower === 'skills' || lineLower === 'top skills' || lineLower === 'vaardigheden') {
-                            currentSection = 'skills';
-                        } else if (lineLower === 'summary' || lineLower === 'about' || lineLower === 'samenvatting') {
-                            currentSection = 'summary';
-                        } else {
-                            // Other section header - stop current section
+                    if (detectedSection) {
+                        console.log(`Section detected: "${line}" -> ${detectedSection}`);
+                        if (detectedSection === 'stop') {
                             currentSection = '';
+                        } else {
+                            currentSection = detectedSection;
                         }
                     } else if (currentSection && sectionContent[currentSection]) {
                         // For skills section, apply strict filtering
@@ -3041,16 +3224,47 @@
                             if (/^\d|january|february|march|april|may|june|july|august|september|october|november|december/i.test(line)) continue;
                             // Valid skill - add it
                             sectionContent.skills.push(line);
+                        } else if (currentSection === 'languages') {
+                            // Only accept lines that contain known language names or proficiency levels
+                            // This automatically filters out cities, job titles, names, etc.
+                            const knownLanguages = ['nederlands', 'dutch', 'engels', 'english', 'duits', 'german',
+                                'frans', 'french', 'spaans', 'spanish', 'italiaans', 'italian', 'portugees',
+                                'portuguese', 'arabisch', 'arabic', 'turks', 'turkish', 'russisch', 'russian',
+                                'chinees', 'chinese', 'japans', 'japanese', 'pools', 'polish', 'hindi', 'urdu',
+                                'farsi', 'persian', 'papiamento', 'sranan', 'indonesisch', 'indonesian',
+                                'vietnamees', 'vietnamese', 'koreaans', 'korean', 'grieks', 'greek',
+                                'hebreeuws', 'hebrew', 'zweeds', 'swedish', 'noors', 'norwegian', 'deens',
+                                'danish', 'fins', 'finnish', 'hongaars', 'hungarian', 'tsjechisch', 'czech',
+                                'roemeens', 'romanian', 'bulgaars', 'bulgarian', 'kroatisch', 'croatian',
+                                'servisch', 'serbian', 'oekraïens', 'ukrainian', 'thais', 'thai',
+                                'native', 'moedertaal', 'professional', 'fluent', 'vloeiend', 'basic',
+                                'elementary', 'intermediate', 'advanced', 'working', 'limited', 'bosnisch'];
+                            if (knownLanguages.some(lang => lineLower.includes(lang))) {
+                                sectionContent.languages.push(line);
+                            }
                         } else {
+                            // Skip page markers like "Page", "of", "Page 1 of 2", etc.
+                            if (lineLower === 'page' || lineLower === 'of' ||
+                                /^page\s*\d/i.test(line) || /^\d+\s*of\s*\d+$/i.test(line)) continue;
                             sectionContent[currentSection].push(line);
                         }
                     }
                 }
 
-                if (sectionContent.experience.length) result.experience = sectionContent.experience.slice(0, 20).join('\n');
-                if (sectionContent.education.length) result.education = sectionContent.education.slice(0, 10).join('\n');
-                if (sectionContent.skills.length) result.skills = sectionContent.skills.slice(0, 8).join(', ');
+                console.log('Section content:', sectionContent);
+
+                if (sectionContent.experience.length) result.experience = sectionContent.experience.slice(0, 30).join('\n');
+                if (sectionContent.education.length) result.education = sectionContent.education.slice(0, 20).join('\n');
+                if (sectionContent.skills.length) result.skills = sectionContent.skills.slice(0, 10).join(', ');
                 if (sectionContent.summary.length) result.summary = sectionContent.summary.slice(0, 5).join(' ');
+                if (sectionContent.languages.length) result.languages = sectionContent.languages.slice(0, 8).join(', ');
+
+                console.log('Final parsed result:', {
+                    languages: result.languages,
+                    skills: result.skills,
+                    educationItems: sectionContent.education.length,
+                    experienceItems: sectionContent.experience.length
+                });
 
                 console.log('Parsed LinkedIn PDF:', result);
                 return result;
@@ -3319,6 +3533,9 @@
 
             let html = '';
 
+            // First button
+            html += `<button class="pagination-btn" onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''} title="Eerste pagina">⏮ Eerste</button>`;
+
             // Previous button
             html += `<button class="pagination-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Vorige</button>`;
 
@@ -3335,6 +3552,9 @@
 
             // Next button
             html += `<button class="pagination-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Volgende →</button>`;
+
+            // Last button
+            html += `<button class="pagination-btn" onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} title="Laatste pagina">Laatste ⏭</button>`;
 
             paginationEl.innerHTML = html;
         }
@@ -3354,16 +3574,27 @@
             document.getElementById('todayCount').textContent = todayCount;
         }
 
-        function viewCV(cvId) {
-            // Find CV in the loaded data
-            const cv = allCVs.find(c => c._id === cvId);
-            if (!cv) {
-                alert('CV niet gevonden');
-                return;
-            }
+        async function viewCV(cvId) {
+            // Fetch full CV data including fileData for PDF viewing
+            try {
+                const response = await fetch(`/api/cvs/${cvId}`, {
+                    headers: { 'X-Admin-Token': authToken }
+                });
 
-            populateLinkedInModal(cv);
-            document.getElementById('cvModal').classList.add('active');
+                if (!response.ok) {
+                    alert('Fout bij ophalen CV');
+                    return;
+                }
+
+                const result = await response.json();
+                const cv = result.data;
+
+                // Use shared CV viewer
+                CVViewer.open(cv);
+            } catch (error) {
+                console.error('Error fetching CV:', error);
+                alert('Fout bij ophalen CV');
+            }
         }
 
         function populateLinkedInModal(cv) {
@@ -3441,29 +3672,147 @@
             // Main - Summary
             const summarySection = document.getElementById('modalSummarySection');
             if (cv.summary) {
-                document.getElementById('modalSummary').innerHTML = `<span class="linkedin-summary-text">${escapeHtml(cv.summary)}</span>`;
+                document.getElementById('modalSummary').innerHTML = `<div class="linkedin-summary-text">${escapeHtml(cv.summary).replace(/\n/g, '<br>')}</div>`;
                 summarySection.style.display = 'block';
             } else {
                 summarySection.style.display = 'none';
             }
 
-            // Main - Experience
+            // Main - Experience (formatted LinkedIn style)
             const experienceSection = document.getElementById('modalExperienceSection');
             if (cv.experience) {
-                document.getElementById('modalExperience').innerHTML = escapeHtml(cv.experience);
+                document.getElementById('modalExperience').innerHTML = formatExperience(cv.experience);
                 experienceSection.style.display = 'block';
             } else {
                 experienceSection.style.display = 'none';
             }
 
-            // Main - Education
+            // Main - Education (formatted LinkedIn style)
             const educationSection = document.getElementById('modalEducationSection');
             if (cv.education) {
-                document.getElementById('modalEducation').innerHTML = escapeHtml(cv.education);
+                document.getElementById('modalEducation').innerHTML = formatEducation(cv.education);
                 educationSection.style.display = 'block';
             } else {
                 educationSection.style.display = 'none';
             }
+        }
+
+        // Format experience text into LinkedIn-style HTML
+        // Simple approach: style individual lines based on their content, don't try to group
+        function formatExperience(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+            // Patterns for styling
+            const datePattern = /^(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|mei|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{4}\s*[-–]/i;
+            const durationPattern = /^\(?\d+\s*(jaar|year|years|maand|maanden|month|months)/i;
+            const locationPattern = /(nederland|netherlands|belgium|germany|belgi[eë]|duitsland|provincie|region)/i;
+            const singleCityPattern = /^(amsterdam|rotterdam|utrecht|den haag|eindhoven|alkmaar|amersfoort|arnhem|groningen|tilburg|breda|nijmegen|enschede|haarlem|almere|apeldoorn|leiden|maastricht|zwolle|deventer|delft)$/i;
+
+            let html = '';
+            let prevWasDate = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
+
+                // Determine line type and style accordingly
+                if (datePattern.test(line)) {
+                    html += `<div class="linkedin-date">${escapeHtml(line)}</div>`;
+                    prevWasDate = true;
+                } else if (durationPattern.test(line)) {
+                    html += `<div class="linkedin-date">${escapeHtml(line)}</div>`;
+                    prevWasDate = false;
+                } else if (locationPattern.test(line) || singleCityPattern.test(line)) {
+                    html += `<div class="linkedin-location">${escapeHtml(line)}</div>`;
+                    prevWasDate = false;
+                } else if (line.endsWith('.') || line.endsWith('!') || line.length > 60) {
+                    // Long lines or lines ending with punctuation are descriptions
+                    html += `<div class="linkedin-description">${escapeHtml(line)}</div>`;
+                    prevWasDate = false;
+                } else {
+                    // Check if this looks like a company/title (short, followed by duration/date)
+                    const nextIsDateOrDuration = datePattern.test(nextLine) || durationPattern.test(nextLine);
+
+                    if (nextIsDateOrDuration || prevWasDate) {
+                        // Likely a job title
+                        html += `<div class="linkedin-job-title">${escapeHtml(line)}</div>`;
+                    } else if (i === 0 || (i > 0 && lines[i-1] && durationPattern.test(lines[i-1]))) {
+                        // First line or after duration = likely company name
+                        html += `<div class="linkedin-company">${escapeHtml(line)}</div>`;
+                    } else {
+                        // Default: treat as job title or company based on length
+                        if (line.length < 40) {
+                            html += `<div class="linkedin-job-title">${escapeHtml(line)}</div>`;
+                        } else {
+                            html += `<div class="linkedin-description">${escapeHtml(line)}</div>`;
+                        }
+                    }
+                    prevWasDate = false;
+                }
+            }
+
+            return html || `<div style="color: rgba(255,255,255,0.7);">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
+        }
+
+        // Format education text into LinkedIn-style HTML
+        function formatEducation(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            let html = '';
+            let currentEntry = null;
+
+            const datePattern = /·?\s*\(?\d{4}\s*[-–]\s*\d{4}\)?/;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Check if line contains a date range (degree line)
+                if (datePattern.test(line)) {
+                    if (currentEntry) {
+                        currentEntry.degree = line;
+                    }
+                    continue;
+                }
+
+                // Check if this looks like an institution name
+                // Usually: capitalized, no dates, reasonable length
+                if (line.length > 3 && line.length < 80 && /^[A-Z]/.test(line) && !datePattern.test(line)) {
+                    // Save previous entry
+                    if (currentEntry) {
+                        html += renderEducationEntry(currentEntry);
+                    }
+                    currentEntry = { institution: line, degree: '', field: '' };
+                    continue;
+                }
+
+                // Otherwise add to current entry as additional info
+                if (currentEntry) {
+                    if (!currentEntry.degree) {
+                        currentEntry.degree = line;
+                    } else {
+                        currentEntry.field = line;
+                    }
+                }
+            }
+
+            // Don't forget last entry
+            if (currentEntry) {
+                html += renderEducationEntry(currentEntry);
+            }
+
+            return html || `<div style="color: rgba(255,255,255,0.7);">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
+        }
+
+        function renderEducationEntry(entry) {
+            let html = '<div class="linkedin-education-entry">';
+            html += `<div class="linkedin-institution">${escapeHtml(entry.institution)}</div>`;
+            if (entry.degree) {
+                html += `<div class="linkedin-degree">${escapeHtml(entry.degree)}</div>`;
+            }
+            if (entry.field) {
+                html += `<div class="linkedin-field">${escapeHtml(entry.field)}</div>`;
+            }
+            html += '</div>';
+            return html;
         }
 
         function closeModal() {
@@ -3734,35 +4083,21 @@
         }
 
         async function viewDuplicateCV(cvId) {
-            // Fetch the CV from server if not in allCVs (might not be loaded yet)
-            let cv = allCVs.find(c => c._id === cvId);
-
-            if (!cv) {
-                // Fetch from server
-                try {
-                    const response = await fetch(`/api/cvs/${cvId}`, {
-                        headers: { 'X-Admin-Token': token }
-                    });
-                    if (response.ok) {
-                        const result = await response.json();
-                        cv = result.data;
-                    }
-                } catch (e) {
-                    console.error('Error fetching CV:', e);
+            // Always fetch full CV from server to get fileData for PDF display
+            try {
+                const response = await fetch(`/api/cvs/${cvId}`, {
+                    headers: { 'X-Admin-Token': authToken }
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    CVViewer.open(result.data);
+                } else {
+                    alert('CV niet gevonden');
                 }
+            } catch (e) {
+                console.error('Error fetching CV:', e);
+                alert('Fout bij ophalen CV');
             }
-
-            if (!cv) {
-                alert('CV niet gevonden');
-                return;
-            }
-
-            // Use shared LinkedIn modal function
-            populateLinkedInModal(cv);
-
-            const cvModal = document.getElementById('cvModal');
-            cvModal.style.zIndex = '10001';  // Higher than addModal (1000)
-            cvModal.classList.add('active');
         }
 
         function readFileAsBase64(file) {
@@ -3931,6 +4266,138 @@
             setTimeout(() => {
                 selectAllBtn.textContent = 'Alles selecteren';
             }, 2000);
+        }
+
+        async function reparseAllCVs() {
+            console.log('=== REPARSE ALL CVs STARTED ===');
+            console.log('Total CVs loaded:', allCVs.length);
+
+            // Re-parse all CVs that have stored file data (check fileName as proxy since fileData is not loaded in list)
+            const cvsWithFiles = allCVs.filter(cv => cv.fileName && cv.fileType);
+            console.log('CVs with files:', cvsWithFiles.length);
+            console.log('CVs with files details:', cvsWithFiles.map(cv => ({ name: cv.fullName, fileName: cv.fileName, fileType: cv.fileType })));
+
+            if (cvsWithFiles.length === 0) {
+                showAlert('info', 'Geen CVs', 'Er zijn geen CVs met opgeslagen PDF-bestanden om te herverwerken.');
+                return;
+            }
+
+            const confirmed = await showConfirmDialog({
+                icon: '🔄',
+                title: 'CVs Herverwerken',
+                message: `Dit zal ${cvsWithFiles.length} CV(s) opnieuw verwerken met de verbeterde parser. Bestaande data wordt overschreven. Doorgaan?`,
+                confirmText: 'Herverwerken'
+            });
+
+            if (!confirmed) return;
+
+            const reparseBtn = document.getElementById('reparseBtn');
+            reparseBtn.disabled = true;
+            const originalText = reparseBtn.textContent;
+            reparseBtn.textContent = 'Verwerken...';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < cvsWithFiles.length; i++) {
+                const cvListItem = cvsWithFiles[i];
+                reparseBtn.textContent = `${i + 1}/${cvsWithFiles.length}...`;
+
+                try {
+                    console.log(`Processing CV ${i + 1}: ${cvListItem.fullName} (${cvListItem._id})`);
+
+                    // Fetch full CV data including fileData
+                    const cvResponse = await fetch(`/api/cvs/${cvListItem._id}`, {
+                        headers: { 'X-Admin-Token': authToken }
+                    });
+
+                    console.log(`Fetch response status: ${cvResponse.status}`);
+
+                    if (!cvResponse.ok) {
+                        errorCount++;
+                        console.error(`Failed to fetch CV: ${cvResponse.status}`);
+                        continue;
+                    }
+
+                    const cvResult = await cvResponse.json();
+                    const cv = cvResult.data;
+                    console.log(`CV data received - fileName: ${cv.fileName}, hasFileData: ${!!cv.fileData}, fileDataLength: ${cv.fileData ? cv.fileData.length : 0}`);
+
+                    if (!cv.fileData) {
+                        errorCount++;
+                        console.log(`CV ${cv.fileName} has no fileData - skipping`);
+                        continue;
+                    }
+
+                    // Convert base64 back to File
+                    const byteCharacters = atob(cv.fileData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let j = 0; j < byteCharacters.length; j++) {
+                        byteNumbers[j] = byteCharacters.charCodeAt(j);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: cv.fileType });
+                    const file = new File([blob], cv.fileName || 'cv.pdf', { type: cv.fileType });
+
+                    // Re-parse the PDF
+                    console.log(`Calling parseLinkedInPDF for: ${file.name}`);
+                    const parsedData = await parseLinkedInPDF(file);
+                    console.log(`parseLinkedInPDF result:`, parsedData);
+
+                    if (parsedData) {
+                        // Update in database - keep existing fields if new ones are empty
+                        const updateData = {
+                            fullName: parsedData.fullName || cv.fullName,
+                            jobTitle: parsedData.jobTitle || cv.jobTitle,
+                            location: parsedData.location || cv.location,
+                            email: parsedData.email || cv.email,
+                            phone: parsedData.phone || cv.phone,
+                            summary: parsedData.summary || cv.summary,
+                            experience: parsedData.experience || cv.experience,
+                            education: parsedData.education || cv.education,
+                            skills: parsedData.skills || cv.skills,
+                            languages: parsedData.languages || cv.languages,
+                            fullText: parsedData.fullText || cv.fullText
+                        };
+
+                        // Update via API
+                        const response = await fetch(`/api/cvs/${cv._id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Admin-Token': authToken
+                            },
+                            body: JSON.stringify(updateData)
+                        });
+
+                        if (response.ok) {
+                            successCount++;
+                            console.log(`Re-parsed CV: ${cv.fileName}`, parsedData);
+                        } else {
+                            errorCount++;
+                            console.error(`Failed to update CV: ${cv.fileName}`);
+                        }
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                    console.error(`Error re-parsing CV ${cv.fileName}:`, error);
+                }
+            }
+
+            reparseBtn.disabled = false;
+            reparseBtn.textContent = originalText;
+
+            // Show result
+            if (errorCount === 0) {
+                showAlert('success', 'Voltooid', `${successCount} CV(s) succesvol herverwerkt.`);
+            } else {
+                showAlert('warning', 'Gedeeltelijk Voltooid', `${successCount} geslaagd, ${errorCount} mislukt.`);
+            }
+
+            // Reload CVs to show updated data
+            loadCVs();
         }
 
         async function deleteSelected() {
