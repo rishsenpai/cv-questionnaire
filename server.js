@@ -676,8 +676,8 @@ app.get('/api/employer/favorites', requireEmployer, async (req, res) => {
         }
 
         await connectDB();
-        const employer = await Employer.findById(req.employer._id);
-        res.json({ success: true, data: employer.favorites || [] });
+        const employer = await Employer.findById(req.employer.employerId);
+        res.json({ success: true, data: employer?.favorites || [] });
     } catch (error) {
         console.error('Error fetching favorites:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch favorites' });
@@ -696,7 +696,10 @@ app.post('/api/employer/favorites/:cvId', requireEmployer, async (req, res) => {
         }
 
         await connectDB();
-        const employer = await Employer.findById(req.employer._id);
+        const employer = await Employer.findById(req.employer.employerId);
+        if (!employer) {
+            return res.status(404).json({ success: false, message: 'Employer not found' });
+        }
 
         if (!employer.favorites) {
             employer.favorites = [];
@@ -727,7 +730,7 @@ app.delete('/api/employer/favorites/:cvId', requireEmployer, async (req, res) =>
         }
 
         await connectDB();
-        const employer = await Employer.findById(req.employer._id);
+        const employer = await Employer.findById(req.employer.employerId);
 
         if (employer.favorites) {
             employer.favorites = employer.favorites.filter(id => id.toString() !== req.params.cvId);
@@ -755,7 +758,7 @@ app.get('/api/employer/notes', requireEmployer, async (req, res) => {
         }
 
         await connectDB();
-        const employer = await Employer.findById(req.employer._id);
+        const employer = await Employer.findById(req.employer.employerId);
         res.json({ success: true, data: employer.notes || [] });
     } catch (error) {
         console.error('Error fetching notes:', error);
@@ -780,7 +783,7 @@ app.post('/api/employer/notes/:cvId', requireEmployer, async (req, res) => {
         }
 
         await connectDB();
-        const employer = await Employer.findById(req.employer._id);
+        const employer = await Employer.findById(req.employer.employerId);
 
         if (!employer.notes) {
             employer.notes = [];
@@ -821,7 +824,7 @@ app.delete('/api/employer/notes/:cvId', requireEmployer, async (req, res) => {
         }
 
         await connectDB();
-        const employer = await Employer.findById(req.employer._id);
+        const employer = await Employer.findById(req.employer.employerId);
 
         if (employer.notes) {
             employer.notes = employer.notes.filter(n => n.cvId.toString() !== req.params.cvId);

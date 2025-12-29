@@ -518,6 +518,85 @@
             color: #2ec4b6;
         }
 
+        /* Note tooltip */
+        .note-btn {
+            position: relative;
+        }
+
+        .note-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #fff;
+            border-radius: 6px;
+            padding: 6px 8px;
+            position: absolute;
+            z-index: 1000;
+            top: calc(100% + 6px);
+            right: 0;
+            min-width: 100px;
+            max-width: 200px;
+            font-size: 12px;
+            line-height: 1.2;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(46, 196, 182, 0.3);
+            transition: all 0.2s ease;
+            white-space: normal;
+            word-break: break-word;
+            text-align: left;
+        }
+
+        .note-tooltip::before {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            right: 10px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent transparent #1e293b transparent;
+        }
+
+        .note-tooltip-header {
+            display: block;
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #2ec4b6;
+            margin: 0 0 2px 0;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            line-height: 1;
+        }
+
+        .note-tooltip-text {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            white-space: pre-line;
+        }
+
+        .note-btn.has-note:hover .note-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Light mode note tooltip */
+        body.light-mode .note-tooltip {
+            background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+            border-color: rgba(46, 196, 182, 0.4);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        body.light-mode .note-tooltip::before {
+            border-color: transparent transparent #fff transparent;
+        }
+
+        body.light-mode .note-tooltip-header {
+            color: #0d9488;
+        }
+
+        body.light-mode .note-tooltip-text {
+            color: #1e293b;
+        }
+
         /* Note Modal */
         .note-modal-content {
             max-width: 500px;
@@ -1612,6 +1691,18 @@
             }
         }
 
+        // Get note text for a CV (used for tooltip)
+        function getNoteText(cvId) {
+            const note = employerNotes.find(n => n.cvId === cvId);
+            if (!note || !note.text) return '';
+            // Truncate if too long (max 150 chars)
+            const text = note.text;
+            if (text.length > 150) {
+                return text.substring(0, 147) + '...';
+            }
+            return text;
+        }
+
         // Open note modal
         function openNoteModal(cvId, cvName) {
             currentNoteCV = cvId;
@@ -1909,9 +2000,7 @@
                                 <button class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite('${cv._id}')" title="${isFavorite ? 'Verwijder uit favorieten' : 'Toevoegen aan favorieten'}">
                                     ${isFavorite ? '❤️' : '🤍'}
                                 </button>
-                                <button class="note-btn ${hasNote ? 'has-note' : ''}" onclick="openNoteModal('${cv._id}', '${escapeHtml(cv.fullName).replace(/'/g, "\\'")}')" title="${hasNote ? 'Notitie bewerken' : 'Notitie toevoegen'}">
-                                    📝
-                                </button>
+                                <button class="note-btn ${hasNote ? 'has-note' : ''}" onclick="openNoteModal('${cv._id}', '${escapeHtml(cv.fullName).replace(/'/g, "\\'")}')" title="${hasNote ? '' : 'Notitie toevoegen'}">📝${hasNote ? `<div class="note-tooltip"><span class="note-tooltip-header">Notitie</span><span class="note-tooltip-text">${escapeHtml(getNoteText(cv._id))}</span></div>` : ''}</button>
                             </div>
                         </div>
                         <div class="cv-file-badge">📄 CV download beschikbaar</div>
