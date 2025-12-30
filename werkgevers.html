@@ -748,7 +748,7 @@
 
         .btn-view {
             background: rgba(102, 126, 234, 0.2);
-            color: #667eea;
+            color: #fff;
         }
 
         .btn-view:hover {
@@ -757,11 +757,20 @@
 
         .btn-download {
             background: rgba(46, 196, 182, 0.2);
-            color: #2ec4b6;
+            color: #fff;
         }
 
         .btn-download:hover {
             background: rgba(46, 196, 182, 0.3);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fff;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.3);
         }
 
         .btn-locked {
@@ -1795,10 +1804,21 @@
 
         body.light-mode .btn-view {
             background: rgba(102, 126, 234, 0.1);
+            color: #1e293b;
         }
 
         body.light-mode .btn-download {
             background: rgba(46, 196, 182, 0.1);
+            color: #1e293b;
+        }
+
+        body.light-mode .btn-delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: #1e293b;
+        }
+
+        body.light-mode .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.2);
         }
 
         body.light-mode .btn-locked {
@@ -3079,7 +3099,7 @@
                     <div class="vacancy-info">${escapeHtml(v.location || 'Geen locatie')}</div>
                     <div class="cv-actions">
                         <button class="btn btn-view" onclick="matchVacancy('${v._id}', '${escapeHtml(v.title)}')">Kandidaten Matchen</button>
-                        <button class="btn btn-delete" onclick="deleteVacancy('${v._id}')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">Verwijderen</button>
+                        <button class="btn btn-delete" onclick="deleteVacancy('${v._id}')">Verwijderen</button>
                     </div>
                 </div>
             `).join('');
