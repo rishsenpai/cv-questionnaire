@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('questionnaire');
     const nextBtn = document.getElementById('nextBtn');
     const prevBtn = document.getElementById('prevBtn');
+    const backToChoiceNav = document.getElementById('backToChoiceNav');
     const progress = document.getElementById('progress');
     const generateBtn = document.getElementById('generateCV');
     const modal = document.getElementById('cvModal');
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const formData = {};
     let currentLanguage = 'en';
     
-    const questions = document.querySelectorAll('.question-container');
+    const questions = document.querySelectorAll('.question-container[data-question]:not([data-question="-1"])');
 
     // Format date to dd-mm-yyyy for CV display
     function formatDate(dateString) {
@@ -106,7 +107,23 @@ document.addEventListener('DOMContentLoaded', function() {
             'matching-vacancies': "Matching Vacancies",
             'no-vacancies': "No matching vacancies found at the moment.",
             'check-later': "Check back later, new vacancies are added regularly!",
-            'error-vacancies': "Error fetching vacancies. Please try again later."
+            'error-vacancies': "Error fetching vacancies. Please try again later.",
+            'choice-title': "How would you like to create your CV?",
+            'choice-upload-title': "Upload existing CV",
+            'choice-upload-desc': "Upload your PDF or Word document and we'll fill in the form automatically with AI",
+            'choice-manual-title': "Fill in questionnaire",
+            'choice-manual-desc': "Answer questions step by step to build your CV from scratch",
+            'upload-title': "Upload your CV",
+            'back-to-choice': "← Back to choice",
+            'upload-text': "Drag & drop your CV here or click to browse",
+            'upload-formats': "Supported: PDF, Word (.docx)",
+            'parsing-cv': "Analyzing your CV with AI...",
+            'cv-parsed-success': "CV successfully analyzed! Filling in the form...",
+            'cv-filled-success': "Form filled! Review and continue.",
+            'cv-upload-complete': "CV uploaded and parsed successfully!",
+            'cv-parse-error': "Error analyzing CV. Please try again or fill in manually.",
+            'upload-error-format': "Please upload a PDF or Word document (.docx)",
+            'back-to-choice-nav': "← Back to choice"
         },
         nl: {
             'start-title': "Laten we beginnen met je persoonlijke gegevens",
@@ -184,7 +201,23 @@ document.addEventListener('DOMContentLoaded', function() {
             'matching-vacancies': "Passende Vacatures",
             'no-vacancies': "Geen passende vacatures gevonden op dit moment.",
             'check-later': "Kom later terug, er worden regelmatig nieuwe vacatures toegevoegd!",
-            'error-vacancies': "Fout bij ophalen vacatures. Probeer het later opnieuw."
+            'error-vacancies': "Fout bij ophalen vacatures. Probeer het later opnieuw.",
+            'choice-title': "Hoe wil je je CV maken?",
+            'choice-upload-title': "Upload bestaand CV",
+            'choice-upload-desc': "Upload je PDF of Word document en wij vullen het formulier automatisch in met AI",
+            'choice-manual-title': "Vul vragenlijst in",
+            'choice-manual-desc': "Beantwoord stap voor stap vragen om je CV op te bouwen",
+            'upload-title': "Upload je CV",
+            'back-to-choice': "← Terug naar keuze",
+            'upload-text': "Sleep je CV hierheen of klik om te bladeren",
+            'upload-formats': "Ondersteund: PDF, Word (.docx)",
+            'parsing-cv': "Je CV wordt geanalyseerd met AI...",
+            'cv-parsed-success': "CV succesvol geanalyseerd! Formulier wordt ingevuld...",
+            'cv-filled-success': "Formulier ingevuld! Controleer en ga verder.",
+            'cv-upload-complete': "CV geüpload en verwerkt!",
+            'cv-parse-error': "Fout bij analyseren CV. Probeer opnieuw of vul handmatig in.",
+            'upload-error-format': "Upload een PDF of Word document (.docx)",
+            'back-to-choice-nav': "← Terug naar keuze"
         },
         es: {
             'start-title': "Comencemos con tu información personal",
@@ -262,7 +295,23 @@ document.addEventListener('DOMContentLoaded', function() {
             'matching-vacancies': "Vacantes Coincidentes",
             'no-vacancies': "No se encontraron vacantes coincidentes en este momento.",
             'check-later': "¡Vuelve más tarde, se añaden nuevas vacantes regularmente!",
-            'error-vacancies': "Error al obtener vacantes. Por favor, inténtalo más tarde."
+            'error-vacancies': "Error al obtener vacantes. Por favor, inténtalo más tarde.",
+            'choice-title': "¿Cómo quieres crear tu CV?",
+            'choice-upload-title': "Subir CV existente",
+            'choice-upload-desc': "Sube tu documento PDF o Word y completaremos el formulario automáticamente con IA",
+            'choice-manual-title': "Completar cuestionario",
+            'choice-manual-desc': "Responde preguntas paso a paso para crear tu CV desde cero",
+            'upload-title': "Sube tu CV",
+            'back-to-choice': "← Volver a elegir",
+            'upload-text': "Arrastra tu CV aquí o haz clic para buscar",
+            'upload-formats': "Formatos: PDF, Word (.docx)",
+            'parsing-cv': "Analizando tu CV con IA...",
+            'cv-parsed-success': "¡CV analizado con éxito! Completando el formulario...",
+            'cv-filled-success': "¡Formulario completado! Revisa y continúa.",
+            'cv-upload-complete': "¡CV subido y procesado!",
+            'cv-parse-error': "Error al analizar CV. Intenta de nuevo o completa manualmente.",
+            'upload-error-format': "Por favor sube un documento PDF o Word (.docx)",
+            'back-to-choice-nav': "← Volver a elegir"
         }
     };
 
@@ -380,10 +429,112 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize language
     updateLanguage();
-    
-    // Show first question
-    showQuestion(0);
-    
+
+    // Choice screen elements
+    const choiceScreen = document.getElementById('choiceScreen');
+    const uploadScreen = document.getElementById('uploadScreen');
+    const choiceUpload = document.getElementById('choiceUpload');
+    const choiceManual = document.getElementById('choiceManual');
+    const backToChoiceBtn = document.getElementById('backToChoice');
+
+    // Start at choice screen (hide navigation buttons)
+    currentQuestion = -1;
+
+    // Make sure all question containers are hidden initially
+    questions.forEach(q => {
+        q.style.display = 'none';
+        q.classList.remove('active');
+    });
+    // Make sure upload screen is hidden
+    if (uploadScreen) {
+        uploadScreen.style.display = 'none';
+        uploadScreen.classList.remove('active');
+    }
+    // Make sure choice screen is visible
+    if (choiceScreen) {
+        choiceScreen.classList.add('active');
+    }
+
+    updateNavigation();
+    updateProgress();
+
+    // Choice: Upload CV
+    if (choiceUpload) {
+        choiceUpload.addEventListener('click', function() {
+            choiceScreen.classList.remove('active');
+            // Hide all question containers
+            questions.forEach(q => {
+                q.style.display = 'none';
+                q.classList.remove('active');
+            });
+            // Show upload screen
+            uploadScreen.style.display = 'block';
+            uploadScreen.classList.add('active');
+        });
+    }
+
+    // Choice: Manual questionnaire
+    if (choiceManual) {
+        choiceManual.addEventListener('click', function() {
+            choiceScreen.classList.remove('active');
+            // Make sure upload screen is hidden
+            if (uploadScreen) {
+                uploadScreen.classList.remove('active');
+                uploadScreen.style.display = 'none';
+            }
+            currentQuestion = 0;
+            showQuestion(0);
+            updateProgress();
+            updateNavigation();
+        });
+    }
+
+    // Back to choice screen
+    if (backToChoiceBtn) {
+        backToChoiceBtn.addEventListener('click', function() {
+            // Hide upload screen
+            uploadScreen.classList.remove('active');
+            uploadScreen.style.display = 'none';
+            // Hide all question containers
+            questions.forEach(q => {
+                q.style.display = 'none';
+                q.classList.remove('active');
+            });
+            // Show choice screen
+            choiceScreen.classList.add('active');
+            currentQuestion = -1;
+            updateProgress();
+            updateNavigation();
+            // Reset upload state
+            const uploadBox = document.getElementById('uploadBox');
+            const uploadStatus = document.getElementById('uploadStatus');
+            if (uploadBox) uploadBox.style.display = 'block';
+            if (uploadStatus) {
+                uploadStatus.style.display = 'none';
+                uploadStatus.classList.remove('upload-success', 'upload-error');
+            }
+        });
+    }
+
+    // Back to choice from questionnaire navigation
+    backToChoiceNav.addEventListener('click', function() {
+        // Hide current question
+        questions.forEach(q => {
+            q.style.display = 'none';
+            q.classList.remove('active');
+        });
+        // Hide upload screen
+        if (uploadScreen) {
+            uploadScreen.style.display = 'none';
+            uploadScreen.classList.remove('active');
+        }
+        // Show choice screen
+        choiceScreen.classList.add('active');
+        currentQuestion = -1;
+        updateProgress();
+        updateNavigation();
+    });
+
     // Navigation event listeners
     nextBtn.addEventListener('click', function(e) {
         // Prevent click if button is disabled
@@ -715,6 +866,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function showQuestion(questionIndex) {
+        // Hide choice and upload screens
+        const choiceScreen = document.getElementById('choiceScreen');
+        const uploadScreen = document.getElementById('uploadScreen');
+        if (choiceScreen) choiceScreen.classList.remove('active');
+        if (uploadScreen) {
+            uploadScreen.classList.remove('active');
+            uploadScreen.style.display = 'none';
+        }
+
+        // Show the correct question
         questions.forEach((q, index) => {
             if (index === questionIndex) {
                 q.style.display = 'block';
@@ -735,7 +896,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function validateCurrentQuestion() {
+        if (currentQuestion < 0 || currentQuestion >= questions.length) return true;
         const currentQuestionElement = questions[currentQuestion];
+        if (!currentQuestionElement) return true;
         const input = currentQuestionElement.querySelector('input, textarea');
 
         if (!input) return true; // No input to validate (final screen)
@@ -849,7 +1012,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function saveCurrentAnswer() {
+        if (currentQuestion < 0 || currentQuestion >= questions.length) return;
         const currentQuestionElement = questions[currentQuestion];
+        if (!currentQuestionElement) return;
         const input = currentQuestionElement.querySelector('input, textarea');
 
         if (input && input.name) {
@@ -867,13 +1032,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateNavigation() {
-        // Show/hide previous button
+        // Hide navigation on choice/upload screens
+        if (currentQuestion < 0) {
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+            backToChoiceNav.style.display = 'none';
+            return;
+        }
+
+        // Show/hide previous button and back to choice button
         if (currentQuestion === 0) {
             prevBtn.style.display = 'none';
+            backToChoiceNav.style.display = 'inline-block';
         } else {
             prevBtn.style.display = 'inline-block';
+            backToChoiceNav.style.display = 'none';
         }
-        
+
         // Show/hide next button (hide on final screen)
         if (currentQuestion === totalQuestions - 1) {
             nextBtn.style.display = 'none';
@@ -889,9 +1064,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Force disable first, then enable only if valid
         nextBtn.disabled = true;
 
+        // Guard for choice/upload screens
+        if (currentQuestion < 0 || currentQuestion >= questions.length) return;
 
         // Use the same validation logic as validateCurrentQuestion for consistency
         const currentQuestionElement = questions[currentQuestion];
+        if (!currentQuestionElement) return;
         const input = currentQuestionElement.querySelector('input, textarea');
 
         if (!input) {
@@ -1172,7 +1350,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showSuccessMessage(cvId) {
         submittedCvId = cvId;
+        if (currentQuestion < 0 || currentQuestion >= questions.length) return;
         const currentQuestionElement = questions[currentQuestion];
+        if (!currentQuestionElement) return;
         const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
             <div class="question completed">
@@ -1269,7 +1449,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showErrorMessage(message) {
+        if (currentQuestion < 0 || currentQuestion >= questions.length) return;
         const currentQuestionElement = questions[currentQuestion];
+        if (!currentQuestionElement) return;
         const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
             <div class="question">
@@ -1604,9 +1786,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.setAttribute('data-has-been-touched', 'true');
             }
             // Update next button when user types (only if it's the current question's field)
-            const currentQuestionElement = questions[currentQuestion];
-            if (currentQuestionElement && currentQuestionElement.contains(this)) {
-                updateNextButton();
+            if (currentQuestion >= 0 && currentQuestion < questions.length) {
+                const currentQuestionElement = questions[currentQuestion];
+                if (currentQuestionElement && currentQuestionElement.contains(this)) {
+                    updateNextButton();
+                }
             }
         });
     });
@@ -1620,4 +1804,175 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     `;
     document.head.appendChild(style);
+
+    // CV Upload functionality
+    const uploadBox = document.getElementById('uploadBox');
+    const cvFileInput = document.getElementById('cvFileInput');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const uploadStatusText = document.getElementById('uploadStatusText');
+
+    if (uploadBox && cvFileInput) {
+        // Click to upload
+        uploadBox.addEventListener('click', () => {
+            cvFileInput.click();
+        });
+
+        // Drag and drop
+        uploadBox.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadBox.classList.add('drag-over');
+        });
+
+        uploadBox.addEventListener('dragleave', () => {
+            uploadBox.classList.remove('drag-over');
+        });
+
+        uploadBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadBox.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleCVUpload(files[0]);
+            }
+        });
+
+        // File input change
+        cvFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleCVUpload(e.target.files[0]);
+            }
+        });
+    }
+
+    async function handleCVUpload(file) {
+        const t = translations[currentLanguage];
+
+        // Validate file type
+        const validTypes = [
+            'application/pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        const validExtensions = ['.pdf', '.docx'];
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+        if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+            alert(t['upload-error-format'] || 'Please upload a PDF or Word document (.docx)');
+            return;
+        }
+
+        // Show loading state
+        uploadBox.style.display = 'none';
+        uploadStatus.style.display = 'block';
+        uploadStatusText.textContent = t['parsing-cv'] || 'Analyzing your CV with AI...';
+
+        try {
+            // Convert file to base64
+            const base64Data = await fileToBase64(file);
+
+            // Send to server for parsing
+            const response = await fetch('/api/parse-cv', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fileData: base64Data,
+                    fileType: file.type,
+                    fileName: file.name,
+                    language: currentLanguage
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                // Show success state
+                uploadStatus.classList.add('upload-success');
+                uploadStatusText.textContent = t['cv-parsed-success'] || 'CV successfully analyzed! Filling in the form...';
+
+                // Auto-fill form fields
+                setTimeout(() => {
+                    fillFormWithParsedData(result.data);
+                }, 1000);
+            } else {
+                throw new Error(result.message || 'Failed to parse CV');
+            }
+
+        } catch (error) {
+            console.error('CV upload error:', error);
+            uploadStatus.classList.add('upload-error');
+            uploadStatusText.textContent = error.message || (t['cv-parse-error'] || 'Error analyzing CV. Please try again or fill in manually.');
+
+            // Reset after 3 seconds
+            setTimeout(() => {
+                uploadStatus.style.display = 'none';
+                uploadStatus.classList.remove('upload-error');
+                uploadBox.style.display = 'block';
+            }, 3000);
+        }
+    }
+
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    function fillFormWithParsedData(data) {
+        const t = translations[currentLanguage];
+
+        // Map parsed data to form fields
+        const fieldMapping = {
+            fullName: 'fullName',
+            email: 'email',
+            phone: 'phone',
+            location: 'location',
+            birthDate: 'birthDate',
+            languages: 'languages',
+            jobTitle: 'jobTitle',
+            summary: 'summary',
+            experience: 'experience',
+            education: 'education',
+            skills: 'skills',
+            achievements: 'achievements'
+        };
+
+        // Fill each field
+        Object.entries(fieldMapping).forEach(([dataKey, fieldName]) => {
+            if (data[dataKey]) {
+                const input = document.querySelector(`[name="${fieldName}"]`);
+                if (input) {
+                    input.value = data[dataKey];
+                    formData[fieldName] = data[dataKey];
+                    input.setAttribute('data-has-been-touched', 'true');
+                }
+            }
+        });
+
+        // Update status message
+        uploadStatusText.textContent = t['cv-filled-success'] || 'Form filled! Review and continue.';
+
+        // After a moment, navigate to the questionnaire to review
+        setTimeout(() => {
+            // Hide upload screen
+            const uploadScreen = document.getElementById('uploadScreen');
+            if (uploadScreen) {
+                uploadScreen.classList.remove('active');
+            }
+
+            // Navigate to first question to review/edit
+            currentQuestion = 0;
+            showQuestion(0);
+            updateProgress();
+            updateNavigation();
+            updateNextButton();
+        }, 1500);
+    }
 });

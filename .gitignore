@@ -3,6 +3,8 @@ node_modules/
 *.log
 .DS_Store
 DEVELOPMENT.md
+AI-MATCHING.md
+docs/
 .claude/settings.local.json
 
 # Test files (local only)

@@ -17,7 +17,7 @@ const CV = require('./models/CV');
 const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
-const { generateEmbedding, prepareCVText, cosineSimilarity, findMatches } = require('./utils/embeddings');
+const { generateEmbedding, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI } = require('./utils/embeddings');
 const natural = require('natural');
 const TfIdf = natural.TfIdf;
 
@@ -2202,9 +2202,110 @@ const errorMessages = {
         noVacancies: 'Aún no hay vacantes disponibles',
         cvInsufficientText: 'El CV no tiene suficiente texto para la coincidencia',
         noVacanciesWithEmbeddings: 'No se encontraron vacantes con embeddings.',
-        matchingFailed: 'La coincidencia falló'
+        matchingFailed: 'La coincidencia falló',
+        cvParseError: 'Error al analizar el CV',
+        noFileProvided: 'No se proporcionó ningún archivo',
+        unsupportedFormat: 'Formato de archivo no soportado'
     }
 };
+
+// CV File Upload and AI Parsing endpoint
+app.post('/api/parse-cv', async (req, res) => {
+    try {
+        const { fileData, fileType, fileName, language } = req.body;
+        const lang = language || 'en';
+
+        // Add translations for this endpoint
+        const parseMessages = {
+            en: {
+                noFile: 'No file provided',
+                unsupportedFormat: 'Unsupported file format. Please upload PDF or Word (.docx)',
+                parseError: 'Error parsing CV',
+                aiNotConfigured: 'AI parsing is not configured',
+                textTooShort: 'Could not extract enough text from the file'
+            },
+            nl: {
+                noFile: 'Geen bestand aangeleverd',
+                unsupportedFormat: 'Niet-ondersteund bestandsformaat. Upload PDF of Word (.docx)',
+                parseError: 'Fout bij het analyseren van CV',
+                aiNotConfigured: 'AI parsing is niet geconfigureerd',
+                textTooShort: 'Kon niet genoeg tekst uit het bestand halen'
+            },
+            es: {
+                noFile: 'No se proporcionó ningún archivo',
+                unsupportedFormat: 'Formato no soportado. Suba PDF o Word (.docx)',
+                parseError: 'Error al analizar el CV',
+                aiNotConfigured: 'El análisis AI no está configurado',
+                textTooShort: 'No se pudo extraer suficiente texto del archivo'
+            }
+        };
+        const t = parseMessages[lang] || parseMessages.en;
+
+        if (!fileData) {
+            return res.status(400).json({ success: false, message: t.noFile });
+        }
+
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(503).json({ success: false, message: t.aiNotConfigured });
+        }
+
+        let extractedText = '';
+
+        // Extract text based on file type
+        if (fileType === 'application/pdf' || fileName?.toLowerCase().endsWith('.pdf')) {
+            // PDF parsing
+            if (!pdfParse) {
+                return res.status(500).json({ success: false, message: 'PDF parsing not available' });
+            }
+            const buffer = Buffer.from(fileData, 'base64');
+            const pdfData = await pdfParse(buffer, { max: 0 });
+            extractedText = pdfData.text;
+        } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                   fileName?.toLowerCase().endsWith('.docx')) {
+            // Word document parsing - use simple text extraction
+            const buffer = Buffer.from(fileData, 'base64');
+            // For Word docs, we'll extract text using a simple approach
+            // The docx format is a zip containing XML files
+            const AdmZip = require('adm-zip');
+            try {
+                const zip = new AdmZip(buffer);
+                const documentXml = zip.readAsText('word/document.xml');
+                // Extract text from XML, removing tags
+                extractedText = documentXml
+                    .replace(/<[^>]*>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            } catch (zipError) {
+                console.error('Error parsing Word document:', zipError);
+                return res.status(400).json({ success: false, message: t.parseError });
+            }
+        } else {
+            return res.status(400).json({ success: false, message: t.unsupportedFormat });
+        }
+
+        if (!extractedText || extractedText.trim().length < 50) {
+            return res.status(400).json({ success: false, message: t.textTooShort });
+        }
+
+        console.log(`Parsing CV with AI: ${extractedText.length} characters extracted`);
+
+        // Use AI to parse the CV text into structured fields
+        const parsedData = await parseCVWithAI(extractedText, lang);
+
+        res.json({
+            success: true,
+            data: parsedData,
+            extractedTextLength: extractedText.length
+        });
+
+    } catch (error) {
+        console.error('Error in CV parsing:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error parsing CV'
+        });
+    }
+});
 
 // Submit CV endpoint
 app.post('/submit-cv', async (req, res) => {

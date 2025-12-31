@@ -135,11 +135,74 @@ function findMatches(vacancyEmbedding, cvs, limit = 20) {
     return scored;
 }
 
+/**
+ * Parse CV text using GPT to extract structured fields
+ * @param {string} cvText - Raw text extracted from CV
+ * @param {string} lang - Language for response (en, nl, es)
+ * @returns {Promise<Object>} - Structured CV data
+ */
+async function parseCVWithAI(cvText, lang = 'en') {
+    if (!cvText || cvText.trim().length < 50) {
+        throw new Error('CV text is too short to parse');
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY is not configured');
+    }
+
+    const systemPrompt = `You are a CV/resume parser. Extract information from the CV text and return a JSON object with the following fields. If a field cannot be found, use an empty string.
+
+IMPORTANT: Return ONLY valid JSON, no markdown, no explanation.
+
+Fields to extract:
+- fullName: Full name of the person
+- email: Email address
+- phone: Phone number (include country code if present)
+- location: City, Country or address
+- birthDate: Date of birth in format dd/mm/yyyy (convert from any format)
+- languages: Languages spoken with proficiency levels
+- jobTitle: Current or most recent job title
+- summary: Professional summary or objective (2-3 sentences)
+- experience: Work experience with dates, companies, and responsibilities
+- education: Education history with institutions and dates
+- skills: Technical and soft skills
+- achievements: Notable achievements, certifications, or projects
+
+Keep the original language of the CV content for experience, education, skills, etc.`;
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Parse this CV:\n\n${cvText.slice(0, 15000)}` }
+            ],
+            temperature: 0.1,
+            max_tokens: 4000
+        });
+
+        const content = response.choices[0].message.content.trim();
+
+        // Try to parse JSON, handling potential markdown code blocks
+        let jsonStr = content;
+        if (content.startsWith('```')) {
+            jsonStr = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+        }
+
+        const parsed = JSON.parse(jsonStr);
+        return parsed;
+    } catch (error) {
+        console.error('Error parsing CV with AI:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     generateEmbedding,
     generateEmbeddings,
     cosineSimilarity,
     prepareCVText,
     findMatches,
+    parseCVWithAI,
     EMBEDDING_MODEL
 };

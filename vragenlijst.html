@@ -29,7 +29,42 @@
         </div>
         
         <form id="questionnaire">
-            <div class="question-container" data-question="0">
+            <!-- Choice Screen -->
+            <div class="question-container active" id="choiceScreen" data-question="-1">
+                <h2 data-text="choice-title">How would you like to create your CV?</h2>
+                <div class="choice-cards">
+                    <div class="cv-choice-card" id="choiceUpload">
+                        <div class="choice-card-icon">📄</div>
+                        <h3 data-text="choice-upload-title">Upload existing CV</h3>
+                        <p data-text="choice-upload-desc">Upload your PDF or Word document and we'll fill in the form automatically with AI</p>
+                    </div>
+                    <div class="cv-choice-card" id="choiceManual">
+                        <div class="choice-card-icon">✍️</div>
+                        <h3 data-text="choice-manual-title">Fill in questionnaire</h3>
+                        <p data-text="choice-manual-desc">Answer questions step by step to build your CV from scratch</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Screen -->
+            <div class="question-container" id="uploadScreen" style="display: none;">
+                <h2 data-text="upload-title">Upload your CV</h2>
+                <div class="cv-upload-section">
+                    <div class="upload-box" id="uploadBox">
+                        <div class="upload-icon">📄</div>
+                        <p class="upload-text" data-text="upload-text">Drag & drop your CV here or click to browse</p>
+                        <p class="upload-formats" data-text="upload-formats">Supported: PDF, Word (.docx)</p>
+                        <input type="file" id="cvFileInput" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+                    </div>
+                    <div class="upload-status" id="uploadStatus" style="display: none;">
+                        <div class="upload-spinner"></div>
+                        <p id="uploadStatusText" data-text="parsing-cv">Analyzing your CV with AI...</p>
+                    </div>
+                </div>
+                <button type="button" class="back-to-choice" id="backToChoice" data-text="back-to-choice">← Back to choice</button>
+            </div>
+
+            <div class="question-container" data-question="0" style="display: none;">
                 <h2 data-text="start-title">Let's start with your personal information</h2>
                 <div class="question">
                     <label for="fullName" data-text="fullname-label">What's your full name?</label>
@@ -155,6 +190,7 @@
         </form>
 
         <div class="navigation">
+            <button type="button" id="backToChoiceNav" style="display: none;" data-text="back-to-choice-nav">← Back to choice</button>
             <button type="button" id="prevBtn" style="display: none;" data-text="prev-btn">← Previous</button>
             <button type="button" id="nextBtn" data-text="next-btn" disabled>Continue →</button>
         </div>
