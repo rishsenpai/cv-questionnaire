@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Submission Failed",
             'error-button': "Try Again",
             'submitting': "Submitting...",
-            'view-cv-btn': "Edit CV",
+            'view-cv-btn': "View & Edit my CV",
             'edit-cv-btn': "Edit CV",
             'save-cv-btn': "Save Changes",
             'resubmit-cv-btn': "Resubmit CV",
@@ -99,7 +99,14 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-message-placeholder': "Tell us what you think about the questionnaire, what could be improved, or what you liked...",
             'feedback-cancel': "Cancel",
             'feedback-submit': "Send Feedback",
-            'tooltip-feedback-required': "Please provide your feedback message"
+            'tooltip-feedback-required': "Please provide your feedback message",
+            'find-vacancies': "Find Vacancies",
+            'searching': "Searching...",
+            'finding-vacancies': "Finding vacancies that match your profile...",
+            'matching-vacancies': "Matching Vacancies",
+            'no-vacancies': "No matching vacancies found at the moment.",
+            'check-later': "Check back later, new vacancies are added regularly!",
+            'error-vacancies': "Error fetching vacancies. Please try again later."
         },
         nl: {
             'start-title': "Laten we beginnen met je persoonlijke gegevens",
@@ -152,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Versturen Mislukt",
             'error-button': "Opnieuw Proberen",
             'submitting': "Versturen...",
-            'view-cv-btn': "CV bewerken",
+            'view-cv-btn': "Bekijk & Bewerk mijn CV",
             'edit-cv-btn': "CV bewerken",
             'save-cv-btn': "Wijzigingen opslaan",
             'resubmit-cv-btn': "CV opnieuw versturen",
@@ -170,7 +177,14 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-message-placeholder': "Vertel ons wat je van de vragenlijst vindt, wat er verbeterd kan worden, of wat je leuk vond...",
             'feedback-cancel': "Annuleren",
             'feedback-submit': "Feedback Versturen",
-            'tooltip-feedback-required': "Geef je feedback bericht"
+            'tooltip-feedback-required': "Geef je feedback bericht",
+            'find-vacancies': "Zoek Vacatures",
+            'searching': "Zoeken...",
+            'finding-vacancies': "Vacatures zoeken die bij jouw profiel passen...",
+            'matching-vacancies': "Passende Vacatures",
+            'no-vacancies': "Geen passende vacatures gevonden op dit moment.",
+            'check-later': "Kom later terug, er worden regelmatig nieuwe vacatures toegevoegd!",
+            'error-vacancies': "Fout bij ophalen vacatures. Probeer het later opnieuw."
         },
         es: {
             'start-title': "Comencemos con tu información personal",
@@ -223,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Error al Enviar",
             'error-button': "Intentar de Nuevo",
             'submitting': "Enviando...",
-            'view-cv-btn': "Editar CV",
+            'view-cv-btn': "Ver y Editar mi CV",
             'edit-cv-btn': "Editar CV",
             'save-cv-btn': "Guardar Cambios",
             'resubmit-cv-btn': "Reenviar CV",
@@ -241,7 +255,14 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-message-placeholder': "Cuéntanos qué piensas del cuestionario, qué se podría mejorar, o qué te gustó...",
             'feedback-cancel': "Cancelar",
             'feedback-submit': "Enviar Opinión",
-            'tooltip-feedback-required': "Por favor proporciona tu mensaje de feedback"
+            'tooltip-feedback-required': "Por favor proporciona tu mensaje de feedback",
+            'find-vacancies': "Buscar Vacantes",
+            'searching': "Buscando...",
+            'finding-vacancies': "Buscando vacantes que coincidan con tu perfil...",
+            'matching-vacancies': "Vacantes Coincidentes",
+            'no-vacancies': "No se encontraron vacantes coincidentes en este momento.",
+            'check-later': "¡Vuelve más tarde, se añaden nuevas vacantes regularmente!",
+            'error-vacancies': "Error al obtener vacantes. Por favor, inténtalo más tarde."
         }
     };
 
@@ -1078,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify({ ...formData, language: currentLanguage })
                 });
 
                 const result = await response.json();
@@ -1126,9 +1147,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, language: currentLanguage })
             });
-            
+
             const result = await response.json();
 
             if (result.success) {
@@ -1196,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         try {
-            const response = await fetch(`/api/cvs/${cvId}/matching-vacancies`);
+            const response = await fetch(`/api/cvs/${cvId}/matching-vacancies?lang=${currentLanguage}`);
             const result = await response.json();
 
             if (result.success && result.matches && result.matches.length > 0) {

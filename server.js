@@ -1279,10 +1279,13 @@ app.get('/api/employer/vacancies/:id/ai-matches', requireEmployer, async (req, r
 // AI Matching: Find vacancies matching a CV (for job seekers)
 app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
     try {
+        const lang = req.query.lang || 'en';
+        const t = errorMessages[lang] || errorMessages.en;
+
         if (!process.env.OPENAI_API_KEY) {
             return res.status(503).json({
                 success: false,
-                message: 'AI matching is niet geconfigureerd'
+                message: t.aiNotConfigured
             });
         }
 
@@ -1291,7 +1294,7 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
         // Get CV with embedding
         const cv = await CV.findById(req.params.id).select('+embedding');
         if (!cv) {
-            return res.status(404).json({ success: false, message: 'CV niet gevonden' });
+            return res.status(404).json({ success: false, message: t.cvNotFound });
         }
 
         // Use cached embedding or generate if missing
@@ -1301,7 +1304,7 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
             if (!textToEmbed || textToEmbed.trim().length < 50) {
                 return res.status(400).json({
                     success: false,
-                    message: 'CV heeft onvoldoende tekst voor matching'
+                    message: t.cvInsufficientText
                 });
             }
             cvEmbedding = await generateEmbedding(textToEmbed);
@@ -1320,7 +1323,7 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
                 success: true,
                 cv: { _id: cv._id, fullName: cv.fullName },
                 matches: [],
-                message: 'Geen vacatures met embeddings gevonden.'
+                message: t.noVacanciesWithEmbeddings
             });
         }
 
@@ -1350,7 +1353,9 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
 
     } catch (error) {
         console.error('Error in CV-to-vacancy matching:', error);
-        res.status(500).json({ success: false, message: 'Matching mislukt' });
+        const lang = req.query.lang || 'en';
+        const t = errorMessages[lang] || errorMessages.en;
+        res.status(500).json({ success: false, message: t.matchingFailed });
     }
 });
 
@@ -2167,16 +2172,52 @@ function extractFirstExperience(experience) {
     return firstLine.substring(0, 100);
 }
 
+// Error message translations
+const errorMessages = {
+    en: {
+        duplicateCV: 'A CV with this name and work experience already exists. Contact us if you want to update your CV.',
+        requiredFields: 'Name and email are required',
+        aiNotConfigured: 'AI matching is not configured',
+        cvNotFound: 'CV not found',
+        noVacancies: 'No vacancies available yet',
+        cvInsufficientText: 'CV has insufficient text for matching',
+        noVacanciesWithEmbeddings: 'No vacancies with embeddings found.',
+        matchingFailed: 'Matching failed'
+    },
+    nl: {
+        duplicateCV: 'Er bestaat al een CV met deze naam en werkervaring. Neem contact op als je je CV wilt bijwerken.',
+        requiredFields: 'Naam en e-mail zijn verplicht',
+        aiNotConfigured: 'AI matching is niet geconfigureerd',
+        cvNotFound: 'CV niet gevonden',
+        noVacancies: 'Nog geen vacatures beschikbaar',
+        cvInsufficientText: 'CV heeft onvoldoende tekst voor matching',
+        noVacanciesWithEmbeddings: 'Geen vacatures met embeddings gevonden.',
+        matchingFailed: 'Matching mislukt'
+    },
+    es: {
+        duplicateCV: 'Ya existe un CV con este nombre y experiencia laboral. Contáctanos si deseas actualizar tu CV.',
+        requiredFields: 'Nombre y correo electrónico son obligatorios',
+        aiNotConfigured: 'La coincidencia AI no está configurada',
+        cvNotFound: 'CV no encontrado',
+        noVacancies: 'Aún no hay vacantes disponibles',
+        cvInsufficientText: 'El CV no tiene suficiente texto para la coincidencia',
+        noVacanciesWithEmbeddings: 'No se encontraron vacantes con embeddings.',
+        matchingFailed: 'La coincidencia falló'
+    }
+};
+
 // Submit CV endpoint
 app.post('/submit-cv', async (req, res) => {
     try {
         const formData = req.body;
+        const lang = formData.language || 'en';
+        const t = errorMessages[lang] || errorMessages.en;
 
         // Validate required fields
         if (!formData.fullName || !formData.email) {
             return res.status(400).json({
                 success: false,
-                message: 'Name and email are required'
+                message: t.requiredFields
             });
         }
 
@@ -2202,7 +2243,7 @@ app.post('/submit-cv', async (req, res) => {
             if (isDuplicate) {
                 return res.status(409).json({
                     success: false,
-                    message: 'Er bestaat al een CV met deze naam en werkervaring. Neem contact op als je je CV wilt bijwerken.',
+                    message: t.duplicateCV,
                     duplicate: true
                 });
             }
