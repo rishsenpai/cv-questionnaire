@@ -74,6 +74,15 @@ const cvSchema = new mongoose.Schema({
     },
     fileSize: {
         type: Number
+    },
+    // AI Embedding for semantic search
+    embedding: {
+        type: [Number],
+        select: false  // Don't include in queries by default (large array)
+    },
+    embeddingModel: {
+        type: String,
+        default: 'text-embedding-3-small'
     }
 }, {
     timestamps: true

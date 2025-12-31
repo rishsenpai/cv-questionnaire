@@ -1524,6 +1524,35 @@
             background: rgba(46, 196, 182, 0.3);
         }
 
+        .ai-btn {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.2));
+            color: #a855f7;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .ai-btn:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.3));
+        }
+
+        .ai-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stat-ai {
+            border-left: 2px solid rgba(168, 85, 247, 0.3);
+            padding-left: 15px;
+        }
+
+        .stat-ai .stat-value {
+            color: #a855f7;
+        }
+
         /* Form Modal */
         .form-modal .modal-content {
             max-width: 600px;
@@ -2908,6 +2937,10 @@
                         <div class="stat-value" id="todayCount">-</div>
                         <div class="stat-label">Vandaag</div>
                     </div>
+                    <div class="stat stat-ai" id="embeddingStatContainer" style="display: none;">
+                        <div class="stat-value" id="embeddingCount">-</div>
+                        <div class="stat-label">AI Embeddings</div>
+                    </div>
                 </div>
                 <div class="theme-toggle" onclick="toggleTheme()" title="Wissel thema" role="switch" aria-checked="false" aria-label="Wissel tussen licht en donker thema" tabindex="0">
                     <span class="theme-icon" id="themeIcon">🌙</span>
@@ -2951,6 +2984,7 @@
                             <option value="name-desc">Naam Z-A</option>
                         </select>
                         <button class="export-btn" onclick="exportToCSV()" aria-label="Exporteer naar CSV">📥 Export CSV</button>
+                        <button class="ai-btn" onclick="generateAllEmbeddings()" aria-label="Genereer AI embeddings" id="generateEmbeddingsBtn" style="display: none;">🤖 AI Embeddings</button>
                         <button class="add-btn" onclick="openAddModal()" aria-label="CV uploaden">+ CV Uploaden</button>
                         <button class="refresh-btn" onclick="loadCVs()" aria-label="Vernieuwen">Vernieuwen</button>
                     </div>
@@ -4319,6 +4353,70 @@
             const today = new Date().toDateString();
             const todayCount = cvs.filter(cv => new Date(cv.createdAt).toDateString() === today).length;
             document.getElementById('todayCount').textContent = todayCount;
+
+            // Check embedding status
+            checkEmbeddingStatus();
+        }
+
+        // Check AI embedding status
+        async function checkEmbeddingStatus() {
+            try {
+                const response = await fetch('/api/admin/embedding-status', {
+                    headers: { 'X-Admin-Token': authToken }
+                });
+
+                if (!response.ok) return;
+
+                const result = await response.json();
+                if (result.success) {
+                    const container = document.getElementById('embeddingStatContainer');
+                    const countEl = document.getElementById('embeddingCount');
+                    const btn = document.getElementById('generateEmbeddingsBtn');
+
+                    container.style.display = 'block';
+                    countEl.textContent = `${result.withEmbedding}/${result.total}`;
+
+                    // Show button if there are CVs without embeddings
+                    if (result.withoutEmbedding > 0) {
+                        btn.style.display = 'block';
+                        btn.textContent = `🤖 AI Embeddings (${result.withoutEmbedding})`;
+                    } else {
+                        btn.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.log('Embedding status check failed (API may not be configured)');
+            }
+        }
+
+        // Generate embeddings for all CVs
+        async function generateAllEmbeddings() {
+            const btn = document.getElementById('generateEmbeddingsBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Bezig...';
+
+            try {
+                const response = await fetch('/api/admin/generate-embeddings', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Token': authToken }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Toast.show(`${result.message}`, 'success');
+                    // Refresh status after a delay
+                    setTimeout(checkEmbeddingStatus, 3000);
+                } else {
+                    Toast.show(result.message || 'Fout bij genereren embeddings', 'error');
+                }
+            } catch (error) {
+                Toast.show('Fout bij genereren embeddings', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         async function viewCV(cvId) {

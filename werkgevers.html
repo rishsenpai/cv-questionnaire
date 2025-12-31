@@ -501,6 +501,47 @@
             gap: 20px;
         }
 
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .match-type-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .match-type-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .match-type-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .match-type-btn.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            border-color: rgba(102, 126, 234, 0.5);
+            color: #fff;
+        }
+
+        .match-type-btn.ai-active {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.3));
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
         .cv-card {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1812,6 +1853,28 @@
             color: #1e293b;
         }
 
+        body.light-mode .match-type-btn {
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: #64748b;
+        }
+
+        body.light-mode .match-type-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: #1e293b;
+        }
+
+        body.light-mode .match-type-btn.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            border-color: rgba(102, 126, 234, 0.3);
+            color: #1e293b;
+        }
+
+        body.light-mode .match-type-btn.ai-active {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.15));
+            border-color: rgba(168, 85, 247, 0.3);
+        }
+
         body.light-mode .btn-delete {
             background: rgba(239, 68, 68, 0.1);
             color: #1e293b;
@@ -2053,7 +2116,17 @@
 
                 <!-- Match Results -->
                 <div id="matchResults" style="margin-top: 24px; display: none;">
-                    <h3 style="margin-bottom: 16px; font-size: 16px;">Gematchte Kandidaten voor: <span id="matchVacancyTitle"></span></h3>
+                    <div class="match-header">
+                        <h3 style="margin: 0; font-size: 16px;">Gematchte Kandidaten voor: <span id="matchVacancyTitle"></span></h3>
+                        <div class="match-type-toggle">
+                            <button class="match-type-btn active" id="btnTfIdf" onclick="switchMatchType('tfidf')">
+                                📊 TF-IDF
+                            </button>
+                            <button class="match-type-btn" id="btnAI" onclick="switchMatchType('ai')">
+                                🤖 AI Semantic
+                            </button>
+                        </div>
+                    </div>
                     <div id="matchList" class="cv-grid"></div>
                 </div>
             </div>
@@ -3151,20 +3224,39 @@
             submitBtn.textContent = 'Vacature Toevoegen & Matchen';
         });
 
-        async function matchVacancy(id, title) {
+        let currentVacancyId = null;
+        let currentVacancyTitle = null;
+        let currentMatchType = 'tfidf';
+
+        async function matchVacancy(id, title, matchType = 'tfidf') {
+            currentVacancyId = id;
+            currentVacancyTitle = title;
+            currentMatchType = matchType;
+
             const matchResults = document.getElementById('matchResults');
             const matchList = document.getElementById('matchList');
             document.getElementById('matchVacancyTitle').textContent = title;
             matchResults.style.display = 'block';
+
+            // Update toggle buttons
+            document.getElementById('btnTfIdf').classList.toggle('active', matchType === 'tfidf');
+            document.getElementById('btnAI').classList.toggle('active', matchType === 'ai');
+            document.getElementById('btnAI').classList.toggle('ai-active', matchType === 'ai');
+
+            const loadingText = matchType === 'ai' ? 'AI matching bezig...' : 'Kandidaten matchen...';
             matchList.innerHTML = `
                 <div class="loading">
                     <div class="loading-spinner"></div>
-                    <p>Kandidaten matchen...</p>
+                    <p>${loadingText}</p>
                 </div>
             `;
 
             try {
-                const response = await fetch(`/api/employer/vacancies/${id}/matches`, {
+                const endpoint = matchType === 'ai'
+                    ? `/api/employer/vacancies/${id}/ai-matches`
+                    : `/api/employer/vacancies/${id}/matches`;
+
+                const response = await fetch(endpoint, {
                     headers: { 'X-Employer-Token': authToken }
                 });
 
@@ -3178,18 +3270,31 @@
                 if (result.success) {
                     renderCVs(result.matches, true);
                     if (result.matches.length === 0) {
+                        const noMatchMsg = matchType === 'ai' && result.message
+                            ? result.message
+                            : 'Probeer de vacature-eisen aan te passen';
                         matchList.innerHTML = `
                             <div class="empty-state">
                                 <h2>Geen matches gevonden</h2>
-                                <p>Probeer de vacature-eisen aan te passen</p>
+                                <p>${noMatchMsg}</p>
                             </div>
                         `;
                     }
+                    if (result.totalWithEmbeddings !== undefined) {
+                        console.log(`AI Matching: ${result.totalWithEmbeddings} CV's met embeddings`);
+                    }
                 } else {
-                    matchList.innerHTML = `<div class="empty-state"><p>Fout bij matchen</p></div>`;
+                    const errorMsg = result.message || 'Fout bij matchen';
+                    matchList.innerHTML = `<div class="empty-state"><p>${errorMsg}</p></div>`;
                 }
             } catch (error) {
                 matchList.innerHTML = `<div class="empty-state"><p>Fout bij matchen</p></div>`;
+            }
+        }
+
+        function switchMatchType(type) {
+            if (currentVacancyId && currentMatchType !== type) {
+                matchVacancy(currentVacancyId, currentVacancyTitle, type);
             }
         }
 

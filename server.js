@@ -17,6 +17,7 @@ const CV = require('./models/CV');
 const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
+const { generateEmbedding, prepareCVText, cosineSimilarity, findMatches } = require('./utils/embeddings');
 const natural = require('natural');
 const TfIdf = natural.TfIdf;
 
@@ -1003,6 +1004,14 @@ app.post('/api/employer/vacancies', requireEmployer, async (req, res) => {
         });
 
         const savedVacancy = await vacancy.save();
+
+        // Generate embedding asynchronously (don't wait for response)
+        if (process.env.OPENAI_API_KEY) {
+            generateVacancyEmbedding(savedVacancy._id).catch(err => {
+                console.error('Error generating embedding for vacancy:', err.message);
+            });
+        }
+
         res.json({
             success: true,
             message: 'Vacature aangemaakt',
@@ -1014,6 +1023,26 @@ app.post('/api/employer/vacancies', requireEmployer, async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to create vacancy' });
     }
 });
+
+// Helper function to generate embedding for a Vacancy
+async function generateVacancyEmbedding(vacancyId) {
+    try {
+        const vacancy = await Vacancy.findById(vacancyId);
+        if (!vacancy) return;
+
+        const textToEmbed = `${vacancy.title}\n${vacancy.description || ''}\n${vacancy.requirements || ''}`;
+        if (!textToEmbed || textToEmbed.trim().length < 10) {
+            console.log(`Skipping embedding for vacancy ${vacancyId}: insufficient text`);
+            return;
+        }
+
+        const embedding = await generateEmbedding(textToEmbed);
+        await Vacancy.findByIdAndUpdate(vacancyId, { embedding });
+        console.log(`Embedding generated for vacancy: ${vacancy.title}`);
+    } catch (error) {
+        console.error(`Failed to generate embedding for vacancy ${vacancyId}:`, error.message);
+    }
+}
 
 // Delete vacancy (premium only)
 app.delete('/api/employer/vacancies/:id', requireEmployer, async (req, res) => {
@@ -1162,6 +1191,262 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
     } catch (error) {
         console.error('Error matching CVs:', error);
         res.status(500).json({ success: false, message: 'Failed to match CVs' });
+    }
+});
+
+// AI Embedding-based matching endpoint
+app.get('/api/employer/vacancies/:id/ai-matches', requireEmployer, async (req, res) => {
+    try {
+        const plan = req.employer.plan || 'basic';
+        if (plan !== 'premium') {
+            return res.status(403).json({
+                success: false,
+                message: 'Upgrade naar Premium voor AI matching'
+            });
+        }
+
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(503).json({
+                success: false,
+                message: 'AI matching is niet geconfigureerd'
+            });
+        }
+
+        await connectDB();
+        // Include embedding in query with +embedding
+        const vacancy = await Vacancy.findOne({
+            _id: req.params.id,
+            employerId: req.employer.employerId
+        }).select('+embedding');
+
+        if (!vacancy) {
+            return res.status(404).json({ success: false, message: 'Vacature niet gevonden' });
+        }
+
+        // Use cached embedding or generate if missing
+        let vacancyEmbedding = vacancy.embedding;
+        if (!vacancyEmbedding || vacancyEmbedding.length === 0) {
+            // Generate and cache embedding (only happens once)
+            const vacancyText = `${vacancy.title}\n${vacancy.description || ''}\n${vacancy.requirements || ''}`;
+            vacancyEmbedding = await generateEmbedding(vacancyText);
+            await Vacancy.findByIdAndUpdate(vacancy._id, { embedding: vacancyEmbedding });
+            console.log(`Generated and cached embedding for vacancy: ${vacancy.title}`);
+        }
+
+        // Get all CVs with embeddings
+        const cvs = await CV.find({ embedding: { $exists: true, $ne: [] } })
+            .select('+embedding -fileData');
+
+        if (cvs.length === 0) {
+            return res.json({
+                success: true,
+                vacancy: { _id: vacancy._id, title: vacancy.title },
+                matches: [],
+                message: 'Geen CV\'s met embeddings gevonden. Genereer eerst embeddings voor bestaande CV\'s.'
+            });
+        }
+
+        // Calculate similarity scores
+        const matchedCVs = cvs.map(cv => {
+            const score = cosineSimilarity(vacancyEmbedding, cv.embedding);
+            const cvObj = cv.toObject();
+            delete cvObj.embedding; // Don't send embedding to client
+            return {
+                ...cvObj,
+                matchScore: Math.round(score * 100),
+                matchType: 'AI Semantic'
+            };
+        })
+        .filter(cv => cv.matchScore >= 40) // Minimum 40% similarity
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 20);
+
+        console.log(`AI Matching - Found ${matchedCVs.length} matches for "${vacancy.title}"`);
+
+        res.json({
+            success: true,
+            vacancy: { _id: vacancy._id, title: vacancy.title },
+            matches: matchedCVs,
+            totalWithEmbeddings: cvs.length
+        });
+
+    } catch (error) {
+        console.error('Error in AI matching:', error);
+        res.status(500).json({ success: false, message: 'AI matching mislukt' });
+    }
+});
+
+// AI Matching: Find vacancies matching a CV (for job seekers)
+app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
+    try {
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(503).json({
+                success: false,
+                message: 'AI matching is niet geconfigureerd'
+            });
+        }
+
+        await connectDB();
+
+        // Get CV with embedding
+        const cv = await CV.findById(req.params.id).select('+embedding');
+        if (!cv) {
+            return res.status(404).json({ success: false, message: 'CV niet gevonden' });
+        }
+
+        // Use cached embedding or generate if missing
+        let cvEmbedding = cv.embedding;
+        if (!cvEmbedding || cvEmbedding.length === 0) {
+            const textToEmbed = prepareCVText(cv);
+            if (!textToEmbed || textToEmbed.trim().length < 50) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'CV heeft onvoldoende tekst voor matching'
+                });
+            }
+            cvEmbedding = await generateEmbedding(textToEmbed);
+            await CV.findByIdAndUpdate(cv._id, { embedding: cvEmbedding });
+            console.log(`Generated and cached embedding for CV: ${cv.fullName}`);
+        }
+
+        // Get all active vacancies with embeddings
+        const vacancies = await Vacancy.find({
+            isActive: true,
+            embedding: { $exists: true, $ne: [] }
+        }).select('+embedding -fileData');
+
+        if (vacancies.length === 0) {
+            return res.json({
+                success: true,
+                cv: { _id: cv._id, fullName: cv.fullName },
+                matches: [],
+                message: 'Geen vacatures met embeddings gevonden.'
+            });
+        }
+
+        // Calculate similarity scores
+        const matchedVacancies = vacancies.map(vacancy => {
+            const score = cosineSimilarity(cvEmbedding, vacancy.embedding);
+            const vacObj = vacancy.toObject();
+            delete vacObj.embedding;
+            return {
+                ...vacObj,
+                matchScore: Math.round(score * 100),
+                matchType: 'AI Semantic'
+            };
+        })
+        .filter(v => v.matchScore >= 40)
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 20);
+
+        console.log(`CV Matching - Found ${matchedVacancies.length} vacancies for "${cv.fullName}"`);
+
+        res.json({
+            success: true,
+            cv: { _id: cv._id, fullName: cv.fullName },
+            matches: matchedVacancies,
+            totalVacancies: vacancies.length
+        });
+
+    } catch (error) {
+        console.error('Error in CV-to-vacancy matching:', error);
+        res.status(500).json({ success: false, message: 'Matching mislukt' });
+    }
+});
+
+// Admin endpoint: Generate embeddings for all CVs without one
+app.post('/api/admin/generate-embeddings', requireAdmin, async (req, res) => {
+    try {
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(503).json({
+                success: false,
+                message: 'OPENAI_API_KEY is niet geconfigureerd'
+            });
+        }
+
+        await connectDB();
+
+        // Find CVs without embeddings
+        const cvsWithoutEmbedding = await CV.find({
+            $or: [
+                { embedding: { $exists: false } },
+                { embedding: { $size: 0 } },
+                { embedding: null }
+            ]
+        }).select('-fileData');
+
+        if (cvsWithoutEmbedding.length === 0) {
+            return res.json({
+                success: true,
+                message: 'Alle CV\'s hebben al embeddings',
+                processed: 0,
+                total: 0
+            });
+        }
+
+        // Process in background, return immediately
+        const totalToProcess = cvsWithoutEmbedding.length;
+
+        // Start async processing
+        (async () => {
+            let processed = 0;
+            let failed = 0;
+
+            for (const cv of cvsWithoutEmbedding) {
+                try {
+                    const textToEmbed = prepareCVText(cv);
+                    if (textToEmbed && textToEmbed.trim().length >= 50) {
+                        const embedding = await generateEmbedding(textToEmbed);
+                        await CV.findByIdAndUpdate(cv._id, { embedding });
+                        processed++;
+                        console.log(`Embedding ${processed}/${totalToProcess}: ${cv.fullName}`);
+                    } else {
+                        console.log(`Skipped (insufficient text): ${cv.fullName}`);
+                    }
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (err) {
+                    failed++;
+                    console.error(`Failed embedding for ${cv.fullName}:`, err.message);
+                }
+            }
+
+            console.log(`Embedding generation complete: ${processed} success, ${failed} failed`);
+        })();
+
+        res.json({
+            success: true,
+            message: `Embedding generatie gestart voor ${totalToProcess} CV's`,
+            processing: totalToProcess
+        });
+
+    } catch (error) {
+        console.error('Error starting embedding generation:', error);
+        res.status(500).json({ success: false, message: 'Failed to start embedding generation' });
+    }
+});
+
+// Admin endpoint: Check embedding status
+app.get('/api/admin/embedding-status', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        const totalCVs = await CV.countDocuments();
+        const withEmbedding = await CV.countDocuments({
+            embedding: { $exists: true, $not: { $size: 0 } }
+        });
+
+        res.json({
+            success: true,
+            total: totalCVs,
+            withEmbedding,
+            withoutEmbedding: totalCVs - withEmbedding,
+            percentage: totalCVs > 0 ? Math.round((withEmbedding / totalCVs) * 100) : 0
+        });
+
+    } catch (error) {
+        console.error('Error checking embedding status:', error);
+        res.status(500).json({ success: false, message: 'Failed to check status' });
     }
 });
 
@@ -2446,6 +2731,13 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
         const savedCV = await cv.save();
         console.log(`CV file uploaded: ${savedCV.fullName} - ${fileName}`);
 
+        // Generate embedding asynchronously (don't wait for response)
+        if (process.env.OPENAI_API_KEY) {
+            generateCVEmbedding(savedCV._id).catch(err => {
+                console.error('Error generating embedding for CV:', err.message);
+            });
+        }
+
         res.json({
             success: true,
             message: 'CV uploaded successfully',
@@ -2468,6 +2760,26 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
         });
     }
 });
+
+// Helper function to generate embedding for a CV
+async function generateCVEmbedding(cvId) {
+    try {
+        const cv = await CV.findById(cvId);
+        if (!cv) return;
+
+        const textToEmbed = prepareCVText(cv);
+        if (!textToEmbed || textToEmbed.trim().length < 50) {
+            console.log(`Skipping embedding for CV ${cvId}: insufficient text`);
+            return;
+        }
+
+        const embedding = await generateEmbedding(textToEmbed);
+        await CV.findByIdAndUpdate(cvId, { embedding });
+        console.log(`Embedding generated for CV: ${cv.fullName}`);
+    } catch (error) {
+        console.error(`Failed to generate embedding for CV ${cvId}:`, error.message);
+    }
+}
 
 // Download CV file endpoint (protected)
 app.get('/api/cvs/:id/download', requireAdmin, async (req, res) => {
