@@ -2263,9 +2263,17 @@ app.post('/submit-cv', async (req, res) => {
 
         console.log(`CV received from ${formData.fullName} (${formData.email})`);
 
+        // Generate embedding asynchronously if API key is configured
+        if (savedCV && process.env.OPENAI_API_KEY) {
+            generateCVEmbedding(savedCV._id).catch(err => {
+                console.error('Error generating embedding for submitted CV:', err.message);
+            });
+        }
+
         res.json({
             success: true,
-            message: 'CV submitted successfully!'
+            message: 'CV submitted successfully!',
+            cvId: savedCV ? savedCV._id : null
         });
 
     } catch (error) {

@@ -1130,9 +1130,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             const result = await response.json();
-            
+
             if (result.success) {
-                showSuccessMessage();
+                showSuccessMessage(result.cvId);
             } else {
                 showErrorMessage(result.message);
             }
@@ -1147,7 +1147,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function showSuccessMessage() {
+    let submittedCvId = null;
+
+    function showSuccessMessage(cvId) {
+        submittedCvId = cvId;
         const currentQuestionElement = questions[currentQuestion];
         const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
@@ -1156,8 +1159,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p data-text="success-message">${t['success-message']}</p>
                 <div class="success-buttons">
                     <button type="button" id="viewCVBtn" class="generate-btn view-cv-btn" data-text="view-cv-btn">${t['view-cv-btn']}</button>
+                    ${cvId ? `<button type="button" id="findVacanciesBtn" class="generate-btn find-vacancies-btn">🔍 ${t['find-vacancies'] || 'Zoek Vacatures'}</button>` : ''}
                     <button type="button" onclick="window.location.reload()" class="generate-btn secondary-btn" data-text="success-button">${t['success-button']}</button>
                 </div>
+                <div id="matchingVacancies" class="matching-vacancies" style="display: none;"></div>
             </div>
         `;
 
@@ -1166,6 +1171,81 @@ document.addEventListener('DOMContentLoaded', function() {
             generateEditableCV();
             modal.style.display = 'block';
         });
+
+        // Add click handler for Find Vacancies button
+        if (cvId) {
+            document.getElementById('findVacanciesBtn').addEventListener('click', function() {
+                findMatchingVacancies(cvId);
+            });
+        }
+    }
+
+    async function findMatchingVacancies(cvId) {
+        const container = document.getElementById('matchingVacancies');
+        const btn = document.getElementById('findVacanciesBtn');
+        const t = translations[currentLanguage];
+
+        btn.disabled = true;
+        btn.textContent = '⏳ ' + (t['searching'] || 'Zoeken...');
+
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div class="vacancies-loading">
+                <div class="loading-spinner"></div>
+                <p>${t['finding-vacancies'] || 'Vacatures zoeken die bij jouw profiel passen...'}</p>
+            </div>
+        `;
+
+        try {
+            const response = await fetch(`/api/cvs/${cvId}/matching-vacancies`);
+            const result = await response.json();
+
+            if (result.success && result.matches && result.matches.length > 0) {
+                container.innerHTML = `
+                    <h3 class="vacancies-title">🎯 ${t['matching-vacancies'] || 'Passende Vacatures'} (${result.matches.length})</h3>
+                    <div class="vacancies-grid">
+                        ${result.matches.map(v => `
+                            <div class="vacancy-card">
+                                <div class="vacancy-match-score">${v.matchScore}% match</div>
+                                <h4 class="vacancy-title">${escapeHtml(v.title)}</h4>
+                                ${v.location ? `<p class="vacancy-location">📍 ${escapeHtml(v.location)}</p>` : ''}
+                                ${v.description ? `<p class="vacancy-description">${escapeHtml(v.description).substring(0, 150)}${v.description.length > 150 ? '...' : ''}</p>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (result.message) {
+                container.innerHTML = `
+                    <div class="vacancies-empty">
+                        <p>ℹ️ ${result.message}</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="vacancies-empty">
+                        <p>😔 ${t['no-vacancies'] || 'Geen passende vacatures gevonden op dit moment.'}</p>
+                        <p>${t['check-later'] || 'Kom later terug, er worden regelmatig nieuwe vacatures toegevoegd!'}</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error finding vacancies:', error);
+            container.innerHTML = `
+                <div class="vacancies-error">
+                    <p>❌ ${t['error-vacancies'] || 'Fout bij ophalen vacatures. Probeer het later opnieuw.'}</p>
+                </div>
+            `;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🔍 ' + (t['find-vacancies'] || 'Zoek Vacatures');
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     function showErrorMessage(message) {
