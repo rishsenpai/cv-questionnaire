@@ -1160,7 +1160,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="success-buttons">
                     <button type="button" id="viewCVBtn" class="generate-btn view-cv-btn" data-text="view-cv-btn">${t['view-cv-btn']}</button>
                     ${cvId ? `<button type="button" id="findVacanciesBtn" class="generate-btn find-vacancies-btn">🔍 ${t['find-vacancies'] || 'Zoek Vacatures'}</button>` : ''}
-                    <button type="button" onclick="window.location.reload()" class="generate-btn secondary-btn" data-text="success-button">${t['success-button']}</button>
                 </div>
                 <div id="matchingVacancies" class="matching-vacancies" style="display: none;"></div>
             </div>
@@ -1255,9 +1254,15 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="question">
                 <h2 data-text="error-title">${t['error-title']}</h2>
                 <p style="color: #e53e3e; margin-bottom: 20px;">${message}</p>
-                <button type="button" onclick="generateBtn.click()" class="generate-btn" data-text="error-button">${t['error-button']}</button>
+                <button type="button" id="retryBtn" class="generate-btn" data-text="error-button">${t['error-button']}</button>
             </div>
         `;
+
+        // Add click handler for retry
+        document.getElementById('retryBtn').addEventListener('click', function() {
+            // Reload the page to start fresh
+            window.location.reload();
+        });
     }
     
     function downloadPDF() {
