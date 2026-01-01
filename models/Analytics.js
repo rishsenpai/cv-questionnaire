@@ -63,4 +63,4 @@ analyticsSchema.index({ 'geo.countryCode': 1 });
 analyticsSchema.index({ page: 1 });
 analyticsSchema.index({ sessionId: 1 });
 
-module.exports = mongoose.model('Analytics', analyticsSchema);
+module.exports = mongoose.models.Analytics || mongoose.model('Analytics', analyticsSchema);

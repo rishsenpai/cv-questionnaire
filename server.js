@@ -333,6 +333,7 @@ function getClientIP(req) {
 // Track event endpoint
 app.post('/api/analytics/track', async (req, res) => {
     try {
+        await connectDB();
         const { eventType, page, referrer, language, sessionId, metadata } = req.body;
         const ip = getClientIP(req);
         const geo = await getGeoFromIP(ip);
@@ -359,6 +360,7 @@ app.post('/api/analytics/track', async (req, res) => {
 // Get analytics summary
 app.get('/api/analytics/summary', async (req, res) => {
     try {
+        await connectDB();
         const { days = 30, from, to } = req.query;
 
         let startDate, endDate;
