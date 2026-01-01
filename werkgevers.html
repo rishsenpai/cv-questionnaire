@@ -175,6 +175,21 @@
             gap: 20px;
         }
 
+        .header-logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2ec4b6 0%, #26a69a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .header-logo:hover {
+            opacity: 0.8;
+        }
+
         .header h1 {
             font-size: 20px;
             font-weight: 600;
@@ -1549,6 +1564,10 @@
                 gap: 8px;
             }
 
+            .header-logo {
+                font-size: 18px;
+            }
+
             .header-left h1 {
                 font-size: 18px;
             }
@@ -2137,6 +2156,7 @@
     <div class="portal" id="portal">
         <header class="header">
             <div class="header-left">
+                <a href="/" class="header-logo" title="Terug naar home">Jobparsing</a>
                 <h1>CV Database</h1>
                 <span class="company-badge" id="companyName">Bedrijf</span>
             </div>
