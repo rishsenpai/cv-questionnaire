@@ -445,6 +445,10 @@ function parseUserAgent(userAgent) {
         result.browser.name = 'Edge';
         const match = ua.match(/edg\/([\d.]+)/i);
         result.browser.version = match ? match[1].split('.')[0] : null;
+    } else if (/brave/i.test(ua)) {
+        result.browser.name = 'Brave';
+        const match = ua.match(/brave\/([\d.]+)/i) || ua.match(/chrome\/([\d.]+)/i);
+        result.browser.version = match ? match[1].split('.')[0] : null;
     } else if (/opr\/|opera/i.test(ua)) {
         result.browser.name = 'Opera';
         const match = ua.match(/(?:opr|opera)[\/\s]([\d.]+)/i);
@@ -474,7 +478,7 @@ function parseUserAgent(userAgent) {
 app.post('/api/analytics/track', async (req, res) => {
     try {
         await connectDB();
-        const { eventType, page, referrer, language, sessionId, screen, metadata } = req.body;
+        const { eventType, page, referrer, language, sessionId, screen, detectedBrowser, metadata } = req.body;
         const ip = getClientIP(req);
         const userAgent = req.headers['user-agent'];
 
@@ -490,6 +494,11 @@ app.post('/api/analytics/track', async (req, res) => {
 
         const geo = await getGeoFromIP(ip);
         const { device, browser } = parseUserAgent(userAgent);
+
+        // Use client-side detected browser if provided (e.g., Brave)
+        if (detectedBrowser) {
+            browser.name = detectedBrowser;
+        }
 
         const event = new Analytics({
             eventType,

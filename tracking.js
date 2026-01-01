@@ -10,6 +10,15 @@
         return sessionId;
     }
 
+    // Detect browser client-side (for browsers that hide in UA like Brave)
+    function detectBrowser() {
+        // Brave has a special API
+        if (navigator.brave && navigator.brave.isBrave) {
+            return 'Brave';
+        }
+        return null; // Let server detect from UA
+    }
+
     // Track event
     async function trackEvent(eventType, metadata = {}) {
         try {
@@ -26,6 +35,7 @@
                         width: window.screen.width,
                         height: window.screen.height
                     },
+                    detectedBrowser: detectBrowser(),
                     metadata
                 })
             });

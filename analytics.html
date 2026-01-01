@@ -561,13 +561,13 @@
             <!-- Device & Browser Analytics -->
             <h3 style="margin: 30px 0 20px; color: #2d3748; font-size: 20px;">Device & Browser Analytics</h3>
             <div class="charts-grid">
-                <div class="chart-card">
+                <div class="chart-card" style="max-width: 350px;">
                     <h3 class="chart-title">Device Types</h3>
-                    <canvas id="deviceChart"></canvas>
+                    <canvas id="deviceChart" style="max-height: 250px;"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3 class="chart-title">Browsers</h3>
-                    <canvas id="browserChart"></canvas>
+                    <canvas id="browserChart" style="max-height: 250px;"></canvas>
                 </div>
             </div>
 
@@ -1056,6 +1056,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: true,
                     plugins: {
                         legend: { position: 'bottom' }
                     }
@@ -1077,6 +1078,7 @@
                 'Firefox': '#FF7139',
                 'Edge': '#0078D4',
                 'Opera': '#FF1B2D',
+                'Brave': '#FB542B',
                 'IE': '#0076D6'
             };
 
