@@ -323,11 +323,27 @@ async function getGeoFromIP(ip) {
 
 // Get client IP from request
 function getClientIP(req) {
-    return req.headers['x-forwarded-for']?.split(',')[0] ||
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
            req.headers['x-real-ip'] ||
            req.connection?.remoteAddress ||
            req.socket?.remoteAddress ||
            '127.0.0.1';
+}
+
+// Check if request is from a bot
+function isBot(userAgent) {
+    if (!userAgent) return false;
+    const botPatterns = [
+        /bot/i, /crawler/i, /spider/i, /crawling/i,
+        /googlebot/i, /bingbot/i, /yandex/i, /baidu/i,
+        /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i,
+        /slackbot/i, /telegrambot/i, /whatsapp/i,
+        /pingdom/i, /uptimerobot/i, /statuscake/i,
+        /lighthouse/i, /pagespeed/i, /gtmetrix/i,
+        /headless/i, /phantom/i, /selenium/i, /puppeteer/i,
+        /vercel/i, /curl/i, /wget/i, /python/i, /axios/i, /node-fetch/i
+    ];
+    return botPatterns.some(pattern => pattern.test(userAgent));
 }
 
 // Track event endpoint
@@ -336,10 +352,16 @@ app.post('/api/analytics/track', async (req, res) => {
         await connectDB();
         const { eventType, page, referrer, language, sessionId, metadata } = req.body;
         const ip = getClientIP(req);
+        const userAgent = req.headers['user-agent'];
 
         // Skip tracking for localhost/private IPs
         if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-            return res.json({ success: true, skipped: true });
+            return res.json({ success: true, skipped: 'localhost' });
+        }
+
+        // Skip tracking for bots
+        if (isBot(userAgent)) {
+            return res.json({ success: true, skipped: 'bot' });
         }
 
         const geo = await getGeoFromIP(ip);
