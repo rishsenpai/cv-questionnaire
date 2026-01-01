@@ -336,6 +336,12 @@ app.post('/api/analytics/track', async (req, res) => {
         await connectDB();
         const { eventType, page, referrer, language, sessionId, metadata } = req.body;
         const ip = getClientIP(req);
+
+        // Skip tracking for localhost/private IPs
+        if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+            return res.json({ success: true, skipped: true });
+        }
+
         const geo = await getGeoFromIP(ip);
 
         const event = new Analytics({
@@ -381,68 +387,76 @@ app.get('/api/analytics/summary', async (req, res) => {
 
         const dateFilter = { $gte: startDate, $lte: endDate };
 
+        // Exclude localhost/test data
+        const excludeLocal = { 'geo.countryCode': { $ne: 'LO' } };
+
         // Total pageviews
         const totalPageviews = await Analytics.countDocuments({
             eventType: 'pageview',
-            createdAt: dateFilter
+            createdAt: dateFilter,
+            ...excludeLocal
         });
 
         // Unique sessions
         const uniqueSessions = await Analytics.distinct('sessionId', {
-            createdAt: dateFilter
+            createdAt: dateFilter,
+            ...excludeLocal
         });
 
         // CV submissions
         const cvSubmissions = await Analytics.countDocuments({
             eventType: 'cv_submission',
-            createdAt: dateFilter
+            createdAt: dateFilter,
+            ...excludeLocal
         });
 
         // CV uploads vs manual
         const cvUploads = await Analytics.countDocuments({
             eventType: 'cv_upload',
-            createdAt: dateFilter
+            createdAt: dateFilter,
+            ...excludeLocal
         });
 
         const cvManual = await Analytics.countDocuments({
             eventType: 'cv_manual',
-            createdAt: dateFilter
+            createdAt: dateFilter,
+            ...excludeLocal
         });
 
         // Pageviews per page
         const pageviewsByPage = await Analytics.aggregate([
-            { $match: { eventType: 'pageview', createdAt: dateFilter } },
+            { $match: { eventType: 'pageview', createdAt: dateFilter, 'geo.countryCode': { $ne: 'LO' } } },
             { $group: { _id: '$page', count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
         ]);
 
-        // Visitors by country
+        // Visitors by country (exclude localhost)
         const visitorsByCountry = await Analytics.aggregate([
-            { $match: { createdAt: dateFilter, 'geo.countryCode': { $exists: true } } },
+            { $match: { createdAt: dateFilter, 'geo.countryCode': { $exists: true, $ne: 'LO' } } },
             { $group: { _id: { country: '$geo.country', code: '$geo.countryCode' }, count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
         ]);
 
-        // Visitors by city
+        // Visitors by city (exclude localhost)
         const visitorsByCity = await Analytics.aggregate([
-            { $match: { createdAt: dateFilter, 'geo.city': { $exists: true, $ne: null } } },
+            { $match: { createdAt: dateFilter, 'geo.city': { $exists: true, $nin: [null, 'Localhost'] } } },
             { $group: { _id: '$geo.city', count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
         ]);
 
-        // Language usage
+        // Language usage (exclude localhost)
         const languageUsage = await Analytics.aggregate([
-            { $match: { createdAt: dateFilter, language: { $exists: true } } },
+            { $match: { createdAt: dateFilter, language: { $exists: true }, 'geo.countryCode': { $ne: 'LO' } } },
             { $group: { _id: '$language', count: { $sum: 1 } } },
             { $sort: { count: -1 } }
         ]);
 
-        // Daily pageviews for chart
+        // Daily pageviews for chart (exclude localhost)
         const dailyPageviews = await Analytics.aggregate([
-            { $match: { eventType: 'pageview', createdAt: dateFilter } },
+            { $match: { eventType: 'pageview', createdAt: dateFilter, 'geo.countryCode': { $ne: 'LO' } } },
             {
                 $group: {
                     _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
