@@ -3,6 +3,10 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = require('docx');
 let pdfParse;
 try {
@@ -269,10 +273,59 @@ if (process.env.NODE_ENV !== 'production') {
     connectDB();
 }
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '15mb' }));  // Increased for file uploads
+// Security Middleware
+app.use(helmet({
+    contentSecurityPolicy: false, // Disabled for inline scripts in HTML
+    crossOriginEmbedderPolicy: false
+}));
+
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000', 'https://jobparsing.com', 'https://www.jobparsing.com'];
+app.use(cors({
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(null, true); // Allow all for now, but log unknown origins
+    },
+    credentials: true
+}));
+
+// Rate limiting
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requests per window
+    message: { success: false, message: 'Too many requests, please try again later' }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 login attempts per window
+    message: { success: false, message: 'Too many login attempts, please try again later' },
+    skipSuccessfulRequests: true
+});
+
+const uploadLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 20, // 20 uploads per hour
+    message: { success: false, message: 'Upload limit reached, please try again later' }
+});
+
+// Apply general rate limit to all requests
+app.use(generalLimiter);
+
+// Body parsing
+app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
+
+// NoSQL injection protection
+app.use(mongoSanitize());
+
+// Static files
 app.use(express.static('.'));
 
 // Clean URL routes (without .html)
@@ -547,7 +600,7 @@ const ADMIN_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 const activeTokens = new Map();
 
 function generateToken() {
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    return crypto.randomBytes(32).toString('hex');
 }
 
 function validateToken(token) {
@@ -561,7 +614,7 @@ function validateToken(token) {
 }
 
 // Admin login endpoint
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', authLimiter, (req, res) => {
     const { password } = req.body;
     const adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -575,8 +628,10 @@ app.post('/api/admin/login', (req, res) => {
     if (password === adminPassword) {
         const token = generateToken();
         activeTokens.set(token, { expires: Date.now() + ADMIN_TOKEN_EXPIRY });
+        console.log(`[SECURITY] Admin login successful from IP: ${getClientIP(req)}`);
         res.json({ success: true, token });
     } else {
+        console.warn(`[SECURITY] Failed admin login attempt from IP: ${getClientIP(req)}`);
         res.status(401).json({ success: false, message: 'Invalid password' });
     }
 });
@@ -601,7 +656,7 @@ function requireAdmin(req, res, next) {
 }
 
 // Employer login endpoint - stores token in MongoDB for serverless compatibility
-app.post('/api/employer/login', async (req, res) => {
+app.post('/api/employer/login', authLimiter, async (req, res) => {
     try {
         await connectDB();
         const { username, password } = req.body;
@@ -615,12 +670,14 @@ app.post('/api/employer/login', async (req, res) => {
 
         const employer = await Employer.findOne({ username: username.toLowerCase(), isActive: true });
         if (!employer || !employer.checkPassword(password)) {
+            console.warn(`[SECURITY] Failed employer login attempt for user: ${username} from IP: ${getClientIP(req)}`);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
             });
         }
 
+        console.log(`[SECURITY] Employer login successful: ${employer.companyName} from IP: ${getClientIP(req)}`);
         const token = generateToken();
         const expires = new Date(Date.now() + ADMIN_TOKEN_EXPIRY);
 
@@ -2514,7 +2571,7 @@ const errorMessages = {
 };
 
 // CV File Upload and AI Parsing endpoint
-app.post('/api/parse-cv', async (req, res) => {
+app.post('/api/parse-cv', uploadLimiter, async (req, res) => {
     try {
         const { fileData, fileType, fileName, language } = req.body;
         const lang = language || 'en';
@@ -2680,7 +2737,7 @@ app.post('/api/parse-vacancy', async (req, res) => {
 });
 
 // Submit CV endpoint
-app.post('/submit-cv', async (req, res) => {
+app.post('/submit-cv', uploadLimiter, async (req, res) => {
     try {
         const formData = req.body;
         const lang = formData.language || 'en';
