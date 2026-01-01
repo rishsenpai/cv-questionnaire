@@ -1422,3 +1422,181 @@ input[name="birthDate"].typing-mode {
         max-width: 280px;
     }
 }
+
+/* Extra small screens */
+@media (max-width: 400px) {
+    body {
+        padding: 5px;
+    }
+
+    .container {
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    #questionnaire {
+        padding: 50px 16px 16px;
+    }
+
+    .question-container {
+        left: 16px;
+        right: 16px;
+    }
+
+    .language-toggle {
+        top: 8px;
+        right: 8px;
+        flex-wrap: wrap;
+        gap: 4px;
+        max-width: calc(100% - 16px);
+        justify-content: flex-end;
+    }
+
+    .lang-buttons {
+        order: 1;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .demo-btn,
+    .feedback-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+        order: 2;
+    }
+
+    .lang-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+    }
+
+    .flag-icon {
+        width: 14px;
+        height: 10px;
+    }
+
+    .question h2 {
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+
+    .question label {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    .question input,
+    .question textarea {
+        padding: 12px 14px;
+        font-size: 16px;
+    }
+
+    .navigation {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .navigation button {
+        padding: 10px 16px;
+        font-size: 13px;
+        flex: 1;
+        min-width: 100px;
+    }
+
+    #prevBtn,
+    #backToChoiceNav {
+        flex: 0 0 auto;
+    }
+
+    .generate-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+        width: 100%;
+    }
+
+    .modal-content {
+        margin: 0;
+        border-radius: 0;
+        max-height: 100vh;
+        width: 100%;
+    }
+
+    #cvPreview {
+        padding: 20px 16px;
+    }
+
+    .cv-header {
+        padding: 16px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+    }
+
+    .cv-name {
+        font-size: 22px !important;
+    }
+
+    .cv-title {
+        font-size: 16px !important;
+    }
+
+    .cv-section {
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: 8px;
+    }
+
+    .cv-section-title {
+        font-size: 14px !important;
+    }
+
+    .cv-content {
+        font-size: 13px;
+        padding-left: 12px;
+    }
+
+    .feedback-modal {
+        padding: 20px 16px;
+    }
+
+    .feedback-modal h2 {
+        font-size: 20px;
+    }
+
+    .feedback-buttons {
+        flex-direction: column;
+    }
+
+    .cancel-feedback-btn,
+    .submit-feedback-btn {
+        width: 100%;
+    }
+
+    .upload-box {
+        padding: 20px 16px;
+    }
+
+    .upload-icon {
+        font-size: 36px;
+    }
+
+    .upload-text {
+        font-size: 14px;
+    }
+
+    .cv-choice-card {
+        padding: 20px 16px;
+    }
+
+    .choice-card-icon {
+        font-size: 36px;
+    }
+
+    .cv-choice-card h3 {
+        font-size: 16px;
+    }
+
+    .cv-choice-card p {
+        font-size: 13px;
+    }
+}
