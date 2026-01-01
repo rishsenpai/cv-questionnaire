@@ -22,6 +22,10 @@
                     referrer: document.referrer,
                     language: localStorage.getItem('preferredLanguage') || 'nl',
                     sessionId: getSessionId(),
+                    screen: {
+                        width: window.screen.width,
+                        height: window.screen.height
+                    },
                     metadata
                 })
             });

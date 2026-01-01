@@ -23,6 +23,28 @@ const analyticsSchema = new mongoose.Schema({
         type: String
     },
 
+    // Device information (parsed from user agent)
+    device: {
+        type: {
+            type: String,  // desktop, mobile, tablet
+            enum: ['desktop', 'mobile', 'tablet', 'unknown']
+        },
+        os: String,        // Windows, macOS, iOS, Android, Linux
+        osVersion: String
+    },
+
+    // Browser information (parsed from user agent)
+    browser: {
+        name: String,      // Chrome, Firefox, Safari, Edge
+        version: String
+    },
+
+    // Screen information (from client)
+    screen: {
+        width: Number,
+        height: Number
+    },
+
     // Language preference
     language: {
         type: String
@@ -62,5 +84,7 @@ analyticsSchema.index({ eventType: 1, createdAt: -1 });
 analyticsSchema.index({ 'geo.countryCode': 1 });
 analyticsSchema.index({ page: 1 });
 analyticsSchema.index({ sessionId: 1 });
+analyticsSchema.index({ 'device.type': 1 });
+analyticsSchema.index({ 'browser.name': 1 });
 
 module.exports = mongoose.models.Analytics || mongoose.model('Analytics', analyticsSchema);

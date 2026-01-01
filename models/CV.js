@@ -83,6 +83,11 @@ const cvSchema = new mongoose.Schema({
     embeddingModel: {
         type: String,
         default: 'text-embedding-3-small'
+    },
+    // Hash of text used for embedding (for deduplication)
+    textHash: {
+        type: String,
+        index: true  // Index for quick lookup
     }
 }, {
     timestamps: true

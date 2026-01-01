@@ -1,4 +1,5 @@
 const OpenAI = require('openai');
+const crypto = require('crypto');
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -7,6 +8,19 @@ const openai = new OpenAI({
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const MAX_TOKENS = 8000; // Safe limit for embedding model
+
+/**
+ * Generate a hash from text for deduplication
+ * Uses SHA-256 for fast, collision-resistant hashing
+ * @param {string} text - Text to hash
+ * @returns {string} - Hex hash of the text
+ */
+function generateTextHash(text) {
+    if (!text) return null;
+    // Normalize text: trim, lowercase, remove extra whitespace
+    const normalizedText = text.trim().toLowerCase().replace(/\s+/g, ' ');
+    return crypto.createHash('sha256').update(normalizedText).digest('hex');
+}
 
 /**
  * Generate a deterministic mock embedding based on text hash (for tests)
@@ -282,6 +296,7 @@ Keep the original language of the vacancy content.`;
 module.exports = {
     generateEmbedding,
     generateEmbeddings,
+    generateTextHash,
     cosineSimilarity,
     prepareCVText,
     findMatches,

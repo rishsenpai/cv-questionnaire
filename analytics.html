@@ -557,6 +557,47 @@
                     <canvas id="languageChart"></canvas>
                 </div>
             </div>
+
+            <!-- Device & Browser Analytics -->
+            <h3 style="margin: 30px 0 20px; color: #2d3748; font-size: 20px;">Device & Browser Analytics</h3>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title">Device Types</h3>
+                    <canvas id="deviceChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Browsers</h3>
+                    <canvas id="browserChart"></canvas>
+                </div>
+            </div>
+
+            <div class="tables-grid" style="margin-top: 20px;">
+                <div class="table-card">
+                    <h3 class="table-title">Besturingssystemen</h3>
+                    <table class="data-table" id="osTable">
+                        <thead>
+                            <tr>
+                                <th>OS</th>
+                                <th>Bezoekers</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="table-card">
+                    <h3 class="table-title">Schermresoluties</h3>
+                    <table class="data-table" id="screenTable">
+                        <thead>
+                            <tr>
+                                <th>Resolutie</th>
+                                <th>Bezoekers</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
     </div> <!-- end main-content -->
@@ -565,6 +606,8 @@
         let pageviewsChart = null;
         let cvMethodChart = null;
         let languageChart = null;
+        let deviceChart = null;
+        let browserChart = null;
         let currentDays = 30;
         let currentPage = 'all';
         let fullData = null;
@@ -878,6 +921,26 @@
                 col1: formatPage(item._id),
                 col2: item.count
             }));
+
+            // Device & Browser charts (if data exists)
+            if (data.deviceTypes) {
+                renderDeviceChart(data.deviceTypes);
+            }
+            if (data.browsers) {
+                renderBrowserChart(data.browsers);
+            }
+            if (data.operatingSystems) {
+                renderTable('osTable', data.operatingSystems, (item) => ({
+                    col1: item._id || 'Onbekend',
+                    col2: item.count
+                }));
+            }
+            if (data.screenSizes) {
+                renderTable('screenTable', data.screenSizes, (item) => ({
+                    col1: item._id || 'Onbekend',
+                    col2: item.count
+                }));
+            }
         }
 
         // Render pageviews line chart
@@ -966,6 +1029,75 @@
                     },
                     scales: {
                         y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Render device type doughnut chart
+        function renderDeviceChart(deviceData) {
+            const ctx = document.getElementById('deviceChart').getContext('2d');
+
+            if (deviceChart) {
+                deviceChart.destroy();
+            }
+
+            const deviceNames = { desktop: 'Desktop', mobile: 'Mobiel', tablet: 'Tablet', unknown: 'Onbekend' };
+            const deviceColors = { desktop: '#667eea', mobile: '#38a169', tablet: '#dd6b20', unknown: '#a0aec0' };
+
+            deviceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: deviceData.map(d => deviceNames[d._id] || d._id),
+                    datasets: [{
+                        data: deviceData.map(d => d.count),
+                        backgroundColor: deviceData.map(d => deviceColors[d._id] || '#a0aec0')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        // Render browser bar chart
+        function renderBrowserChart(browserData) {
+            const ctx = document.getElementById('browserChart').getContext('2d');
+
+            if (browserChart) {
+                browserChart.destroy();
+            }
+
+            const browserColors = {
+                'Chrome': '#4285F4',
+                'Safari': '#000000',
+                'Firefox': '#FF7139',
+                'Edge': '#0078D4',
+                'Opera': '#FF1B2D',
+                'IE': '#0076D6'
+            };
+
+            browserChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: browserData.map(d => d._id || 'Onbekend'),
+                    datasets: [{
+                        label: 'Bezoekers',
+                        data: browserData.map(d => d.count),
+                        backgroundColor: browserData.map(d => browserColors[d._id] || '#a0aec0')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true }
                     }
                 }
             });

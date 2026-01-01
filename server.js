@@ -22,7 +22,7 @@ const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
 const Analytics = require('./models/Analytics');
-const { generateEmbedding, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI, parseVacancyWithAI } = require('./utils/embeddings');
+const { generateEmbedding, generateTextHash, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI, parseVacancyWithAI } = require('./utils/embeddings');
 const natural = require('natural');
 const TfIdf = natural.TfIdf;
 
@@ -399,11 +399,82 @@ function isBot(userAgent) {
     return botPatterns.some(pattern => pattern.test(userAgent));
 }
 
+// Parse user agent for device and browser info
+function parseUserAgent(userAgent) {
+    if (!userAgent) return { device: { type: 'unknown' }, browser: {} };
+
+    const ua = userAgent.toLowerCase();
+    const result = {
+        device: { type: 'desktop', os: null, osVersion: null },
+        browser: { name: null, version: null }
+    };
+
+    // Detect device type
+    if (/ipad|tablet|playbook|silk/i.test(ua) || (/android/i.test(ua) && !/mobile/i.test(ua))) {
+        result.device.type = 'tablet';
+    } else if (/mobile|iphone|ipod|android.*mobile|windows phone|blackberry|opera mini|opera mobi/i.test(ua)) {
+        result.device.type = 'mobile';
+    }
+
+    // Detect OS
+    if (/windows nt 10/i.test(ua)) {
+        result.device.os = 'Windows';
+        result.device.osVersion = '10/11';
+    } else if (/windows nt/i.test(ua)) {
+        result.device.os = 'Windows';
+        const match = ua.match(/windows nt ([\d.]+)/i);
+        result.device.osVersion = match ? match[1] : null;
+    } else if (/macintosh|mac os x/i.test(ua)) {
+        result.device.os = 'macOS';
+        const match = ua.match(/mac os x ([\d_]+)/i);
+        result.device.osVersion = match ? match[1].replace(/_/g, '.') : null;
+    } else if (/iphone|ipad|ipod/i.test(ua)) {
+        result.device.os = 'iOS';
+        const match = ua.match(/os ([\d_]+)/i);
+        result.device.osVersion = match ? match[1].replace(/_/g, '.') : null;
+    } else if (/android/i.test(ua)) {
+        result.device.os = 'Android';
+        const match = ua.match(/android ([\d.]+)/i);
+        result.device.osVersion = match ? match[1] : null;
+    } else if (/linux/i.test(ua)) {
+        result.device.os = 'Linux';
+    }
+
+    // Detect browser (order matters - check specific browsers first)
+    if (/edg\//i.test(ua)) {
+        result.browser.name = 'Edge';
+        const match = ua.match(/edg\/([\d.]+)/i);
+        result.browser.version = match ? match[1].split('.')[0] : null;
+    } else if (/opr\/|opera/i.test(ua)) {
+        result.browser.name = 'Opera';
+        const match = ua.match(/(?:opr|opera)[\/\s]([\d.]+)/i);
+        result.browser.version = match ? match[1].split('.')[0] : null;
+    } else if (/chrome|crios/i.test(ua) && !/edg/i.test(ua)) {
+        result.browser.name = 'Chrome';
+        const match = ua.match(/(?:chrome|crios)\/([\d.]+)/i);
+        result.browser.version = match ? match[1].split('.')[0] : null;
+    } else if (/safari/i.test(ua) && !/chrome|chromium/i.test(ua)) {
+        result.browser.name = 'Safari';
+        const match = ua.match(/version\/([\d.]+)/i);
+        result.browser.version = match ? match[1].split('.')[0] : null;
+    } else if (/firefox|fxios/i.test(ua)) {
+        result.browser.name = 'Firefox';
+        const match = ua.match(/(?:firefox|fxios)\/([\d.]+)/i);
+        result.browser.version = match ? match[1].split('.')[0] : null;
+    } else if (/msie|trident/i.test(ua)) {
+        result.browser.name = 'IE';
+        const match = ua.match(/(?:msie |rv:)([\d.]+)/i);
+        result.browser.version = match ? match[1] : null;
+    }
+
+    return result;
+}
+
 // Track event endpoint
 app.post('/api/analytics/track', async (req, res) => {
     try {
         await connectDB();
-        const { eventType, page, referrer, language, sessionId, metadata } = req.body;
+        const { eventType, page, referrer, language, sessionId, screen, metadata } = req.body;
         const ip = getClientIP(req);
         const userAgent = req.headers['user-agent'];
 
@@ -418,12 +489,16 @@ app.post('/api/analytics/track', async (req, res) => {
         }
 
         const geo = await getGeoFromIP(ip);
+        const { device, browser } = parseUserAgent(userAgent);
 
         const event = new Analytics({
             eventType,
             page,
             referrer,
-            userAgent: req.headers['user-agent'],
+            userAgent,
+            device,
+            browser,
+            screen: screen ? { width: screen.width, height: screen.height } : undefined,
             language,
             sessionId,
             metadata,
@@ -571,6 +646,42 @@ app.get('/api/analytics/summary', async (req, res) => {
             }
         ]);
 
+        // Device type distribution
+        const deviceTypes = await Analytics.aggregate([
+            { $match: { createdAt: dateFilter, 'device.type': { $exists: true }, 'geo.countryCode': { $ne: 'LO' } } },
+            { $group: { _id: '$device.type', count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        // Browser distribution
+        const browsers = await Analytics.aggregate([
+            { $match: { createdAt: dateFilter, 'browser.name': { $exists: true, $ne: null }, 'geo.countryCode': { $ne: 'LO' } } },
+            { $group: { _id: '$browser.name', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // OS distribution
+        const operatingSystems = await Analytics.aggregate([
+            { $match: { createdAt: dateFilter, 'device.os': { $exists: true, $ne: null }, 'geo.countryCode': { $ne: 'LO' } } },
+            { $group: { _id: '$device.os', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Screen resolution distribution (group by common sizes)
+        const screenSizes = await Analytics.aggregate([
+            { $match: { createdAt: dateFilter, 'screen.width': { $exists: true }, 'geo.countryCode': { $ne: 'LO' } } },
+            {
+                $group: {
+                    _id: { $concat: [{ $toString: '$screen.width' }, 'x', { $toString: '$screen.height' }] },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
         res.json({
             success: true,
             data: {
@@ -586,7 +697,11 @@ app.get('/api/analytics/summary', async (req, res) => {
                 visitorsByCity,
                 languageUsage,
                 dailyPageviews,
-                dailyCVs
+                dailyCVs,
+                deviceTypes,
+                browsers,
+                operatingSystems,
+                screenSizes
             }
         });
     } catch (error) {
@@ -1645,8 +1760,9 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
                     message: t.cvInsufficientText
                 });
             }
+            const textHash = generateTextHash(textToEmbed);
             cvEmbedding = await generateEmbedding(textToEmbed);
-            await CV.findByIdAndUpdate(cv._id, { embedding: cvEmbedding });
+            await CV.findByIdAndUpdate(cv._id, { embedding: cvEmbedding, textHash });
             console.log(`Generated and cached embedding for CV: ${cv.fullName}`);
         }
 
@@ -1748,8 +1864,9 @@ app.post('/api/admin/generate-embeddings', requireAdmin, async (req, res) => {
                 try {
                     const textToEmbed = prepareCVText(cv);
                     if (textToEmbed && textToEmbed.trim().length >= 50) {
+                        const textHash = generateTextHash(textToEmbed);
                         const embedding = await generateEmbedding(textToEmbed);
-                        await CV.findByIdAndUpdate(cv._id, { embedding });
+                        await CV.findByIdAndUpdate(cv._id, { embedding, textHash });
                         embeddingProgress.current++;
                         console.log(`Embedding ${embeddingProgress.current}/${totalToProcess}: ${cv.fullName}`);
                     } else {
@@ -3341,10 +3458,10 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
     }
 });
 
-// Helper function to generate embedding for a CV
+// Helper function to generate embedding for a CV (with hash-based deduplication)
 async function generateCVEmbedding(cvId) {
     try {
-        const cv = await CV.findById(cvId);
+        const cv = await CV.findById(cvId).select('+textHash');
         if (!cv) return;
 
         const textToEmbed = prepareCVText(cv);
@@ -3353,8 +3470,17 @@ async function generateCVEmbedding(cvId) {
             return;
         }
 
+        // Generate hash to check if text has changed
+        const newHash = generateTextHash(textToEmbed);
+
+        // Skip if hash hasn't changed (text is the same)
+        if (cv.textHash && cv.textHash === newHash && cv.embedding && cv.embedding.length > 0) {
+            console.log(`Skipping embedding for CV ${cv.fullName}: text unchanged (hash match)`);
+            return;
+        }
+
         const embedding = await generateEmbedding(textToEmbed);
-        await CV.findByIdAndUpdate(cvId, { embedding });
+        await CV.findByIdAndUpdate(cvId, { embedding, textHash: newHash });
         console.log(`Embedding generated for CV: ${cv.fullName}`);
     } catch (error) {
         console.error(`Failed to generate embedding for CV ${cvId}:`, error.message);
