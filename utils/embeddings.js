@@ -9,6 +9,30 @@ const EMBEDDING_MODEL = 'text-embedding-3-small';
 const MAX_TOKENS = 8000; // Safe limit for embedding model
 
 /**
+ * Generate a deterministic mock embedding based on text hash (for tests)
+ * @param {string} text - Text to create mock embedding for
+ * @returns {number[]} - Mock embedding vector (1536 dimensions)
+ */
+function generateMockEmbedding(text) {
+    // Create a simple hash from the text for deterministic results
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+        const char = text.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+
+    // Generate deterministic "embedding" based on hash
+    const embedding = [];
+    for (let i = 0; i < 1536; i++) {
+        // Use hash + index to generate pseudo-random but deterministic values
+        const seed = hash + i * 31;
+        embedding.push(Math.sin(seed) * 0.5);
+    }
+    return embedding;
+}
+
+/**
  * Generate embedding for text using OpenAI
  * @param {string} text - Text to embed
  * @returns {Promise<number[]>} - Embedding vector (1536 dimensions)
@@ -16,6 +40,12 @@ const MAX_TOKENS = 8000; // Safe limit for embedding model
 async function generateEmbedding(text) {
     if (!text || text.trim().length === 0) {
         throw new Error('Text is required for embedding');
+    }
+
+    // Use mock embeddings in test mode to avoid API costs
+    if (process.env.NODE_ENV === 'test') {
+        console.log('Test mode: using mock embedding');
+        return generateMockEmbedding(text);
     }
 
     if (!process.env.OPENAI_API_KEY) {
@@ -197,6 +227,58 @@ Keep the original language of the CV content for experience, education, skills, 
     }
 }
 
+/**
+ * Parse vacancy text using GPT to extract structured fields
+ * @param {string} vacancyText - Raw text extracted from vacancy document
+ * @returns {Promise<Object>} - Structured vacancy data
+ */
+async function parseVacancyWithAI(vacancyText) {
+    if (!vacancyText || vacancyText.trim().length < 30) {
+        throw new Error('Vacancy text is too short to parse');
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY is not configured');
+    }
+
+    const systemPrompt = `You are a job vacancy parser. Extract information from the vacancy text and return a JSON object with the following fields. If a field cannot be found, make a reasonable inference or use an empty string.
+
+IMPORTANT: Return ONLY valid JSON, no markdown, no explanation.
+
+Fields to extract:
+- title: Job title (e.g., "Senior Software Developer", "Marketing Manager")
+- location: Work location (city, country, or "Remote")
+- requirements: Full description of the job including requirements, responsibilities, qualifications, and any other relevant details. Combine all relevant information into one comprehensive text.
+
+Keep the original language of the vacancy content.`;
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Parse this vacancy:\n\n${vacancyText.slice(0, 15000)}` }
+            ],
+            temperature: 0.1,
+            max_tokens: 4000
+        });
+
+        const content = response.choices[0].message.content.trim();
+
+        // Try to parse JSON, handling potential markdown code blocks
+        let jsonStr = content;
+        if (content.startsWith('```')) {
+            jsonStr = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+        }
+
+        const parsed = JSON.parse(jsonStr);
+        return parsed;
+    } catch (error) {
+        console.error('Error parsing vacancy with AI:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     generateEmbedding,
     generateEmbeddings,
@@ -204,5 +286,6 @@ module.exports = {
     prepareCVText,
     findMatches,
     parseCVWithAI,
+    parseVacancyWithAI,
     EMBEDDING_MODEL
 };

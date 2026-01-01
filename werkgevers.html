@@ -336,6 +336,56 @@
             resize: vertical;
         }
 
+        /* Vacancy upload */
+        .vacancy-upload-box {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .vacancy-upload-box:hover {
+            border-color: #2ec4b6;
+            background: rgba(46, 196, 182, 0.1);
+        }
+
+        .vacancy-upload-box.drag-over {
+            border-color: #2ec4b6;
+            background: rgba(46, 196, 182, 0.15);
+            transform: scale(1.02);
+        }
+
+        .vacancy-upload-status {
+            text-align: center;
+            padding: 24px;
+            background: rgba(46, 196, 182, 0.1);
+            border: 2px solid #2ec4b6;
+            border-radius: 12px;
+        }
+
+        .vacancy-upload-status .upload-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(46, 196, 182, 0.3);
+            border-top-color: #2ec4b6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        .vacancy-upload-status.upload-success {
+            background: rgba(72, 187, 120, 0.1);
+            border-color: #48bb78;
+        }
+
+        .vacancy-upload-status.upload-error {
+            background: rgba(245, 101, 101, 0.1);
+            border-color: #f56565;
+        }
+
         /* Vacancy cards */
         .vacancy-grid {
             display: grid;
@@ -2089,6 +2139,23 @@
             <div class="tab-content" id="vacanciesTab">
                 <div class="vacancy-form">
                     <h3 style="margin-bottom: 16px; font-size: 16px;">Nieuwe Vacature Toevoegen</h3>
+
+                    <!-- Vacancy Upload Section -->
+                    <div class="vacancy-upload-section" style="margin-bottom: 20px;">
+                        <div class="vacancy-upload-box" id="vacancyUploadBox">
+                            <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
+                            <p style="margin-bottom: 4px; font-weight: 500;">Upload vacature document</p>
+                            <p style="font-size: 12px; color: #a0aec0;">PDF of Word (.docx) - AI vult automatisch in</p>
+                            <input type="file" id="vacancyFileInput" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+                        </div>
+                        <div class="vacancy-upload-status" id="vacancyUploadStatus" style="display: none;">
+                            <div class="upload-spinner"></div>
+                            <p id="vacancyUploadStatusText">Vacature analyseren met AI...</p>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin: 16px 0; color: #718096; font-size: 14px;">— of vul handmatig in —</div>
+
                     <form id="vacancyForm">
                         <div class="form-group">
                             <label>Vacature Titel *</label>
@@ -3178,6 +3245,103 @@
             `).join('');
         }
 
+        // Vacancy file upload
+        const vacancyUploadBox = document.getElementById('vacancyUploadBox');
+        const vacancyFileInput = document.getElementById('vacancyFileInput');
+        const vacancyUploadStatus = document.getElementById('vacancyUploadStatus');
+        const vacancyUploadStatusText = document.getElementById('vacancyUploadStatusText');
+
+        if (vacancyUploadBox && vacancyFileInput) {
+            vacancyUploadBox.addEventListener('click', () => vacancyFileInput.click());
+
+            vacancyUploadBox.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                vacancyUploadBox.classList.add('drag-over');
+            });
+
+            vacancyUploadBox.addEventListener('dragleave', () => {
+                vacancyUploadBox.classList.remove('drag-over');
+            });
+
+            vacancyUploadBox.addEventListener('drop', (e) => {
+                e.preventDefault();
+                vacancyUploadBox.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file) handleVacancyUpload(file);
+            });
+
+            vacancyFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) handleVacancyUpload(file);
+            });
+        }
+
+        async function handleVacancyUpload(file) {
+            const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            if (!validTypes.includes(file.type) && !file.name.endsWith('.docx')) {
+                showAlert({ icon: '❌', title: 'Fout', message: 'Upload een PDF of Word document (.docx)' });
+                return;
+            }
+
+            vacancyUploadBox.style.display = 'none';
+            vacancyUploadStatus.style.display = 'block';
+            vacancyUploadStatus.classList.remove('upload-success', 'upload-error');
+            vacancyUploadStatusText.textContent = 'Vacature analyseren met AI...';
+
+            try {
+                const base64Data = await fileToBase64(file);
+                const response = await fetch('/api/parse-vacancy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileData: base64Data,
+                        fileType: file.type,
+                        fileName: file.name
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    vacancyUploadStatus.classList.add('upload-success');
+                    vacancyUploadStatusText.textContent = 'Vacature geanalyseerd! Formulier wordt ingevuld...';
+
+                    setTimeout(() => {
+                        // Fill form with parsed data
+                        if (result.data.title) document.getElementById('vacancyTitle').value = result.data.title;
+                        if (result.data.location) document.getElementById('vacancyLocation').value = result.data.location;
+                        if (result.data.requirements) document.getElementById('vacancyRequirements').value = result.data.requirements;
+
+                        // Reset upload UI
+                        vacancyUploadStatus.style.display = 'none';
+                        vacancyUploadStatus.classList.remove('upload-success');
+                        vacancyUploadBox.style.display = 'block';
+                    }, 1500);
+                } else {
+                    throw new Error(result.message || 'Fout bij analyseren vacature');
+                }
+            } catch (error) {
+                console.error('Vacancy upload error:', error);
+                vacancyUploadStatus.classList.add('upload-error');
+                vacancyUploadStatusText.textContent = error.message || 'Fout bij analyseren. Probeer opnieuw.';
+
+                setTimeout(() => {
+                    vacancyUploadStatus.style.display = 'none';
+                    vacancyUploadStatus.classList.remove('upload-error');
+                    vacancyUploadBox.style.display = 'block';
+                }, 3000);
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
         // Vacancy form submit
         document.getElementById('vacancyForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -3282,6 +3446,18 @@
                     }
                     if (result.totalWithEmbeddings !== undefined) {
                         console.log(`AI Matching: ${result.totalWithEmbeddings} CV's met embeddings`);
+                    }
+
+                    // Track high-quality matches (>80%)
+                    const highMatches = result.matches.filter(m => m.matchScore > 80);
+                    if (highMatches.length > 0 && window.jpTrack) {
+                        window.jpTrack('high_match', {
+                            vacancyId: vacancyId,
+                            matchType: matchType,
+                            totalMatches: result.matches.length,
+                            highMatches: highMatches.length,
+                            topScore: Math.max(...result.matches.map(m => m.matchScore))
+                        });
                     }
                 } else {
                     const errorMsg = result.message || 'Fout bij matchen';
@@ -3396,5 +3572,6 @@
         </div>
     </div>
 <script src="cv-viewer.js"></script>
+<script src="/tracking.js"></script>
 </body>
 </html>

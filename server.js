@@ -17,9 +17,20 @@ const CV = require('./models/CV');
 const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
-const { generateEmbedding, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI } = require('./utils/embeddings');
+const Analytics = require('./models/Analytics');
+const { generateEmbedding, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI, parseVacancyWithAI } = require('./utils/embeddings');
 const natural = require('natural');
 const TfIdf = natural.TfIdf;
+
+// Global progress tracker for embedding generation
+let embeddingProgress = {
+    active: false,
+    current: 0,
+    total: 0,
+    currentName: '',
+    failed: 0,
+    startedAt: null
+};
 
 // Dutch/English stopwords to ignore in matching
 const stopwords = new Set([
@@ -263,6 +274,235 @@ app.use(cors());
 app.use(express.json({ limit: '15mb' }));  // Increased for file uploads
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static('.'));
+
+// Clean URL routes (without .html)
+app.get('/vragenlijst', (req, res) => {
+    res.sendFile(path.join(__dirname, 'vragenlijst.html'));
+});
+
+app.get('/werkgevers', (req, res) => {
+    res.sendFile(path.join(__dirname, 'werkgevers.html'));
+});
+
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/analytics', (req, res) => {
+    res.sendFile(path.join(__dirname, 'analytics.html'));
+});
+
+// ============ ANALYTICS ============
+
+// Get geolocation from IP using ip-api.com (free)
+async function getGeoFromIP(ip) {
+    try {
+        // Skip localhost/private IPs
+        if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+            return { country: 'Local', countryCode: 'LO', city: 'Localhost' };
+        }
+
+        const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,city,lat,lon`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            return {
+                country: data.country,
+                countryCode: data.countryCode,
+                region: data.region,
+                city: data.city,
+                lat: data.lat,
+                lon: data.lon
+            };
+        }
+    } catch (error) {
+        console.error('Geolocation error:', error);
+    }
+    return null;
+}
+
+// Get client IP from request
+function getClientIP(req) {
+    return req.headers['x-forwarded-for']?.split(',')[0] ||
+           req.headers['x-real-ip'] ||
+           req.connection?.remoteAddress ||
+           req.socket?.remoteAddress ||
+           '127.0.0.1';
+}
+
+// Track event endpoint
+app.post('/api/analytics/track', async (req, res) => {
+    try {
+        const { eventType, page, referrer, language, sessionId, metadata } = req.body;
+        const ip = getClientIP(req);
+        const geo = await getGeoFromIP(ip);
+
+        const event = new Analytics({
+            eventType,
+            page,
+            referrer,
+            userAgent: req.headers['user-agent'],
+            language,
+            sessionId,
+            metadata,
+            geo: geo ? { ip, ...geo } : { ip }
+        });
+
+        await event.save();
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Analytics track error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get analytics summary
+app.get('/api/analytics/summary', async (req, res) => {
+    try {
+        const { days = 30, from, to } = req.query;
+
+        let startDate, endDate;
+        if (from && to) {
+            // Custom date range with optional time (format: YYYY-MM-DD or YYYY-MM-DDTHH:MM)
+            startDate = new Date(from);
+            endDate = new Date(to);
+            // Only set to end of day if no time was specified
+            if (!to.includes('T')) {
+                endDate.setHours(23, 59, 59, 999);
+            }
+        } else {
+            // Days-based range
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() - parseInt(days));
+            endDate = new Date();
+        }
+
+        const dateFilter = { $gte: startDate, $lte: endDate };
+
+        // Total pageviews
+        const totalPageviews = await Analytics.countDocuments({
+            eventType: 'pageview',
+            createdAt: dateFilter
+        });
+
+        // Unique sessions
+        const uniqueSessions = await Analytics.distinct('sessionId', {
+            createdAt: dateFilter
+        });
+
+        // CV submissions
+        const cvSubmissions = await Analytics.countDocuments({
+            eventType: 'cv_submission',
+            createdAt: dateFilter
+        });
+
+        // CV uploads vs manual
+        const cvUploads = await Analytics.countDocuments({
+            eventType: 'cv_upload',
+            createdAt: dateFilter
+        });
+
+        const cvManual = await Analytics.countDocuments({
+            eventType: 'cv_manual',
+            createdAt: dateFilter
+        });
+
+        // Pageviews per page
+        const pageviewsByPage = await Analytics.aggregate([
+            { $match: { eventType: 'pageview', createdAt: dateFilter } },
+            { $group: { _id: '$page', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Visitors by country
+        const visitorsByCountry = await Analytics.aggregate([
+            { $match: { createdAt: dateFilter, 'geo.countryCode': { $exists: true } } },
+            { $group: { _id: { country: '$geo.country', code: '$geo.countryCode' }, count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Visitors by city
+        const visitorsByCity = await Analytics.aggregate([
+            { $match: { createdAt: dateFilter, 'geo.city': { $exists: true, $ne: null } } },
+            { $group: { _id: '$geo.city', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Language usage
+        const languageUsage = await Analytics.aggregate([
+            { $match: { createdAt: dateFilter, language: { $exists: true } } },
+            { $group: { _id: '$language', count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        // Daily pageviews for chart
+        const dailyPageviews = await Analytics.aggregate([
+            { $match: { eventType: 'pageview', createdAt: dateFilter } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // Daily CV submissions for chart
+        const dailyCVs = await Analytics.aggregate([
+            { $match: { eventType: 'cv_submission', createdAt: dateFilter } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // High match events (>80% matches)
+        const highMatchEvents = await Analytics.countDocuments({
+            eventType: 'high_match',
+            createdAt: dateFilter
+        });
+
+        // Total high matches (sum of all highMatches in metadata)
+        const highMatchStats = await Analytics.aggregate([
+            { $match: { eventType: 'high_match', createdAt: dateFilter } },
+            {
+                $group: {
+                    _id: null,
+                    totalHighMatches: { $sum: '$metadata.highMatches' },
+                    avgTopScore: { $avg: '$metadata.topScore' }
+                }
+            }
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                totalPageviews,
+                uniqueVisitors: uniqueSessions.length,
+                cvSubmissions,
+                cvUploads,
+                cvManual,
+                highMatchEvents,
+                highMatchStats: highMatchStats[0] || { totalHighMatches: 0, avgTopScore: 0 },
+                pageviewsByPage,
+                visitorsByCountry,
+                visitorsByCity,
+                languageUsage,
+                dailyPageviews,
+                dailyCVs
+            }
+        });
+    } catch (error) {
+        console.error('Analytics summary error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 // Admin authentication
 const ADMIN_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
@@ -1006,7 +1246,8 @@ app.post('/api/employer/vacancies', requireEmployer, async (req, res) => {
         const savedVacancy = await vacancy.save();
 
         // Generate embedding asynchronously (don't wait for response)
-        if (process.env.OPENAI_API_KEY) {
+        // In test mode, mock embeddings are used (see utils/embeddings.js)
+        if (process.env.OPENAI_API_KEY || process.env.NODE_ENV === 'test') {
             generateVacancyEmbedding(savedVacancy._id).catch(err => {
                 console.error('Error generating embedding for vacancy:', err.message);
             });
@@ -1224,6 +1465,7 @@ app.get('/api/employer/vacancies/:id/ai-matches', requireEmployer, async (req, r
         }
 
         // Use cached embedding or generate if missing
+        // In test mode, mock embeddings are used (see utils/embeddings.js)
         let vacancyEmbedding = vacancy.embedding;
         if (!vacancyEmbedding || vacancyEmbedding.length === 0) {
             // Generate and cache embedding (only happens once)
@@ -1298,6 +1540,7 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
         }
 
         // Use cached embedding or generate if missing
+        // In test mode, mock embeddings are used (see utils/embeddings.js)
         let cvEmbedding = cv.embedding;
         if (!cvEmbedding || cvEmbedding.length === 0) {
             const textToEmbed = prepareCVText(cv);
@@ -1360,9 +1603,10 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
 });
 
 // Admin endpoint: Generate embeddings for all CVs without one
+// In test mode, mock embeddings are used (see utils/embeddings.js)
 app.post('/api/admin/generate-embeddings', requireAdmin, async (req, res) => {
     try {
-        if (!process.env.OPENAI_API_KEY) {
+        if (!process.env.OPENAI_API_KEY && process.env.NODE_ENV !== 'test') {
             return res.status(503).json({
                 success: false,
                 message: 'OPENAI_API_KEY is niet geconfigureerd'
@@ -1392,31 +1636,42 @@ app.post('/api/admin/generate-embeddings', requireAdmin, async (req, res) => {
         // Process in background, return immediately
         const totalToProcess = cvsWithoutEmbedding.length;
 
+        // Initialize progress tracker
+        embeddingProgress = {
+            active: true,
+            current: 0,
+            total: totalToProcess,
+            currentName: '',
+            failed: 0,
+            startedAt: new Date()
+        };
+
         // Start async processing
         (async () => {
-            let processed = 0;
-            let failed = 0;
-
             for (const cv of cvsWithoutEmbedding) {
+                embeddingProgress.currentName = cv.fullName || 'Onbekend';
                 try {
                     const textToEmbed = prepareCVText(cv);
                     if (textToEmbed && textToEmbed.trim().length >= 50) {
                         const embedding = await generateEmbedding(textToEmbed);
                         await CV.findByIdAndUpdate(cv._id, { embedding });
-                        processed++;
-                        console.log(`Embedding ${processed}/${totalToProcess}: ${cv.fullName}`);
+                        embeddingProgress.current++;
+                        console.log(`Embedding ${embeddingProgress.current}/${totalToProcess}: ${cv.fullName}`);
                     } else {
+                        embeddingProgress.current++;
                         console.log(`Skipped (insufficient text): ${cv.fullName}`);
                     }
                     // Small delay to avoid rate limiting
                     await new Promise(resolve => setTimeout(resolve, 200));
                 } catch (err) {
-                    failed++;
+                    embeddingProgress.failed++;
+                    embeddingProgress.current++;
                     console.error(`Failed embedding for ${cv.fullName}:`, err.message);
                 }
             }
 
-            console.log(`Embedding generation complete: ${processed} success, ${failed} failed`);
+            console.log(`Embedding generation complete: ${embeddingProgress.current - embeddingProgress.failed} success, ${embeddingProgress.failed} failed`);
+            embeddingProgress.active = false;
         })();
 
         res.json({
@@ -1453,6 +1708,17 @@ app.get('/api/admin/embedding-status', requireAdmin, async (req, res) => {
         console.error('Error checking embedding status:', error);
         res.status(500).json({ success: false, message: 'Failed to check status' });
     }
+});
+
+// Admin endpoint: Get real-time embedding generation progress
+app.get('/api/admin/embedding-progress', requireAdmin, async (req, res) => {
+    res.json({
+        success: true,
+        ...embeddingProgress,
+        percentage: embeddingProgress.total > 0
+            ? Math.round((embeddingProgress.current / embeddingProgress.total) * 100)
+            : 0
+    });
 });
 
 // === ADMIN: Test Matching (for testing TF-IDF without creating vacancy) ===
@@ -2307,6 +2573,74 @@ app.post('/api/parse-cv', async (req, res) => {
     }
 });
 
+// Vacancy File Upload and AI Parsing endpoint
+app.post('/api/parse-vacancy', async (req, res) => {
+    try {
+        const { fileData, fileType, fileName } = req.body;
+
+        if (!fileData) {
+            return res.status(400).json({ success: false, message: 'Geen bestand aangeleverd' });
+        }
+
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(503).json({ success: false, message: 'AI parsing is niet geconfigureerd' });
+        }
+
+        let extractedText = '';
+
+        // Extract text based on file type
+        if (fileType === 'application/pdf' || fileName?.toLowerCase().endsWith('.pdf')) {
+            // PDF parsing
+            if (!pdfParse) {
+                return res.status(500).json({ success: false, message: 'PDF parsing niet beschikbaar' });
+            }
+            const buffer = Buffer.from(fileData, 'base64');
+            const pdfData = await pdfParse(buffer, { max: 0 });
+            extractedText = pdfData.text;
+        } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                   fileName?.toLowerCase().endsWith('.docx')) {
+            // Word document parsing
+            const buffer = Buffer.from(fileData, 'base64');
+            const AdmZip = require('adm-zip');
+            try {
+                const zip = new AdmZip(buffer);
+                const documentXml = zip.readAsText('word/document.xml');
+                extractedText = documentXml
+                    .replace(/<[^>]*>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            } catch (zipError) {
+                console.error('Error parsing Word document:', zipError);
+                return res.status(400).json({ success: false, message: 'Fout bij het lezen van Word document' });
+            }
+        } else {
+            return res.status(400).json({ success: false, message: 'Upload een PDF of Word (.docx) bestand' });
+        }
+
+        if (!extractedText || extractedText.trim().length < 30) {
+            return res.status(400).json({ success: false, message: 'Kon niet genoeg tekst uit het bestand halen' });
+        }
+
+        console.log(`Parsing vacancy with AI: ${extractedText.length} characters extracted`);
+
+        // Use AI to parse the vacancy text into structured fields
+        const parsedData = await parseVacancyWithAI(extractedText);
+
+        res.json({
+            success: true,
+            data: parsedData,
+            extractedTextLength: extractedText.length
+        });
+
+    } catch (error) {
+        console.error('Error in vacancy parsing:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Fout bij analyseren vacature'
+        });
+    }
+});
+
 // Submit CV endpoint
 app.post('/submit-cv', async (req, res) => {
     try {
@@ -2882,7 +3216,8 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
         console.log(`CV file uploaded: ${savedCV.fullName} - ${fileName}`);
 
         // Generate embedding asynchronously (don't wait for response)
-        if (process.env.OPENAI_API_KEY) {
+        // In test mode, mock embeddings are used (see utils/embeddings.js)
+        if (process.env.OPENAI_API_KEY || process.env.NODE_ENV === 'test') {
             generateCVEmbedding(savedCV._id).catch(err => {
                 console.error('Error generating embedding for CV:', err.message);
             });

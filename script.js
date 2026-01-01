@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentQuestion = 0;
     const totalQuestions = 17; // 0-16
     const formData = {};
-    let currentLanguage = 'en';
+    let currentLanguage = 'nl';
     
     const questions = document.querySelectorAll('.question-container[data-question]:not([data-question="-1"])');
 
@@ -486,6 +486,10 @@ document.addEventListener('DOMContentLoaded', function() {
             showQuestion(0);
             updateProgress();
             updateNavigation();
+            // Track manual choice
+            if (window.jpTrack) {
+                window.jpTrack('cv_manual');
+            }
         });
     }
 
@@ -1332,6 +1336,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (result.success) {
                 showSuccessMessage(result.cvId);
+                // Track CV submission
+                if (window.jpTrack) {
+                    window.jpTrack('cv_submission', { cvId: result.cvId });
+                }
             } else {
                 showErrorMessage(result.message);
             }
@@ -1889,6 +1897,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show success state
                 uploadStatus.classList.add('upload-success');
                 uploadStatusText.textContent = t['cv-parsed-success'] || 'CV successfully analyzed! Filling in the form...';
+
+                // Track CV upload
+                if (window.jpTrack) {
+                    window.jpTrack('cv_upload', { fileType: file.type });
+                }
 
                 // Auto-fill form fields
                 setTimeout(() => {

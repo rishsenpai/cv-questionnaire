@@ -1581,6 +1581,57 @@
             background: var(--bg-card-hover);
         }
 
+        /* Progress Modal */
+        .progress-modal .modal-content {
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .progress-modal h3 {
+            margin: 0 0 20px 0;
+            color: var(--text-primary);
+            font-size: 1.3rem;
+        }
+
+        .progress-bar-container {
+            background: var(--bg-main);
+            border-radius: 12px;
+            height: 24px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+        }
+
+        .progress-bar-text {
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .progress-status {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .progress-current {
+            color: var(--text-primary);
+            font-size: 13px;
+            font-style: italic;
+        }
+
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -3091,6 +3142,20 @@
         </div>
     </div>
 
+    <!-- Embedding Progress Modal -->
+    <div class="modal progress-modal" id="progressModal">
+        <div class="modal-content">
+            <h3>🤖 AI Embeddings Genereren</h3>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar" style="width: 0%">
+                    <span class="progress-bar-text" id="progressPercent">0%</span>
+                </div>
+            </div>
+            <div class="progress-status" id="progressStatus">0 / 0 CV's verwerkt</div>
+            <div class="progress-current" id="progressCurrent">Starten...</div>
+        </div>
+    </div>
+
     <!-- Upload CV Modal -->
     <div class="modal form-modal" id="addModal">
         <div class="modal-content">
@@ -4404,10 +4469,13 @@
 
                 const result = await response.json();
 
-                if (result.success) {
-                    Toast.show(`${result.message}`, 'success');
-                    // Refresh status after a delay
-                    setTimeout(checkEmbeddingStatus, 3000);
+                if (result.success && result.processing > 0) {
+                    // Show progress modal
+                    showProgressModal();
+                    // Start polling for progress
+                    pollEmbeddingProgress();
+                } else if (result.success) {
+                    Toast.show(result.message, 'success');
                 } else {
                     Toast.show(result.message || 'Fout bij genereren embeddings', 'error');
                 }
@@ -4416,6 +4484,59 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
+            }
+        }
+
+        function showProgressModal() {
+            const modal = document.getElementById('progressModal');
+            modal.classList.add('active');
+            // Reset progress display
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressStatus').textContent = '0 / 0 CV\'s verwerkt';
+            document.getElementById('progressCurrent').textContent = 'Starten...';
+        }
+
+        function hideProgressModal() {
+            const modal = document.getElementById('progressModal');
+            modal.classList.remove('active');
+        }
+
+        async function pollEmbeddingProgress() {
+            try {
+                const response = await fetch('/api/admin/embedding-progress', {
+                    headers: { 'X-Admin-Token': authToken }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update progress UI
+                    const percent = data.percentage;
+                    document.getElementById('progressBar').style.width = `${percent}%`;
+                    document.getElementById('progressPercent').textContent = `${percent}%`;
+                    document.getElementById('progressStatus').textContent = `${data.current} / ${data.total} CV's verwerkt`;
+                    document.getElementById('progressCurrent').textContent = data.currentName ? `Bezig met: ${data.currentName}` : 'Starten...';
+
+                    if (data.active) {
+                        // Still processing, poll again
+                        setTimeout(pollEmbeddingProgress, 500);
+                    } else {
+                        // Done!
+                        document.getElementById('progressCurrent').textContent = data.failed > 0
+                            ? `✅ Klaar! (${data.failed} mislukt)`
+                            : '✅ Alle embeddings gegenereerd!';
+
+                        // Hide modal after 2 seconds and refresh status
+                        setTimeout(() => {
+                            hideProgressModal();
+                            checkEmbeddingStatus();
+                            Toast.show('AI Embeddings succesvol gegenereerd!', 'success');
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling progress:', error);
+                setTimeout(pollEmbeddingProgress, 1000);
             }
         }
 
@@ -5662,5 +5783,6 @@
             </div>
         </div>
     </div>
+    <script src="/tracking.js"></script>
 </body>
 </html>
