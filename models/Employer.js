@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 const BCRYPT_ROUNDS = 12; // Industry standard, good balance of security and speed
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 const employerSchema = new mongoose.Schema({
     username: {
@@ -34,6 +36,15 @@ const employerSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    // Security: account lockout
+    failedLoginAttempts: {
+        type: Number,
+        default: 0
+    },
+    lockUntil: {
+        type: Date,
+        default: null
     },
     favorites: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -95,6 +106,49 @@ employerSchema.methods.checkPassword = async function(password) {
             return true;
         }
         return false;
+    }
+};
+
+// Check if account is currently locked
+employerSchema.methods.isLocked = function() {
+    return this.lockUntil && this.lockUntil > Date.now();
+};
+
+// Get remaining lock time in minutes
+employerSchema.methods.getLockTimeRemaining = function() {
+    if (!this.isLocked()) return 0;
+    return Math.ceil((this.lockUntil - Date.now()) / 60000);
+};
+
+// Increment failed login attempts
+employerSchema.methods.incLoginAttempts = async function() {
+    // Reset if lock has expired
+    if (this.lockUntil && this.lockUntil < Date.now()) {
+        await this.updateOne({
+            $set: { failedLoginAttempts: 1 },
+            $unset: { lockUntil: 1 }
+        });
+        return;
+    }
+
+    const updates = { $inc: { failedLoginAttempts: 1 } };
+
+    // Lock account if max attempts reached
+    if (this.failedLoginAttempts + 1 >= MAX_LOGIN_ATTEMPTS && !this.isLocked()) {
+        updates.$set = { lockUntil: Date.now() + LOCK_TIME };
+        console.log(`[SECURITY] Account locked for employer: ${this.username}`);
+    }
+
+    await this.updateOne(updates);
+};
+
+// Reset failed attempts on successful login
+employerSchema.methods.resetLoginAttempts = async function() {
+    if (this.failedLoginAttempts > 0 || this.lockUntil) {
+        await this.updateOne({
+            $set: { failedLoginAttempts: 0 },
+            $unset: { lockUntil: 1 }
+        });
     }
 };
 

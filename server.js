@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = require('docx');
 let pdfParse;
 try {
@@ -324,6 +325,39 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 // NoSQL injection protection
 app.use(mongoSanitize());
+
+// XSS sanitization helper
+function sanitizeValue(value) {
+    if (typeof value === 'string') {
+        return xss(value);
+    }
+    if (Array.isArray(value)) {
+        return value.map(sanitizeValue);
+    }
+    if (value && typeof value === 'object') {
+        return sanitizeObject(value);
+    }
+    return value;
+}
+
+function sanitizeObject(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    const sanitized = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            sanitized[key] = sanitizeValue(obj[key]);
+        }
+    }
+    return sanitized;
+}
+
+// XSS protection middleware - sanitize all request body strings
+app.use((req, res, next) => {
+    if (req.body && typeof req.body === 'object') {
+        req.body = sanitizeObject(req.body);
+    }
+    next();
+});
 
 // Static files
 app.use(express.static('.'));
@@ -793,13 +827,44 @@ app.post('/api/employer/login', authLimiter, async (req, res) => {
         }
 
         const employer = await Employer.findOne({ username: username.toLowerCase(), isActive: true });
-        if (!employer || !(await employer.checkPassword(password))) {
-            console.warn(`[SECURITY] Failed employer login attempt for user: ${username} from IP: ${getClientIP(req)}`);
+
+        // Check if account exists
+        if (!employer) {
+            console.warn(`[SECURITY] Failed employer login attempt for unknown user: ${username} from IP: ${getClientIP(req)}`);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
             });
         }
+
+        // Check if account is locked
+        if (employer.isLocked()) {
+            const minutesLeft = employer.getLockTimeRemaining();
+            console.warn(`[SECURITY] Login attempt on locked account: ${username} from IP: ${getClientIP(req)}`);
+            return res.status(423).json({
+                success: false,
+                message: `Account is locked. Try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`,
+                locked: true,
+                minutesRemaining: minutesLeft
+            });
+        }
+
+        // Check password
+        const isValidPassword = await employer.checkPassword(password);
+        if (!isValidPassword) {
+            await employer.incLoginAttempts();
+            const attemptsLeft = 5 - (employer.failedLoginAttempts + 1);
+            console.warn(`[SECURITY] Failed employer login attempt for user: ${username} from IP: ${getClientIP(req)} (${attemptsLeft} attempts left)`);
+            return res.status(401).json({
+                success: false,
+                message: attemptsLeft > 0
+                    ? `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`
+                    : 'Account locked due to too many failed attempts. Try again in 15 minutes.'
+            });
+        }
+
+        // Successful login - reset failed attempts
+        await employer.resetLoginAttempts();
 
         console.log(`[SECURITY] Employer login successful: ${employer.companyName} from IP: ${getClientIP(req)}`);
         const token = generateToken();
@@ -1325,10 +1390,12 @@ app.post('/api/admin/employers', requireAdmin, async (req, res) => {
             });
         }
 
-        if (password.length < 6) {
+        // Strong password validation: min 8 chars, at least 1 letter and 1 number
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+        if (!passwordRegex.test(password)) {
             return res.status(400).json({
                 success: false,
-                message: 'Password must be at least 6 characters'
+                message: 'Password must be at least 8 characters with at least one letter and one number'
             });
         }
 
@@ -1381,7 +1448,17 @@ app.put('/api/admin/employers/:id', requireAdmin, async (req, res) => {
         if (contactEmail !== undefined) employer.contactEmail = contactEmail;
         if (plan !== undefined) employer.plan = plan;
         if (isActive !== undefined) employer.isActive = isActive;
-        if (password) employer.password = password;
+        if (password) {
+            // Validate password strength
+            const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+            if (!passwordRegex.test(password)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Password must be at least 8 characters with at least one letter and one number'
+                });
+            }
+            employer.password = password;
+        }
 
         await employer.save();
         res.json({ success: true, message: 'Employer updated' });
