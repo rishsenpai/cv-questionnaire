@@ -793,7 +793,7 @@ app.post('/api/employer/login', authLimiter, async (req, res) => {
         }
 
         const employer = await Employer.findOne({ username: username.toLowerCase(), isActive: true });
-        if (!employer || !employer.checkPassword(password)) {
+        if (!employer || !(await employer.checkPassword(password))) {
             console.warn(`[SECURITY] Failed employer login attempt for user: ${username} from IP: ${getClientIP(req)}`);
             return res.status(401).json({
                 success: false,
