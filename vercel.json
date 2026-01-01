@@ -28,6 +28,14 @@
       "dest": "/werkgevers.html"
     },
     {
+      "src": "/vragenlijst",
+      "dest": "/vragenlijst.html"
+    },
+    {
+      "src": "/analytics",
+      "dest": "/analytics.html"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/server.js"
     },
