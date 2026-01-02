@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "postinstall": "node -e \"try{require('fs').rmSync('node_modules/pdf-parse/test',{recursive:true,force:true})}catch(e){}\""
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
@@ -21,7 +22,7 @@
     "natural": "^8.1.0",
     "nodemailer": "^7.0.12",
     "openai": "^6.15.0",
-    "pdf-parse": "^2.4.5",
+    "pdf-parse": "^1.1.1",
     "validator": "^13.15.26",
     "xss": "^1.0.15"
   },
