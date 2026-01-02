@@ -1864,21 +1864,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
 
         if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
-            // Show error in UI instead of alert
-            uploadBox.style.display = 'none';
-            uploadStatus.style.display = 'block';
-            uploadStatus.classList.add('upload-error');
-            uploadStatusText.innerHTML = `
-                <span style="color: #e53e3e; font-size: 1.5rem;">❌</span><br>
-                ${t['upload-error-format'] || 'Please upload a PDF or Word document (.docx)'}<br>
-                <small style="color: #718096;">${t['upload-formats'] || 'Supported: PDF, Word (.docx)'}</small>
-            `;
-            // Reset after 3 seconds so user can try again
-            setTimeout(() => {
-                uploadStatus.style.display = 'none';
-                uploadStatus.classList.remove('upload-error');
-                uploadBox.style.display = 'flex';
-            }, 3000);
+            // Show error message below upload box
+            const errorMessage = document.getElementById('uploadErrorMessage');
+            if (errorMessage) {
+                errorMessage.innerHTML = `⚠️ ${t['upload-error-format'] || 'Please upload a PDF or Word document (.docx)'}`;
+                errorMessage.style.display = 'block';
+                // Hide error after 4 seconds
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 4000);
+            }
             return;
         }
 
