@@ -1488,6 +1488,30 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let submittedCvId = null;
 
+    // Confetti animation for success celebration
+    function createConfetti() {
+        const container = document.getElementById('confetti');
+        if (!container) return;
+
+        const colors = ['#667eea', '#764ba2', '#48bb78', '#f6e05e', '#fc8181', '#63b3ed'];
+        const confettiCount = 50;
+
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti-piece';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDelay = Math.random() * 2 + 's';
+            confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            container.appendChild(confetti);
+        }
+
+        // Clean up confetti after animation
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 5000);
+    }
+
     function showSuccessMessage(cvId) {
         submittedCvId = cvId;
         if (currentQuestion < 0 || currentQuestion >= questions.length) return;
@@ -1495,16 +1519,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!currentQuestionElement) return;
         const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
-            <div class="question completed">
-                <h2 data-text="success-title">${t['success-title']}</h2>
-                <p data-text="success-message">${t['success-message']}</p>
+            <div class="question completed success-celebration">
+                <div class="success-icon-container">
+                    <div class="success-icon">👍</div>
+                    <div class="success-checkmark">✓</div>
+                </div>
+                <h2 class="success-title">${t['success-title']}</h2>
+                <p class="success-subtitle">${t['success-message']}</p>
                 <div class="success-buttons">
                     <button type="button" id="viewCVBtn" class="generate-btn view-cv-btn" data-text="view-cv-btn">${t['view-cv-btn']}</button>
                     ${cvId ? `<button type="button" id="findVacanciesBtn" class="generate-btn find-vacancies-btn">🔍 ${t['find-vacancies'] || 'Zoek Vacatures'}</button>` : ''}
                 </div>
                 <div id="matchingVacancies" class="matching-vacancies" style="display: none;"></div>
             </div>
+            <div class="confetti-container" id="confetti"></div>
         `;
+
+        // Trigger confetti animation
+        createConfetti();
 
         // Add click handler for View CV button
         document.getElementById('viewCVBtn').addEventListener('click', function() {
