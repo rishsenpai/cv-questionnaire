@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalQuestions = 17; // 0-16
     const formData = {};
     let currentLanguage = 'nl';
+    let skipFilledQuestions = false; // Skip filled questions after CV upload
     
     const questions = document.querySelectorAll('.question-container[data-question]:not([data-question="-1"])');
 
@@ -136,8 +137,15 @@ document.addEventListener('DOMContentLoaded', function() {
             'upload-text': "Drag & drop your CV here or click to browse",
             'upload-formats': "Supported: PDF, Word (.docx)",
             'parsing-cv': "Analyzing your CV with AI...",
+            'parsing-step-1': "Reading document...",
+            'parsing-step-2': "Extracting text...",
+            'parsing-step-3': "Analyzing with AI...",
+            'parsing-step-4': "Identifying fields...",
+            'parsing-step-5': "Almost done...",
             'cv-parsed-success': "CV successfully analyzed! Filling in the form...",
             'cv-filled-success': "Form filled! Review and continue.",
+            'cv-all-filled': "All fields filled from CV! Ready to submit.",
+            'cv-partial-filled': "Filled {count} fields from CV! Complete the remaining questions.",
             'cv-upload-complete': "CV uploaded and parsed successfully!",
             'cv-parse-error': "Error analyzing CV. Please try again or fill in manually.",
             'upload-error-format': "Please upload a PDF or Word document (.docx)",
@@ -248,8 +256,15 @@ document.addEventListener('DOMContentLoaded', function() {
             'upload-text': "Sleep je CV hierheen of klik om te bladeren",
             'upload-formats': "Ondersteund: PDF, Word (.docx)",
             'parsing-cv': "Je CV wordt geanalyseerd met AI...",
+            'parsing-step-1': "Document lezen...",
+            'parsing-step-2': "Tekst extraheren...",
+            'parsing-step-3': "Analyseren met AI...",
+            'parsing-step-4': "Velden identificeren...",
+            'parsing-step-5': "Bijna klaar...",
             'cv-parsed-success': "CV succesvol geanalyseerd! Formulier wordt ingevuld...",
             'cv-filled-success': "Formulier ingevuld! Controleer en ga verder.",
+            'cv-all-filled': "Alle velden ingevuld vanuit CV! Klaar om te versturen.",
+            'cv-partial-filled': "{count} velden ingevuld vanuit CV! Vul de resterende vragen in.",
             'cv-upload-complete': "CV geüpload en verwerkt!",
             'cv-parse-error': "Fout bij analyseren CV. Probeer opnieuw of vul handmatig in.",
             'upload-error-format': "Upload een PDF of Word document (.docx)",
@@ -360,8 +375,15 @@ document.addEventListener('DOMContentLoaded', function() {
             'upload-text': "Arrastra tu CV aquí o haz clic para buscar",
             'upload-formats': "Formatos: PDF, Word (.docx)",
             'parsing-cv': "Analizando tu CV con IA...",
+            'parsing-step-1': "Leyendo documento...",
+            'parsing-step-2': "Extrayendo texto...",
+            'parsing-step-3': "Analizando con IA...",
+            'parsing-step-4': "Identificando campos...",
+            'parsing-step-5': "Casi listo...",
             'cv-parsed-success': "¡CV analizado con éxito! Completando el formulario...",
             'cv-filled-success': "¡Formulario completado! Revisa y continúa.",
+            'cv-all-filled': "¡Todos los campos completados desde el CV! Listo para enviar.",
+            'cv-partial-filled': "¡{count} campos completados desde el CV! Completa las preguntas restantes.",
             'cv-upload-complete': "¡CV subido y procesado!",
             'cv-parse-error': "Error al analizar CV. Intenta de nuevo o completa manualmente.",
             'upload-error-format': "Por favor sube un documento PDF o Word (.docx)",
@@ -517,6 +539,26 @@ document.addEventListener('DOMContentLoaded', function() {
         phone: ''
     };
 
+    // Pre-fill form fields with account details (to avoid duplicate entry)
+    function prefillFormWithAccountDetails() {
+        if (backupContactDetails.fullName) {
+            const nameInput = document.querySelector('[name="fullName"]');
+            if (nameInput && !nameInput.value) {
+                nameInput.value = backupContactDetails.fullName;
+                formData.fullName = backupContactDetails.fullName;
+            }
+        }
+        if (backupContactDetails.email) {
+            const emailInput = document.querySelector('[name="email"]');
+            if (emailInput && !emailInput.value) {
+                emailInput.value = backupContactDetails.email;
+                formData.email = backupContactDetails.email;
+            }
+        }
+        // Phone is NOT prefilled from account - user should always verify/enter phone themselves
+        // Only prefill phone for manual flow (not CV upload)
+    }
+
     // Start at choice screen (hide navigation buttons)
     currentQuestion = -1;
 
@@ -637,6 +679,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadScreen.classList.add('active');
             } else {
                 // Start manual questionnaire
+                // Pre-fill form fields with account details
+                prefillFormWithAccountDetails();
+
                 currentQuestion = 0;
                 showQuestion(0);
                 updateProgress();
@@ -717,7 +762,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (validateCurrentQuestion()) {
             saveCurrentAnswer();
             if (currentQuestion < totalQuestions - 1) {
-                currentQuestion++;
+                // If in skip mode (after CV upload), find next unfilled question
+                if (skipFilledQuestions && typeof findNextUnfilledQuestion === 'function') {
+                    const nextUnfilled = findNextUnfilledQuestion(currentQuestion);
+                    currentQuestion = nextUnfilled;
+                } else {
+                    currentQuestion++;
+                }
                 showQuestion(currentQuestion);
                 updateProgress();
                 updateNavigation();
@@ -2121,6 +2172,22 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadStatus.style.display = 'block';
         uploadStatusText.textContent = t['parsing-cv'] || 'Analyzing your CV with AI...';
 
+        // Animated progress messages
+        const progressMessages = [
+            t['parsing-step-1'] || 'Reading document...',
+            t['parsing-step-2'] || 'Extracting text...',
+            t['parsing-step-3'] || 'Analyzing with AI...',
+            t['parsing-step-4'] || 'Identifying fields...',
+            t['parsing-step-5'] || 'Almost done...'
+        ];
+        let progressIndex = 0;
+        const progressInterval = setInterval(() => {
+            if (progressIndex < progressMessages.length) {
+                uploadStatusText.textContent = progressMessages[progressIndex];
+                progressIndex++;
+            }
+        }, 2000);
+
         try {
             // Convert file to base64
             const base64Data = await fileToBase64(file);
@@ -2140,6 +2207,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             const result = await response.json();
+            clearInterval(progressInterval);
 
             if (result.success && result.data) {
                 // Show success state
@@ -2160,6 +2228,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         } catch (error) {
+            clearInterval(progressInterval);
             console.error('CV upload error:', error);
             uploadStatus.classList.add('upload-error');
             uploadStatusText.textContent = error.message || (t['cv-parse-error'] || 'Error analyzing CV. Please try again or fill in manually.');
@@ -2186,6 +2255,63 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Mapping of question index to field name
+    const questionFieldMapping = {
+        0: 'fullName',
+        1: 'email',
+        2: 'phone',
+        3: 'location',
+        4: 'birthDate',
+        5: 'languages',
+        6: 'jobTitle',
+        7: 'summary',
+        8: 'experience',
+        9: 'education',
+        10: 'skills',
+        11: 'achievements',
+        12: 'targetJob',
+        13: 'availability',
+        14: 'salaryIndication',
+        15: 'preferredSector'
+    };
+
+    // Find first question with empty/unfilled field
+    function findFirstUnfilledQuestion() {
+        for (let q = 0; q <= 15; q++) {
+            const fieldName = questionFieldMapping[q];
+            if (!fieldName) continue;
+
+            const input = document.querySelector(`[name="${fieldName}"]`);
+            if (!input) continue;
+
+            // Check if field is empty or has no value
+            const value = input.value?.trim();
+            if (!value) {
+                return q;
+            }
+        }
+        // All filled - go to final screen
+        return 16;
+    }
+
+    // Find next unfilled question from current position
+    function findNextUnfilledQuestion(fromQuestion) {
+        for (let q = fromQuestion + 1; q <= 15; q++) {
+            const fieldName = questionFieldMapping[q];
+            if (!fieldName) continue;
+
+            const input = document.querySelector(`[name="${fieldName}"]`);
+            if (!input) continue;
+
+            const value = input.value?.trim();
+            if (!value) {
+                return q;
+            }
+        }
+        // No more unfilled - go to final screen
+        return 16;
+    }
+
     function fillFormWithParsedData(data) {
         const t = translations[currentLanguage];
 
@@ -2205,22 +2331,82 @@ document.addEventListener('DOMContentLoaded', function() {
             achievements: 'achievements'
         };
 
+        // Validate phone number format (Dutch or Surinamese)
+        function isValidPhoneFormat(phone) {
+            if (!phone) return false;
+            // Remove all spaces, dashes, parentheses, dots for checking
+            const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
+
+            // Dutch formats: 06, 0031, +31, 0xx (landline)
+            // Surinamese formats: 00597, +597, 8x (local mobile)
+            const validPatterns = [
+                /^06\d{8}$/,           // Dutch mobile: 0612345678
+                /^0031\d{9}$/,         // Dutch international: 00316...
+                /^\+31\d{9}$/,         // Dutch international: +316...
+                /^31\d{9}$/,           // Dutch without +: 316...
+                /^0[1-9][0-9]\d{6,7}$/, // Dutch landline: 020..., 010..., 0521... (7-8 digits after area code)
+                /^00597\d{6,7}$/,      // Suriname international: 00597...
+                /^\+597\d{6,7}$/,      // Suriname international: +597...
+                /^597\d{6,7}$/,        // Suriname without +: 597...
+                /^8[0-9]\d{5}$/,       // Suriname mobile: 86xxxxx, 87xxxxx, etc.
+            ];
+
+            return validPatterns.some(pattern => pattern.test(cleaned));
+        }
+
         // Fill each field
         Object.entries(fieldMapping).forEach(([dataKey, fieldName]) => {
             if (data[dataKey]) {
                 const input = document.querySelector(`[name="${fieldName}"]`);
                 if (input) {
-                    input.value = data[dataKey];
-                    formData[fieldName] = data[dataKey];
+                    // Handle arrays or objects - convert to string
+                    let value = data[dataKey];
+                    if (Array.isArray(value)) {
+                        value = value.map(item => {
+                            if (typeof item === 'object') {
+                                return Object.values(item).filter(v => v).join(' - ');
+                            }
+                            return item;
+                        }).join('\n\n');
+                    } else if (typeof value === 'object') {
+                        value = Object.values(value).filter(v => v).join(' - ');
+                    }
+
+                    // Special validation for phone number
+                    if (fieldName === 'phone') {
+                        if (!isValidPhoneFormat(value)) {
+                            console.log('Invalid phone format from CV:', value, '- leaving empty for user to fill');
+                            // Mark that we should NOT use account phone either
+                            input.setAttribute('data-skip-prefill', 'true');
+                            return;
+                        }
+                    }
+
+                    input.value = value;
+                    formData[fieldName] = value;
                     input.setAttribute('data-has-been-touched', 'true');
+                    input.setAttribute('data-filled-from-cv', 'true');
                 }
             }
         });
 
-        // Update status message
-        uploadStatusText.textContent = t['cv-filled-success'] || 'Form filled! Review and continue.';
+        // Also fill with account details (for fields not in CV, like email)
+        prefillFormWithAccountDetails();
 
-        // After a moment, navigate to the questionnaire to review
+        // Find first unfilled question
+        const firstUnfilled = findFirstUnfilledQuestion();
+        const filledCount = firstUnfilled; // Questions 0 to firstUnfilled-1 are filled
+
+        // Update status message with info about filled fields
+        if (firstUnfilled === 16) {
+            uploadStatusText.textContent = t['cv-all-filled'] || 'All fields filled! Ready to submit.';
+        } else if (filledCount > 0) {
+            uploadStatusText.textContent = (t['cv-partial-filled'] || 'Filled {count} fields! Complete the remaining questions.').replace('{count}', filledCount);
+        } else {
+            uploadStatusText.textContent = t['cv-filled-success'] || 'Form filled! Review and continue.';
+        }
+
+        // After a moment, navigate to the first unfilled question
         setTimeout(() => {
             // Hide upload screen
             const uploadScreen = document.getElementById('uploadScreen');
@@ -2228,9 +2414,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadScreen.classList.remove('active');
             }
 
-            // Navigate to first question to review/edit
-            currentQuestion = 0;
-            showQuestion(0);
+            // Enable skip mode - skip filled questions when navigating
+            skipFilledQuestions = true;
+
+            // Navigate to first unfilled question (or final screen if all filled)
+            currentQuestion = firstUnfilled;
+            showQuestion(firstUnfilled);
             updateProgress();
             updateNavigation();
             updateNextButton();

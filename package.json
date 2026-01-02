@@ -14,7 +14,8 @@
     "test:success": "npx playwright test tests/success-screen.spec.js",
     "test:cv": "npx playwright test tests/cv-submission.spec.js",
     "test:quick": "npx playwright test tests/api.spec.js tests/success-screen.spec.js",
-    "test:full": "npx playwright test tests/api.spec.js tests/questionnaire-flow.spec.js tests/success-screen.spec.js tests/cv-submission.spec.js",
+    "test:phone": "npx playwright test tests/phone-validation.spec.js",
+    "test:full": "npx playwright test tests/api.spec.js tests/questionnaire-flow.spec.js tests/success-screen.spec.js tests/cv-submission.spec.js tests/phone-validation.spec.js",
     "postinstall": "node -e \"try{require('fs').rmSync('node_modules/pdf-parse/test',{recursive:true,force:true})}catch(e){}\""
   },
   "dependencies": {
