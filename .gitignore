@@ -4,6 +4,7 @@ node_modules/
 .DS_Store
 DEVELOPMENT.md
 AI-MATCHING.md
+CLAUDE.md
 docs/
 .claude/settings.local.json
 

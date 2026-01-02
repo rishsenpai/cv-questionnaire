@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Submission Failed",
             'error-button': "Try Again",
             'submitting': "Submitting...",
-            'view-cv-btn': "View & Edit my CV",
+            'view-cv-btn': "View CV",
             'edit-cv-btn': "Edit CV",
             'save-cv-btn': "Save Changes",
             'resubmit-cv-btn': "Submit CV",
@@ -148,8 +148,23 @@ document.addEventListener('DOMContentLoaded', function() {
             'cv-partial-filled': "Filled {count} fields from CV! Complete the remaining questions.",
             'cv-upload-complete': "CV uploaded and parsed successfully!",
             'cv-parse-error': "Error analyzing CV. Please try again or fill in manually.",
+            'cv-already-uploaded': "You have already uploaded a CV.",
+            'continue-with-existing': "Continue with current data",
+            'upload-new-cv': "Upload different CV",
+            'go-to-submit': "Go to submit",
             'upload-error-format': "Please upload a PDF or Word document (.docx)",
-            'back-to-choice-nav': "← Back to choice"
+            'back-to-choice-nav': "← Back to choice",
+            // Validation error messages
+            'error-required': "This field is required",
+            'error-name': "Please enter a valid name (2-50 characters, letters only)",
+            'error-email': "Please enter a valid email address",
+            'error-phone': "Please enter a valid Dutch or Surinamese phone number",
+            'error-phone-format': "Only numbers, +, spaces and dashes allowed",
+            'error-location': "Please enter a valid location (2-100 characters)",
+            'error-date-format': "Please enter a valid date (dd/mm/yyyy)",
+            'error-date-complete': "Please enter the complete date",
+            'error-date-future': "Date cannot be in the future",
+            'error-date-unrealistic': "This date seems unrealistic"
         },
         nl: {
             'start-title': "Laten we beginnen met je persoonlijke gegevens",
@@ -203,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Versturen Mislukt",
             'error-button': "Opnieuw Proberen",
             'submitting': "Versturen...",
-            'view-cv-btn': "Bekijk & Bewerk mijn CV",
+            'view-cv-btn': "Bekijk CV",
             'edit-cv-btn': "CV bewerken",
             'save-cv-btn': "Wijzigingen opslaan",
             'resubmit-cv-btn': "CV versturen",
@@ -267,8 +282,23 @@ document.addEventListener('DOMContentLoaded', function() {
             'cv-partial-filled': "{count} velden ingevuld vanuit CV! Vul de resterende vragen in.",
             'cv-upload-complete': "CV geüpload en verwerkt!",
             'cv-parse-error': "Fout bij analyseren CV. Probeer opnieuw of vul handmatig in.",
+            'cv-already-uploaded': "Je hebt al een CV geüpload.",
+            'continue-with-existing': "Doorgaan met huidige gegevens",
+            'upload-new-cv': "Andere CV uploaden",
+            'go-to-submit': "Direct naar versturen",
             'upload-error-format': "Upload een PDF of Word document (.docx)",
-            'back-to-choice-nav': "← Terug naar keuze"
+            'back-to-choice-nav': "← Terug naar keuze",
+            // Validatie foutmeldingen
+            'error-required': "Dit veld is verplicht",
+            'error-name': "Vul een geldige naam in (2-50 tekens, alleen letters)",
+            'error-email': "Vul een geldig e-mailadres in",
+            'error-phone': "Vul een geldig Nederlands of Surinaams telefoonnummer in",
+            'error-phone-format': "Alleen cijfers, +, spaties en streepjes toegestaan",
+            'error-location': "Vul een geldige locatie in (2-100 tekens)",
+            'error-date-format': "Vul een geldige datum in (dd/mm/jjjj)",
+            'error-date-complete': "Vul de volledige datum in",
+            'error-date-future': "Datum kan niet in de toekomst liggen",
+            'error-date-unrealistic': "Deze datum lijkt niet realistisch"
         },
         es: {
             'start-title': "Comencemos con tu información personal",
@@ -322,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'error-title': "❌ Error al Enviar",
             'error-button': "Intentar de Nuevo",
             'submitting': "Enviando...",
-            'view-cv-btn': "Ver y Editar mi CV",
+            'view-cv-btn': "Ver CV",
             'edit-cv-btn': "Editar CV",
             'save-cv-btn': "Guardar Cambios",
             'resubmit-cv-btn': "Enviar CV",
@@ -386,8 +416,23 @@ document.addEventListener('DOMContentLoaded', function() {
             'cv-partial-filled': "¡{count} campos completados desde el CV! Completa las preguntas restantes.",
             'cv-upload-complete': "¡CV subido y procesado!",
             'cv-parse-error': "Error al analizar CV. Intenta de nuevo o completa manualmente.",
+            'cv-already-uploaded': "Ya has subido un CV.",
+            'continue-with-existing': "Continuar con datos actuales",
+            'upload-new-cv': "Subir otro CV",
+            'go-to-submit': "Ir a enviar",
             'upload-error-format': "Por favor sube un documento PDF o Word (.docx)",
-            'back-to-choice-nav': "← Volver a elegir"
+            'back-to-choice-nav': "← Volver a elegir",
+            // Mensajes de error de validación
+            'error-required': "Este campo es obligatorio",
+            'error-name': "Ingresa un nombre válido (2-50 caracteres, solo letras)",
+            'error-email': "Ingresa un correo electrónico válido",
+            'error-phone': "Ingresa un número de teléfono válido (Países Bajos o Surinam)",
+            'error-phone-format': "Solo números, +, espacios y guiones permitidos",
+            'error-location': "Ingresa una ubicación válida (2-100 caracteres)",
+            'error-date-format': "Ingresa una fecha válida (dd/mm/aaaa)",
+            'error-date-complete': "Ingresa la fecha completa",
+            'error-date-future': "La fecha no puede ser en el futuro",
+            'error-date-unrealistic': "Esta fecha no parece realista"
         }
     };
 
@@ -539,6 +584,30 @@ document.addEventListener('DOMContentLoaded', function() {
         phone: ''
     };
 
+    // Validate phone number format (Dutch or Surinamese)
+    // Used by both manual questionnaire and CV upload flow
+    function isValidPhoneFormat(phone) {
+        if (!phone) return false;
+        // Remove all spaces, dashes, parentheses, dots for checking
+        const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
+
+        // Dutch formats: 06, 0031, +31, 0xx (landline)
+        // Surinamese formats: 00597, +597, 8x (local mobile)
+        const validPatterns = [
+            /^06\d{8}$/,           // Dutch mobile: 0612345678
+            /^0031\d{9}$/,         // Dutch international: 00316...
+            /^\+31\d{9}$/,         // Dutch international: +316...
+            /^31\d{9}$/,           // Dutch without +: 316...
+            /^0[1-9][0-9]\d{6,7}$/, // Dutch landline: 020..., 010..., 0521... (7-8 digits after area code)
+            /^00597\d{6,7}$/,      // Suriname international: 00597...
+            /^\+597\d{6,7}$/,      // Suriname international: +597...
+            /^597\d{6,7}$/,        // Suriname without +: 597...
+            /^8[0-9]\d{5}$/,       // Suriname mobile: 86xxxxx, 87xxxxx, etc.
+        ];
+
+        return validPatterns.some(pattern => pattern.test(cleaned));
+    }
+
     // Pre-fill form fields with account details (to avoid duplicate entry)
     function prefillFormWithAccountDetails() {
         if (backupContactDetails.fullName) {
@@ -555,8 +624,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.email = backupContactDetails.email;
             }
         }
-        // Phone is NOT prefilled from account - user should always verify/enter phone themselves
-        // Only prefill phone for manual flow (not CV upload)
+        // Prefill phone from account if provided
+        if (backupContactDetails.phone) {
+            const phoneInput = document.querySelector('[name="phone"]');
+            if (phoneInput && !phoneInput.value) {
+                phoneInput.value = backupContactDetails.phone;
+                formData.phone = backupContactDetails.phone;
+            }
+        }
     }
 
     // Start at choice screen (hide navigation buttons)
@@ -620,6 +695,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Helper function to show account form errors
+    function showAccountError(input, message) {
+        input.classList.add('error');
+        // Remove existing error message
+        const existingError = input.parentNode.querySelector('.error-message');
+        if (existingError) existingError.remove();
+        // Add new error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message show';
+        errorDiv.textContent = message;
+        input.parentNode.appendChild(errorDiv);
+    }
+
+    function clearAccountError(input) {
+        input.classList.remove('error');
+        const existingError = input.parentNode.querySelector('.error-message');
+        if (existingError) existingError.remove();
+    }
+
     // Account screen continue button
     if (accountContinueBtn) {
         accountContinueBtn.addEventListener('click', async function() {
@@ -634,21 +728,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const phone = phoneInput.value.trim();
 
             // Clear previous errors
-            nameInput.classList.remove('error');
-            emailInput.classList.remove('error');
+            clearAccountError(nameInput);
+            clearAccountError(emailInput);
+            clearAccountError(phoneInput);
 
             let hasError = false;
 
             if (!name || name.length < 2) {
-                nameInput.classList.add('error');
-                nameInput.placeholder = t['account-error-name'] || 'Please enter your full name';
+                showAccountError(nameInput, t['error-name'] || 'Please enter a valid name');
                 hasError = true;
             }
 
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!email || !emailRegex.test(email)) {
-                emailInput.classList.add('error');
-                emailInput.placeholder = t['account-error-email'] || 'Please enter a valid email address';
+                showAccountError(emailInput, t['error-email'] || 'Please enter a valid email address');
+                hasError = true;
+            }
+
+            // Validate phone if entered (optional but must be valid if provided)
+            if (phone && !isValidPhoneFormat(phone)) {
+                showAccountError(phoneInput, t['error-phone'] || 'Please enter a valid phone number');
                 hasError = true;
             }
 
@@ -704,6 +803,107 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Track if CV has been uploaded in this session
+    let cvAlreadyUploaded = false;
+
+    // Helper function to fully reset upload screen state
+    function resetUploadScreen(forceFullReset = false) {
+        const uploadBox = document.getElementById('uploadBox');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const uploadStatusText = document.getElementById('uploadStatusText');
+        const uploadSpinner = document.querySelector('.upload-spinner');
+        const cvFileInput = document.getElementById('cvFileInput');
+        const t = translations[currentLanguage];
+
+        // Check if there's already form data filled (from previous CV upload)
+        const hasExistingData = cvAlreadyUploaded && !forceFullReset;
+
+        if (hasExistingData) {
+            // Show choice: upload new CV or continue with existing
+            if (uploadBox) uploadBox.style.display = 'none';
+            if (uploadSpinner) uploadSpinner.style.display = 'none'; // Hide spinner
+            if (uploadStatus) {
+                uploadStatus.style.display = 'block';
+                uploadStatus.classList.remove('upload-error');
+                uploadStatus.classList.add('upload-success');
+            }
+            if (uploadStatusText) {
+                uploadStatusText.innerHTML = `
+                    <div style="text-align: center;">
+                        <p style="margin-bottom: 15px; font-weight: 500;">${t['cv-already-uploaded'] || 'Je hebt al een CV geüpload.'}</p>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button type="button" id="continueWithExistingBtn" class="upload-choice-btn primary">
+                                ${t['continue-with-existing'] || 'Doorgaan met huidige gegevens'}
+                            </button>
+                            <button type="button" id="goToSubmitBtn" class="upload-choice-btn primary">
+                                🚀 ${t['go-to-submit'] || 'Direct naar versturen'}
+                            </button>
+                            <button type="button" id="uploadNewCVBtn" class="upload-choice-btn secondary">
+                                ${t['upload-new-cv'] || 'Andere CV uploaden'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                // Add event listeners for the buttons
+                setTimeout(() => {
+                    const continueBtn = document.getElementById('continueWithExistingBtn');
+                    const goToSubmitBtn = document.getElementById('goToSubmitBtn');
+                    const uploadNewBtn = document.getElementById('uploadNewCVBtn');
+
+                    if (continueBtn) {
+                        continueBtn.addEventListener('click', function() {
+                            // Continue to questionnaire with existing data
+                            uploadScreen.style.display = 'none';
+                            uploadScreen.classList.remove('active');
+                            const firstUnfilled = findFirstUnfilledQuestion();
+                            currentQuestion = firstUnfilled;
+                            showQuestion(currentQuestion);
+                            updateProgress();
+                            updateNavigation();
+                        });
+                    }
+
+                    if (goToSubmitBtn) {
+                        goToSubmitBtn.addEventListener('click', function() {
+                            // Go directly to the final submit screen
+                            uploadScreen.style.display = 'none';
+                            uploadScreen.classList.remove('active');
+                            currentQuestion = totalQuestions - 1; // Last question (submit screen)
+                            showQuestion(currentQuestion);
+                            updateProgress();
+                            updateNavigation();
+                        });
+                    }
+
+                    if (uploadNewBtn) {
+                        uploadNewBtn.addEventListener('click', function() {
+                            // Reset and show upload box for new CV
+                            resetUploadScreen(true); // Force full reset
+                        });
+                    }
+                }, 0);
+            }
+        } else {
+            // Normal reset - show upload box
+            if (uploadBox) {
+                uploadBox.style.display = 'block';
+            }
+            if (uploadSpinner) {
+                uploadSpinner.style.display = 'block'; // Show spinner for next upload
+            }
+            if (uploadStatus) {
+                uploadStatus.style.display = 'none';
+                uploadStatus.classList.remove('upload-success', 'upload-error');
+            }
+            if (uploadStatusText) {
+                uploadStatusText.textContent = t['parsing-cv'] || 'Analyzing your CV...';
+            }
+            if (cvFileInput) {
+                cvFileInput.value = ''; // Clear file input
+            }
+        }
+    }
+
     // Back to choice screen
     if (backToChoiceBtn) {
         backToChoiceBtn.addEventListener('click', function() {
@@ -721,13 +921,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateProgress();
             updateNavigation();
             // Reset upload state
-            const uploadBox = document.getElementById('uploadBox');
-            const uploadStatus = document.getElementById('uploadStatus');
-            if (uploadBox) uploadBox.style.display = 'block';
-            if (uploadStatus) {
-                uploadStatus.style.display = 'none';
-                uploadStatus.classList.remove('upload-success', 'upload-error');
-            }
+            resetUploadScreen();
         });
     }
 
@@ -748,6 +942,8 @@ document.addEventListener('DOMContentLoaded', function() {
         currentQuestion = -1;
         updateProgress();
         updateNavigation();
+        // Reset upload state
+        resetUploadScreen();
     });
 
     // Navigation event listeners
@@ -794,7 +990,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
             e.preventDefault();
-            if (nextBtn.style.display !== 'none') {
+            // Check if on account screen
+            const accountScreen = document.getElementById('accountScreen');
+            if (accountScreen && accountScreen.style.display !== 'none') {
+                accountContinueBtn.click();
+            } else if (nextBtn.style.display !== 'none') {
                 nextBtn.click();
             }
         }
@@ -984,6 +1184,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function validateInputRealTime(input) {
         const value = input.value.trim();
+        const t = translations[currentLanguage];
 
         // Only validate if field has content
         if (!value) {
@@ -999,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (input.name) {
             case 'fullName':
                 if (!/^[a-zA-ZÀ-ÿ\s'-]{2,50}$/.test(value)) {
-                    showValidationError(input, 'Naam mag alleen letters, spaties, apostrofes en koppeltekens bevatten (2-50 karakters)');
+                    showValidationError(input, t['error-name']);
                 } else {
                     showValidationSuccess(input);
                 }
@@ -1007,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             case 'location':
                 if (!/^[a-zA-ZÀ-ÿ\s,'-]{2,100}$/.test(value)) {
-                    showValidationError(input, 'Locatie mag alleen letters, spaties, komma\'s, apostrofes en koppeltekens bevatten (2-100 karakters)');
+                    showValidationError(input, t['error-location']);
                 } else {
                     showValidationSuccess(input);
                 }
@@ -1015,16 +1216,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
             case 'email':
                 if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
-                    showValidationError(input, 'Voer een geldig e-mailadres in');
+                    showValidationError(input, t['error-email']);
                 } else {
                     showValidationSuccess(input);
                 }
                 break;
 
             case 'phone':
-                if (!/^[\+]?[0-9\s\-\(\)]{1,50}$/.test(value)) {
-                    showValidationError(input, 'Voer een geldig telefoonnummer in (1-50 cijfers)');
-                } else {
+                // Allow typing but show error if complete number is invalid
+                // Basic format check first (allows partial input)
+                if (!/^[\+]?[0-9\s\-\(\)]{0,50}$/.test(value)) {
+                    showValidationError(input, t['error-phone-format']);
+                } else if (value.replace(/[\s\-\(\)\.]/g, '').length >= 7 && !isValidPhoneFormat(value)) {
+                    // Only validate format once they've entered enough digits
+                    showValidationError(input, t['error-phone']);
+                } else if (value.length > 0) {
                     showValidationSuccess(input);
                 }
                 break;
@@ -1037,7 +1243,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 if (!/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(19|20)\d{2}$/.test(value)) {
-                    showValidationError(input, 'Voer een geldige geboortedatum in (dd/mm/yyyy)');
+                    showValidationError(input, t['error-date-format']);
                 } else {
                     // Check if date is realistic
                     const [day, month, year] = value.split('/');
@@ -1045,9 +1251,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const today = new Date();
                     const age = today.getFullYear() - birthDate.getFullYear();
                     if (birthDate > today) {
-                        showValidationError(input, 'Geboortedatum kan niet in de toekomst liggen');
+                        showValidationError(input, t['error-date-future']);
                     } else if (age > 120) {
-                        showValidationError(input, 'Geboortedatum lijkt niet realistisch');
+                        showValidationError(input, t['error-date-unrealistic']);
                     } else {
                         showValidationSuccess(input);
                     }
@@ -1080,7 +1286,22 @@ document.addEventListener('DOMContentLoaded', function() {
             modal.style.display = 'none';
         }
     });
-    
+
+    // ESC key to close modals
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            // Close CV modal
+            if (modal && modal.style.display === 'block') {
+                modal.style.display = 'none';
+            }
+            // Close feedback modal
+            const feedbackModal = document.getElementById('feedbackModal');
+            if (feedbackModal && feedbackModal.style.display === 'block') {
+                feedbackModal.style.display = 'none';
+            }
+        }
+    });
+
     // Download functionality
     downloadBtn.addEventListener('click', function() {
         downloadPDF();
@@ -1128,6 +1349,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input.classList.remove('error');
 
         const value = input.value.trim();
+        const t = translations[currentLanguage];
 
         // Required field validation
         if (input.hasAttribute('required')) {
@@ -1135,13 +1357,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (input.name === 'birthDate') {
                 const isCompleteDate = /^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/.test(value);
                 if (!isCompleteDate) {
-                    showValidationError(input, 'Dit veld is verplicht');
+                    showValidationError(input, t['error-required']);
                     return false;
                 }
             }
             // Regular handling for other fields
             else if (input.name !== 'birthDate' && !value) {
-                showValidationError(input, 'Dit veld is verplicht');
+                showValidationError(input, t['error-required']);
                 return false;
             }
         }
@@ -1150,28 +1372,28 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (input.name) {
             case 'fullName':
                 if (!/^[a-zA-ZÀ-ÿ\s'-]{2,50}$/.test(value)) {
-                    showValidationError(input, 'Naam mag alleen letters, spaties, apostrofes en koppeltekens bevatten (2-50 karakters)');
+                    showValidationError(input, t['error-name']);
                     return false;
                 }
                 break;
 
             case 'location':
                 if (!/^[a-zA-ZÀ-ÿ\s,'-]{2,100}$/.test(value)) {
-                    showValidationError(input, 'Locatie mag alleen letters, spaties, komma\'s, apostrofes en koppeltekens bevatten (2-100 karakters)');
+                    showValidationError(input, t['error-location']);
                     return false;
                 }
                 break;
 
             case 'email':
                 if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
-                    showValidationError(input, 'Voer een geldig e-mailadres in');
+                    showValidationError(input, t['error-email']);
                     return false;
                 }
                 break;
 
             case 'phone':
-                if (!/^[\+]?[0-9\s\-\(\)]{1,50}$/.test(value)) {
-                    showValidationError(input, 'Voer een geldig telefoonnummer in (1-50 cijfers)');
+                if (!isValidPhoneFormat(value)) {
+                    showValidationError(input, t['error-phone']);
                     return false;
                 }
                 break;
@@ -1179,11 +1401,11 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'birthDate':
                 // Check if the format contains template characters (incomplete)
                 if (value.includes('d') || value.includes('m') || value.includes('y')) {
-                    showValidationError(input, 'Vul de volledige geboortedatum in');
+                    showValidationError(input, t['error-date-complete']);
                     return false;
                 }
                 if (!/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(19|20)\d{2}$/.test(value)) {
-                    showValidationError(input, 'Voer een geldige geboortedatum in (dd/mm/yyyy)');
+                    showValidationError(input, t['error-date-format']);
                     return false;
                 }
                 // Check if date is realistic (not in future, not too old)
@@ -1192,11 +1414,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const today = new Date();
                 const age = today.getFullYear() - birthDate.getFullYear();
                 if (birthDate > today) {
-                    showValidationError(input, 'Geboortedatum kan niet in de toekomst liggen');
+                    showValidationError(input, t['error-date-future']);
                     return false;
                 }
                 if (age > 120) {
-                    showValidationError(input, 'Geboortedatum lijkt niet realistisch');
+                    showValidationError(input, t['error-date-unrealistic']);
                     return false;
                 }
                 break;
@@ -1326,7 +1548,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     isValid = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
                     break;
                 case 'phone':
-                    isValid = /^[\+]?[0-9\s\-\(\)]{1,50}$/.test(value);
+                    isValid = isValidPhoneFormat(value);
                     break;
                 case 'location':
                     isValid = /^[a-zA-ZÀ-ÿ\s,'-]{2,100}$/.test(value);
@@ -2214,6 +2436,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadStatus.classList.add('upload-success');
                 uploadStatusText.textContent = t['cv-parsed-success'] || 'CV successfully analyzed! Filling in the form...';
 
+                // Debug: log parsed data
+                console.log('CV parsed data from AI:', result.data);
+
                 // Track CV upload
                 if (window.jpTrack) {
                     window.jpTrack('cv_upload', { fileType: file.type });
@@ -2222,6 +2447,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Auto-fill form fields
                 setTimeout(() => {
                     fillFormWithParsedData(result.data);
+                    cvAlreadyUploaded = true; // Mark that CV has been uploaded
                 }, 1000);
             } else {
                 throw new Error(result.message || 'Failed to parse CV');
@@ -2314,6 +2540,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fillFormWithParsedData(data) {
         const t = translations[currentLanguage];
+        console.log('Filling form with data:', data);
 
         // Map parsed data to form fields
         const fieldMapping = {
@@ -2331,30 +2558,7 @@ document.addEventListener('DOMContentLoaded', function() {
             achievements: 'achievements'
         };
 
-        // Validate phone number format (Dutch or Surinamese)
-        function isValidPhoneFormat(phone) {
-            if (!phone) return false;
-            // Remove all spaces, dashes, parentheses, dots for checking
-            const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
-
-            // Dutch formats: 06, 0031, +31, 0xx (landline)
-            // Surinamese formats: 00597, +597, 8x (local mobile)
-            const validPatterns = [
-                /^06\d{8}$/,           // Dutch mobile: 0612345678
-                /^0031\d{9}$/,         // Dutch international: 00316...
-                /^\+31\d{9}$/,         // Dutch international: +316...
-                /^31\d{9}$/,           // Dutch without +: 316...
-                /^0[1-9][0-9]\d{6,7}$/, // Dutch landline: 020..., 010..., 0521... (7-8 digits after area code)
-                /^00597\d{6,7}$/,      // Suriname international: 00597...
-                /^\+597\d{6,7}$/,      // Suriname international: +597...
-                /^597\d{6,7}$/,        // Suriname without +: 597...
-                /^8[0-9]\d{5}$/,       // Suriname mobile: 86xxxxx, 87xxxxx, etc.
-            ];
-
-            return validPatterns.some(pattern => pattern.test(cleaned));
-        }
-
-        // Fill each field
+        // Fill each field (uses shared isValidPhoneFormat function)
         Object.entries(fieldMapping).forEach(([dataKey, fieldName]) => {
             if (data[dataKey]) {
                 const input = document.querySelector(`[name="${fieldName}"]`);

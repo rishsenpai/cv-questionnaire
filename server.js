@@ -297,24 +297,29 @@ app.use(cors({
     credentials: true
 }));
 
-// Rate limiting
+// Rate limiting (disabled in test mode)
+const isTestMode = process.env.NODE_ENV === 'test';
+
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window
-    message: { success: false, message: 'Too many requests, please try again later' }
+    max: isTestMode ? 10000 : 100, // Much higher limit for tests
+    message: { success: false, message: 'Too many requests, please try again later' },
+    skip: () => isTestMode // Skip rate limiting entirely in test mode
 });
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 login attempts per window
+    max: isTestMode ? 10000 : 10, // Much higher limit for tests
     message: { success: false, message: 'Too many login attempts, please try again later' },
-    skipSuccessfulRequests: true
+    skipSuccessfulRequests: true,
+    skip: () => isTestMode
 });
 
 const uploadLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 20, // 20 uploads per hour
-    message: { success: false, message: 'Upload limit reached, please try again later' }
+    max: isTestMode ? 10000 : 20, // Much higher limit for tests
+    message: { success: false, message: 'Upload limit reached, please try again later' },
+    skip: () => isTestMode
 });
 
 // Apply general rate limit to all requests

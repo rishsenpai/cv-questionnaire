@@ -213,25 +213,33 @@ async function parseCVWithAI(cvText, lang = 'en') {
         throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are a CV/resume parser. Extract information from the CV text and return a JSON object with the following fields. If a field cannot be found, use an empty string.
+    const systemPrompt = `You are a CV/resume parser. Extract information from the CV text and return a JSON object.
 
-IMPORTANT: Return ONLY valid JSON, no markdown, no explanation.
+CRITICAL RULES:
+1. Return ONLY valid JSON, no markdown, no explanation
+2. ALL values must be STRINGS (not arrays or objects)
+3. If a field cannot be found, use empty string ""
+4. Keep the original language of the CV content
 
-Fields to extract:
+Fields to extract (all as strings):
 - fullName: Full name of the person
-- email: Email address
-- phone: Phone number (include country code if present)
-- location: City, Country or address
-- birthDate: Date of birth in format dd/mm/yyyy (convert from any format)
-- languages: Languages spoken with proficiency levels
-- jobTitle: Current or most recent job title
-- summary: Professional summary or objective (2-3 sentences)
-- experience: Work experience with dates, companies, and responsibilities
-- education: Education history with institutions and dates
-- skills: Technical and soft skills
-- achievements: Notable achievements, certifications, or projects
+- email: Email address (look for @ symbol)
+- phone: Phone number with country code if present
+- location: City and/or Country
+- birthDate: Date of birth as "dd/mm/yyyy" (convert from any format found)
+- languages: Languages with proficiency, e.g. "Nederlands (moedertaal), Engels (vloeiend), Duits (basis)"
+- jobTitle: Current or most recent job title/function
+- summary: Professional summary in 2-3 sentences based on the CV content
+- experience: Work history as readable text, format each job as "Title at Company (period): responsibilities" separated by newlines
+- education: Education as readable text, format as "Degree - Institution (year)" separated by newlines
+- skills: Comma-separated list of technical and soft skills
+- achievements: Notable achievements, certifications, projects as comma-separated list
 
-Keep the original language of the CV content for experience, education, skills, etc.`;
+Example format for experience (as string, not array):
+"Software Developer at TechCorp (2020-2023): Developed web apps, led team of 5\\nJunior Dev at StartupX (2018-2020): Built APIs"
+
+Example format for education (as string, not array):
+"MSc Computer Science - University of Amsterdam (2018)\\nBSc Informatica - HvA (2016)"`;
 
     try {
         const response = await openai.chat.completions.create({

@@ -155,6 +155,7 @@ body {
     opacity: 0;
     transform: translateX(30px);
     transition: all 0.4s ease;
+    pointer-events: none;
 }
 
 .question-container.active {
@@ -164,6 +165,7 @@ body {
     top: auto;
     left: auto;
     right: auto;
+    pointer-events: auto;
 }
 
 .question h2 {
@@ -946,12 +948,30 @@ textarea:not([data-has-been-touched="true"]) {
     box-shadow: none;
 }
 
+/* Error styling for input fields */
+input.error,
+textarea.error {
+    border-color: #e53e3e !important;
+    background-color: rgba(229, 62, 62, 0.05) !important;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1) !important;
+}
+
+input.error:focus,
+textarea.error:focus {
+    border-color: #e53e3e !important;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.2) !important;
+}
+
 .error-message {
     color: #e53e3e;
     font-size: 14px;
     margin-top: 8px;
     display: none;
     animation: fadeIn 0.3s ease;
+    padding: 8px 12px;
+    background-color: rgba(229, 62, 62, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid #e53e3e;
 }
 
 .error-message.show {
@@ -968,6 +988,37 @@ textarea:not([data-has-been-touched="true"]) {
 
 .success-message.show {
     display: block;
+}
+
+/* Upload choice buttons (when CV already uploaded) */
+.upload-choice-btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.upload-choice-btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.upload-choice-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.upload-choice-btn.secondary {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.upload-choice-btn.secondary:hover {
+    background: #f7f8fc;
 }
 
 @keyframes fadeIn {
