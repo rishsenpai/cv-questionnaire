@@ -113,6 +113,17 @@ document.addEventListener('DOMContentLoaded', function() {
             'choice-upload-desc': "Upload your PDF or Word document and we'll fill in the form automatically with AI",
             'choice-manual-title': "I don't have a CV, create one",
             'choice-manual-desc': "Answer questions step by step to build your CV from scratch",
+            'account-title': "First, let's get your contact details",
+            'account-subtitle': "We'll use this to contact you about matching vacancies",
+            'account-name-label': "Full name *",
+            'account-name-placeholder': "Your full name",
+            'account-email-label': "Email address *",
+            'account-email-placeholder': "your@email.com",
+            'account-phone-label': "Phone number (optional)",
+            'account-phone-placeholder': "+31 6 12345678",
+            'account-continue': "Continue",
+            'account-error-name': "Please enter your full name",
+            'account-error-email': "Please enter a valid email address",
             'upload-title': "Upload your CV",
             'back-to-choice': "← Back to choice",
             'upload-text': "Drag & drop your CV here or click to browse",
@@ -207,6 +218,17 @@ document.addEventListener('DOMContentLoaded', function() {
             'choice-upload-desc': "Upload je PDF of Word document en wij vullen het formulier automatisch in met AI",
             'choice-manual-title': "Ik heb geen CV, maak er eentje aan",
             'choice-manual-desc': "Beantwoord stap voor stap vragen om je CV op te bouwen",
+            'account-title': "Eerst je contactgegevens",
+            'account-subtitle': "We gebruiken dit om contact met je op te nemen over passende vacatures",
+            'account-name-label': "Volledige naam *",
+            'account-name-placeholder': "Je volledige naam",
+            'account-email-label': "E-mailadres *",
+            'account-email-placeholder': "jouw@email.nl",
+            'account-phone-label': "Telefoonnummer (optioneel)",
+            'account-phone-placeholder': "+31 6 12345678",
+            'account-continue': "Doorgaan",
+            'account-error-name': "Vul je volledige naam in",
+            'account-error-email': "Vul een geldig e-mailadres in",
             'upload-title': "Upload je CV",
             'back-to-choice': "← Terug naar keuze",
             'upload-text': "Sleep je CV hierheen of klik om te bladeren",
@@ -301,6 +323,17 @@ document.addEventListener('DOMContentLoaded', function() {
             'choice-upload-desc': "Sube tu documento PDF o Word y completaremos el formulario automáticamente con IA",
             'choice-manual-title': "No tengo CV, crear uno",
             'choice-manual-desc': "Responde preguntas paso a paso para crear tu CV desde cero",
+            'account-title': "Primero, tus datos de contacto",
+            'account-subtitle': "Usaremos esto para contactarte sobre vacantes que coincidan",
+            'account-name-label': "Nombre completo *",
+            'account-name-placeholder': "Tu nombre completo",
+            'account-email-label': "Correo electrónico *",
+            'account-email-placeholder': "tu@email.com",
+            'account-phone-label': "Teléfono (opcional)",
+            'account-phone-placeholder': "+31 6 12345678",
+            'account-continue': "Continuar",
+            'account-error-name': "Por favor ingresa tu nombre completo",
+            'account-error-email': "Por favor ingresa un correo electrónico válido",
             'upload-title': "Sube tu CV",
             'back-to-choice': "← Volver a elegir",
             'upload-text': "Arrastra tu CV aquí o haz clic para buscar",
@@ -436,6 +469,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const choiceUpload = document.getElementById('choiceUpload');
     const choiceManual = document.getElementById('choiceManual');
     const backToChoiceBtn = document.getElementById('backToChoice');
+    const accountScreen = document.getElementById('accountScreen');
+    const accountContinueBtn = document.getElementById('accountContinueBtn');
+    const backToChoiceFromAccount = document.getElementById('backToChoiceFromAccount');
+
+    // Store user's choice (upload or manual)
+    let userChoice = null;
+
+    // Store backup contact details
+    let backupContactDetails = {
+        fullName: '',
+        email: '',
+        phone: ''
+    };
 
     // Start at choice screen (hide navigation buttons)
     currentQuestion = -1;
@@ -450,6 +496,11 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadScreen.style.display = 'none';
         uploadScreen.classList.remove('active');
     }
+    // Make sure account screen is hidden
+    if (accountScreen) {
+        accountScreen.style.display = 'none';
+        accountScreen.classList.remove('active');
+    }
     // Make sure choice screen is visible
     if (choiceScreen) {
         choiceScreen.classList.add('active');
@@ -458,38 +509,119 @@ document.addEventListener('DOMContentLoaded', function() {
     updateNavigation();
     updateProgress();
 
+    // Helper function to show account screen
+    function showAccountScreen(choice) {
+        userChoice = choice;
+        choiceScreen.classList.remove('active');
+        // Hide all question containers
+        questions.forEach(q => {
+            q.style.display = 'none';
+            q.classList.remove('active');
+        });
+        // Hide upload screen
+        if (uploadScreen) {
+            uploadScreen.style.display = 'none';
+            uploadScreen.classList.remove('active');
+        }
+        // Show account screen
+        if (accountScreen) {
+            accountScreen.style.display = 'block';
+            accountScreen.classList.add('active');
+        }
+    }
+
     // Choice: Upload CV
     if (choiceUpload) {
         choiceUpload.addEventListener('click', function() {
-            choiceScreen.classList.remove('active');
-            // Hide all question containers
-            questions.forEach(q => {
-                q.style.display = 'none';
-                q.classList.remove('active');
-            });
-            // Show upload screen
-            uploadScreen.style.display = 'block';
-            uploadScreen.classList.add('active');
+            showAccountScreen('upload');
         });
     }
 
     // Choice: Manual questionnaire
     if (choiceManual) {
         choiceManual.addEventListener('click', function() {
-            choiceScreen.classList.remove('active');
-            // Make sure upload screen is hidden
-            if (uploadScreen) {
-                uploadScreen.classList.remove('active');
-                uploadScreen.style.display = 'none';
+            showAccountScreen('manual');
+        });
+    }
+
+    // Account screen continue button
+    if (accountContinueBtn) {
+        accountContinueBtn.addEventListener('click', async function() {
+            const t = translations[currentLanguage];
+            const nameInput = document.getElementById('accountName');
+            const emailInput = document.getElementById('accountEmail');
+            const phoneInput = document.getElementById('accountPhone');
+
+            // Validate required fields
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const phone = phoneInput.value.trim();
+
+            // Clear previous errors
+            nameInput.classList.remove('error');
+            emailInput.classList.remove('error');
+
+            let hasError = false;
+
+            if (!name || name.length < 2) {
+                nameInput.classList.add('error');
+                nameInput.placeholder = t['account-error-name'] || 'Please enter your full name';
+                hasError = true;
             }
-            currentQuestion = 0;
-            showQuestion(0);
-            updateProgress();
-            updateNavigation();
-            // Track manual choice
-            if (window.jpTrack) {
-                window.jpTrack('cv_manual');
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                emailInput.classList.add('error');
+                emailInput.placeholder = t['account-error-email'] || 'Please enter a valid email address';
+                hasError = true;
             }
+
+            if (hasError) return;
+
+            // Store backup contact details
+            backupContactDetails = { fullName: name, email, phone };
+
+            // Save to server as backup
+            try {
+                await fetch('/api/backup-contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(backupContactDetails)
+                });
+            } catch (e) {
+                console.log('Could not save backup contact details');
+            }
+
+            // Hide account screen
+            accountScreen.style.display = 'none';
+            accountScreen.classList.remove('active');
+
+            // Proceed based on user choice
+            if (userChoice === 'upload') {
+                // Show upload screen
+                uploadScreen.style.display = 'block';
+                uploadScreen.classList.add('active');
+            } else {
+                // Start manual questionnaire
+                currentQuestion = 0;
+                showQuestion(0);
+                updateProgress();
+                updateNavigation();
+                // Track manual choice
+                if (window.jpTrack) {
+                    window.jpTrack('cv_manual');
+                }
+            }
+        });
+    }
+
+    // Back to choice from account screen
+    if (backToChoiceFromAccount) {
+        backToChoiceFromAccount.addEventListener('click', function() {
+            accountScreen.style.display = 'none';
+            accountScreen.classList.remove('active');
+            choiceScreen.classList.add('active');
+            userChoice = null;
         });
     }
 

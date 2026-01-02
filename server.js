@@ -23,6 +23,7 @@ const Employer = require('./models/Employer');
 const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
 const Analytics = require('./models/Analytics');
+const BackupContact = require('./models/BackupContact');
 const { generateEmbedding, generateTextHash, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI, parseVacancyWithAI } = require('./utils/embeddings');
 const natural = require('natural');
 const TfIdf = natural.TfIdf;
@@ -2939,6 +2940,70 @@ app.post('/api/parse-vacancy', async (req, res) => {
     }
 });
 
+// Backup contact details endpoint (saves before CV submission)
+app.post('/api/backup-contact', async (req, res) => {
+    try {
+        const { fullName, email, phone } = req.body;
+
+        // Validate required fields
+        if (!fullName || !email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name and email are required'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
+            });
+        }
+
+        // Connect to database (for serverless)
+        await connectDB();
+
+        // Check if we already have this email in backup (update instead of create)
+        let backupContact = await BackupContact.findOne({
+            email: email.toLowerCase().trim()
+        });
+
+        if (backupContact) {
+            // Update existing record
+            backupContact.fullName = fullName.trim();
+            backupContact.phone = phone?.trim() || '';
+            backupContact.status = 'pending';
+            await backupContact.save();
+        } else {
+            // Create new backup contact
+            backupContact = new BackupContact({
+                fullName: fullName.trim(),
+                email: email.toLowerCase().trim(),
+                phone: phone?.trim() || '',
+                status: 'pending'
+            });
+            await backupContact.save();
+        }
+
+        console.log(`Backup contact saved: ${fullName} (${email})`);
+
+        res.json({
+            success: true,
+            message: 'Contact details saved',
+            id: backupContact._id
+        });
+
+    } catch (error) {
+        console.error('Error saving backup contact:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error saving contact details'
+        });
+    }
+});
+
 // Submit CV endpoint
 app.post('/submit-cv', uploadLimiter, async (req, res) => {
     try {
@@ -3002,6 +3067,16 @@ app.post('/submit-cv', uploadLimiter, async (req, res) => {
             });
             savedCV = await cv.save();
             console.log(`CV saved to database with ID: ${savedCV._id}`);
+
+            // Update backup contact status if exists
+            try {
+                await BackupContact.findOneAndUpdate(
+                    { email: formData.email.toLowerCase().trim() },
+                    { status: 'cv_submitted', cvId: savedCV._id }
+                );
+            } catch (e) {
+                // Ignore if backup contact doesn't exist
+            }
         }
 
         // Generate CV HTML

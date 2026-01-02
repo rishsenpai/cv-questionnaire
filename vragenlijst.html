@@ -49,6 +49,28 @@
                 </div>
             </div>
 
+            <!-- Account Details Screen -->
+            <div class="question-container" id="accountScreen" style="display: none;">
+                <h2 data-text="account-title">First, let's get your contact details</h2>
+                <p class="account-subtitle" data-text="account-subtitle">We'll use this to contact you about matching vacancies</p>
+                <div class="account-form">
+                    <div class="question">
+                        <label for="accountName" data-text="account-name-label">Full name *</label>
+                        <input type="text" id="accountName" name="accountName" data-placeholder="account-name-placeholder" placeholder="Your full name" required>
+                    </div>
+                    <div class="question">
+                        <label for="accountEmail" data-text="account-email-label">Email address *</label>
+                        <input type="email" id="accountEmail" name="accountEmail" data-placeholder="account-email-placeholder" placeholder="your@email.com" required>
+                    </div>
+                    <div class="question">
+                        <label for="accountPhone" data-text="account-phone-label">Phone number (optional)</label>
+                        <input type="tel" id="accountPhone" name="accountPhone" data-placeholder="account-phone-placeholder" placeholder="+31 6 12345678">
+                    </div>
+                    <button type="button" id="accountContinueBtn" class="nav-btn next-btn" data-text="account-continue">Continue</button>
+                </div>
+                <button type="button" class="back-to-choice" id="backToChoiceFromAccount" data-text="back-to-choice">← Back to choice</button>
+            </div>
+
             <!-- Upload Screen -->
             <div class="question-container" id="uploadScreen" style="display: none;">
                 <h2 data-text="upload-title">Upload your CV</h2>

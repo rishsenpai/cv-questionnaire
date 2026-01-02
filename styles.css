@@ -1497,6 +1497,78 @@ input[name="birthDate"].typing-mode {
     color: #764ba2;
 }
 
+/* Account Form Styles */
+.account-subtitle {
+    color: #718096;
+    font-size: 15px;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.account-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.account-form .question {
+    margin-bottom: 20px;
+}
+
+.account-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.account-form input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.account-form input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.account-form input.error {
+    border-color: #f56565;
+    background-color: rgba(245, 101, 101, 0.05);
+}
+
+.account-form input.error::placeholder {
+    color: #e53e3e;
+}
+
+#accountContinueBtn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px 24px;
+    font-size: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+#accountContinueBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+#accountContinueBtn:active {
+    transform: translateY(0);
+}
+
 @media (max-width: 500px) {
     .choice-cards {
         flex-direction: column;
