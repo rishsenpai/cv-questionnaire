@@ -1869,12 +1869,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (errorMessage) {
                 errorMessage.innerHTML = `⚠️ ${t['upload-error-format'] || 'Please upload a PDF or Word document (.docx)'}`;
                 errorMessage.style.display = 'block';
-                // Hide error after 4 seconds
-                setTimeout(() => {
-                    errorMessage.style.display = 'none';
-                }, 4000);
             }
             return;
+        }
+
+        // Hide any previous error message on valid upload attempt
+        const errorMessage = document.getElementById('uploadErrorMessage');
+        if (errorMessage) {
+            errorMessage.style.display = 'none';
         }
 
         // Show loading state
