@@ -190,6 +190,25 @@ async function parseCVWithAI(cvText, lang = 'en') {
         throw new Error('CV text is too short to parse');
     }
 
+    // Use mock response in test mode to avoid API costs
+    if (process.env.NODE_ENV === 'test') {
+        console.log('Test mode: using mock CV parsing');
+        return {
+            fullName: 'Test User',
+            email: 'test@example.com',
+            phone: '+31612345678',
+            location: 'Amsterdam, Netherlands',
+            birthDate: '01/01/1990',
+            languages: 'Dutch (native), English (fluent)',
+            jobTitle: 'Software Developer',
+            summary: 'Experienced developer with 5 years of experience.',
+            experience: 'Software Developer at TestCorp (2019-present)',
+            education: 'BSc Computer Science, University of Amsterdam',
+            skills: 'JavaScript, Python, React, Node.js',
+            achievements: 'Led team of 5 developers'
+        };
+    }
+
     if (!process.env.OPENAI_API_KEY) {
         throw new Error('OPENAI_API_KEY is not configured');
     }
@@ -249,6 +268,16 @@ Keep the original language of the CV content for experience, education, skills, 
 async function parseVacancyWithAI(vacancyText) {
     if (!vacancyText || vacancyText.trim().length < 30) {
         throw new Error('Vacancy text is too short to parse');
+    }
+
+    // Use mock response in test mode to avoid API costs
+    if (process.env.NODE_ENV === 'test') {
+        console.log('Test mode: using mock vacancy parsing');
+        return {
+            title: 'Software Developer',
+            location: 'Amsterdam, Netherlands',
+            requirements: 'Looking for experienced developer with JavaScript skills.'
+        };
     }
 
     if (!process.env.OPENAI_API_KEY) {

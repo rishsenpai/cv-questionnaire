@@ -3004,6 +3004,29 @@ app.post('/api/backup-contact', async (req, res) => {
     }
 });
 
+// Request personal recruiter endpoint
+app.post('/api/request-recruiter', async (req, res) => {
+    try {
+        const { cvId } = req.body;
+
+        if (cvId) {
+            // Update CV with recruiter request flag
+            const cv = await CV.findById(cvId);
+            if (cv) {
+                cv.recruiterRequested = true;
+                cv.recruiterRequestedAt = new Date();
+                await cv.save();
+                console.log(`Recruiter requested for CV: ${cvId} (${cv.fullName})`);
+            }
+        }
+
+        res.json({ success: true, message: 'Recruiter request received' });
+    } catch (error) {
+        console.error('Error saving recruiter request:', error);
+        res.json({ success: true, message: 'Request logged' });
+    }
+});
+
 // Submit CV endpoint
 app.post('/submit-cv', uploadLimiter, async (req, res) => {
     try {

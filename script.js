@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'cv-section-skills': "Skills",
             'cv-section-achievements': "Achievements & Projects",
             'success-title': "✅ CV Submitted Successfully!",
+            'success-celebration': "Woohoo! 🎊",
             'success-message': "Thank you for submitting your CV. It has been sent and you'll hear back soon.",
             'success-button': "Submit Another CV",
             'error-title': "❌ Submission Failed",
@@ -108,6 +109,12 @@ document.addEventListener('DOMContentLoaded', function() {
             'no-vacancies': "No matching vacancies found at the moment.",
             'check-later': "Check back later, new vacancies are added regularly!",
             'error-vacancies': "Error fetching vacancies. Please try again later.",
+            'btn-view-cv': "View CV",
+            'btn-find-vacancies': "Browse vacancies",
+            'btn-contact-recruiter': "Contact recruiter",
+            'desc-find-vacancies': "Search for vacancies yourself",
+            'desc-contact-recruiter': "A personal recruiter will help you find a job",
+            'recruiter-confirmation': "A recruiter will contact you shortly!",
             'choice-title': "How would you like to create your CV?",
             'choice-upload-title': "I have a CV, upload it",
             'choice-upload-desc': "Upload your PDF or Word document and we'll fill in the form automatically with AI",
@@ -182,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'cv-section-skills': "Vaardigheden",
             'cv-section-achievements': "Prestaties & Projecten",
             'success-title': "✅ CV Succesvol Verzonden!",
+            'success-celebration': "Gelukt! 🎊",
             'success-message': "Bedankt voor het versturen van je CV. Het is verzonden en je hoort snel iets terug.",
             'success-button': "Nog een CV Versturen",
             'error-title': "❌ Versturen Mislukt",
@@ -213,6 +221,12 @@ document.addEventListener('DOMContentLoaded', function() {
             'no-vacancies': "Geen passende vacatures gevonden op dit moment.",
             'check-later': "Kom later terug, er worden regelmatig nieuwe vacatures toegevoegd!",
             'error-vacancies': "Fout bij ophalen vacatures. Probeer het later opnieuw.",
+            'btn-view-cv': "Bekijk CV",
+            'btn-find-vacancies': "Vacatures bekijken",
+            'btn-contact-recruiter': "Recruiter inschakelen",
+            'desc-find-vacancies': "Bekijk zelf vacatures die bij je passen",
+            'desc-contact-recruiter': "Een persoonlijke recruiter helpt je aan een baan",
+            'recruiter-confirmation': "Een recruiter neemt z.s.m. contact met je op!",
             'choice-title': "Hoe wil je je CV maken?",
             'choice-upload-title': "Ik heb al een CV, uploaden",
             'choice-upload-desc': "Upload je PDF of Word document en wij vullen het formulier automatisch in met AI",
@@ -287,6 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'cv-section-skills': "Habilidades",
             'cv-section-achievements': "Logros y Proyectos",
             'success-title': "✅ ¡CV Enviado Exitosamente!",
+            'success-celebration': "¡Lo lograste! 🎊",
             'success-message': "Gracias por enviar tu CV. Ha sido enviado y pronto recibirás noticias.",
             'success-button': "Enviar Otro CV",
             'error-title': "❌ Error al Enviar",
@@ -318,6 +333,12 @@ document.addEventListener('DOMContentLoaded', function() {
             'no-vacancies': "No se encontraron vacantes coincidentes en este momento.",
             'check-later': "¡Vuelve más tarde, se añaden nuevas vacantes regularmente!",
             'error-vacancies': "Error al obtener vacantes. Por favor, inténtalo más tarde.",
+            'btn-view-cv': "Ver CV",
+            'btn-find-vacancies': "Ver vacantes",
+            'btn-contact-recruiter': "Contactar reclutador",
+            'desc-find-vacancies': "Busca vacantes por ti mismo",
+            'desc-contact-recruiter': "Un reclutador personal te ayudará a encontrar trabajo",
+            'recruiter-confirmation': "¡Un reclutador se pondrá en contacto contigo pronto!",
             'choice-title': "¿Cómo quieres crear tu CV?",
             'choice-upload-title': "Tengo un CV, subirlo",
             'choice-upload-desc': "Sube tu documento PDF o Word y completaremos el formulario automáticamente con IA",
@@ -453,7 +474,20 @@ document.addEventListener('DOMContentLoaded', function() {
         generateCV();
         modal.style.display = 'block';
     });
-    
+
+    // Test shortcut: Ctrl+Shift+S to show success screen (localhost only)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                currentQuestion = totalQuestions - 1;
+                showQuestion(currentQuestion);
+                showSuccessMessage('test-cv-id-123');
+                console.log('Test success screen triggered (Ctrl+Shift+S)');
+            }
+        });
+    }
+
     // Load saved language preference
     const savedLanguage = localStorage.getItem('preferredLanguage');
     if (savedLanguage && translations[savedLanguage]) {
@@ -1520,15 +1554,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const t = translations[currentLanguage];
         currentQuestionElement.innerHTML = `
             <div class="question completed success-celebration">
-                <div class="success-icon-container">
-                    <div class="success-icon">👍</div>
-                    <div class="success-checkmark">✓</div>
+                <div class="success-circle">
+                    <div class="success-circle-bg"></div>
+                    <div class="success-emoji">🎉</div>
+                    <div class="success-sparkles">
+                        <span class="sparkle">✨</span>
+                        <span class="sparkle">✨</span>
+                        <span class="sparkle">✨</span>
+                        <span class="sparkle">⭐</span>
+                    </div>
                 </div>
-                <h2 class="success-title">${t['success-title']}</h2>
+                <h2 class="success-title">${t['success-celebration'] || 'Gelukt!'}</h2>
                 <p class="success-subtitle">${t['success-message']}</p>
                 <div class="success-buttons">
-                    <button type="button" id="viewCVBtn" class="generate-btn view-cv-btn" data-text="view-cv-btn">${t['view-cv-btn']}</button>
-                    ${cvId ? `<button type="button" id="findVacanciesBtn" class="generate-btn find-vacancies-btn">🔍 ${t['find-vacancies'] || 'Zoek Vacatures'}</button>` : ''}
+                    <div class="success-button-group">
+                        <button type="button" id="viewCVBtn" class="generate-btn view-cv-btn">📄 ${t['btn-view-cv'] || 'Bekijk CV'}</button>
+                    </div>
+                    <div class="success-button-group">
+                        <button type="button" id="findVacanciesBtn" class="generate-btn find-vacancies-btn">🔍 ${t['btn-find-vacancies'] || 'Vacatures bekijken'}</button>
+                        <p class="success-option-desc">${t['desc-find-vacancies'] || 'Bekijk zelf vacatures die bij je passen'}</p>
+                    </div>
+                    <div class="success-button-group">
+                        <button type="button" id="contactRecruiterBtn" class="generate-btn contact-recruiter-btn">👤 ${t['btn-contact-recruiter'] || 'Recruiter inschakelen'}</button>
+                        <p class="success-option-desc">${t['desc-contact-recruiter'] || 'Een persoonlijke recruiter helpt je aan een baan'}</p>
+                    </div>
+                </div>
+                <div id="recruiterConfirmation" class="recruiter-confirmation" style="display: none;">
+                    <span class="confirmation-icon">✅</span>
+                    <span>${t['recruiter-confirmation'] || 'Een recruiter neemt z.s.m. contact met je op!'}</span>
                 </div>
                 <div id="matchingVacancies" class="matching-vacancies" style="display: none;"></div>
             </div>
@@ -1550,6 +1603,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 findMatchingVacancies(cvId);
             });
         }
+
+        // Add click handler for Contact Recruiter button
+        document.getElementById('contactRecruiterBtn').addEventListener('click', function() {
+            const confirmation = document.getElementById('recruiterConfirmation');
+            const btn = document.getElementById('contactRecruiterBtn');
+
+            // Disable button and show confirmation
+            btn.disabled = true;
+            btn.classList.add('clicked');
+            confirmation.style.display = 'flex';
+
+            // Optionally: send notification to backend
+            if (cvId) {
+                fetch('/api/request-recruiter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cvId: cvId })
+                }).catch(err => console.log('Recruiter request logged'));
+            }
+        });
     }
 
     async function findMatchingVacancies(cvId) {

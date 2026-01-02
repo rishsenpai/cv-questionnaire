@@ -88,6 +88,14 @@ const cvSchema = new mongoose.Schema({
     textHash: {
         type: String,
         index: true  // Index for quick lookup
+    },
+    // Recruiter request tracking
+    recruiterRequested: {
+        type: Boolean,
+        default: false
+    },
+    recruiterRequestedAt: {
+        type: Date
     }
 }, {
     timestamps: true
