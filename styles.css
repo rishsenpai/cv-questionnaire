@@ -1546,6 +1546,61 @@ input[name="birthDate"].typing-mode {
     line-height: 1.5;
 }
 
+.vacancy-company-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: white;
+    padding: 4px;
+}
+
+.vacancy-company {
+    font-size: 14px;
+    color: #4a5568;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.vacancy-type {
+    font-size: 13px;
+    color: #718096;
+    margin-bottom: 6px;
+}
+
+.vacancy-salary {
+    font-size: 13px;
+    color: #38a169;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.vacancy-apply-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+}
+
+.vacancy-apply-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.vacancy-source {
+    font-size: 11px;
+    color: #a0aec0;
+    margin-top: 10px;
+    font-style: italic;
+}
+
 .vacancies-empty,
 .vacancies-error {
     text-align: center;
@@ -1581,6 +1636,445 @@ input[name="birthDate"].typing-mode {
 
     .vacancy-card .vacancy-title {
         padding-right: 0;
+    }
+}
+
+/* Matches Summary (Privacy-focused display) */
+.matches-summary {
+    background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+    border: 1px solid #9ae6b4;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    position: relative;
+}
+
+.matches-total {
+    margin-bottom: 20px;
+}
+
+.matches-count {
+    display: block;
+    font-size: 48px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #38a169 0%, #319795 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+}
+
+.matches-label {
+    font-size: 16px;
+    color: #2f855a;
+    font-weight: 500;
+}
+
+.matches-list {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.match-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.match-item:last-child {
+    border-bottom: none;
+}
+
+.match-count {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 36px;
+}
+
+.match-title {
+    flex: 1;
+    font-weight: 500;
+    color: #2d3748;
+    text-align: left;
+}
+
+.match-location {
+    font-size: 13px;
+    color: #718096;
+}
+
+.matches-more {
+    color: #718096;
+    font-size: 13px;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+.matches-cta {
+    margin-top: 16px;
+    color: #4a5568;
+    font-size: 14px;
+}
+
+.matches-instruction {
+    font-size: 14px;
+    color: #4a5568;
+    margin: 16px 0 8px;
+    font-weight: 500;
+}
+
+.matches-selectable .match-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.matches-selectable .match-item:hover {
+    background: #f0fff4;
+    border-color: #9ae6b4;
+}
+
+.match-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    accent-color: #38a169;
+    cursor: pointer;
+}
+
+.match-selectable {
+    display: flex;
+    align-items: center;
+}
+
+.match-selectable input:checked + .match-count {
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+}
+
+.send-interests-btn {
+    margin-top: 16px;
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%) !important;
+    width: 100%;
+}
+
+.send-interests-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2f855a 0%, #276749 100%) !important;
+}
+
+.send-interests-btn:disabled {
+    background: #cbd5e0 !important;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.matches-hint {
+    font-size: 13px;
+    color: #718096;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+.interest-confirmation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+    border: 1px solid #68d391;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 16px;
+    color: #276749;
+    font-weight: 500;
+}
+
+.interest-confirmation .confirmation-icon {
+    font-size: 24px;
+}
+
+.match-info-icon {
+    margin-left: auto;
+    cursor: pointer;
+    font-size: 16px;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.match-info-icon:hover {
+    opacity: 1;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+/* Match Detail Modal */
+.match-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.match-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.match-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.match-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #f7fafc;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #718096;
+    transition: all 0.2s ease;
+}
+
+.match-modal-close:hover {
+    background: #edf2f7;
+    color: #2d3748;
+}
+
+.match-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 16px;
+    padding-right: 40px;
+}
+
+.match-modal-meta {
+    background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+    border: 1px solid #9ae6b4;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.match-modal-meta p {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #2d3748;
+}
+
+.match-modal-meta p:last-child {
+    margin-bottom: 0;
+}
+
+.match-modal-description {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #4a5568;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 480px) {
+    .match-modal-content {
+        padding: 20px;
+        margin: 10px;
+        max-height: 90vh;
+    }
+
+    .match-modal-title {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .match-item {
+        flex-wrap: wrap;
+    }
+
+    .match-location {
+        width: 100%;
+        margin-top: 4px;
+        padding-left: 48px;
+    }
+
+    .matches-count {
+        font-size: 36px;
+    }
+
+    .match-selectable {
+        padding: 12px;
+    }
+
+    .match-checkbox {
+        margin-right: 12px;
+    }
+}
+
+/* Match Card Layout */
+.match-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+    position: relative;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+}
+
+.match-card:hover {
+    background: #f7fafc;
+}
+
+.match-item-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.match-score {
+    font-size: 12px;
+    color: #38a169;
+    font-weight: 600;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.match-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-left: 48px;
+}
+
+/* Apply Vacancy Button */
+.apply-vacancy-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.apply-vacancy-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.apply-vacancy-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.apply-vacancy-btn.applied {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+}
+
+/* Match Tooltip (hover summary) */
+.match-tooltip {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 100;
+    padding-top: 4px;
+}
+
+.match-card:hover .match-tooltip {
+    display: block;
+}
+
+.match-tooltip-content {
+    background: #2d3748;
+    color: #e2e8f0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    max-width: 100%;
+    word-wrap: break-word;
+}
+
+.match-tooltip-content::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 24px;
+    width: 8px;
+    height: 8px;
+    background: #2d3748;
+    transform: rotate(45deg);
+}
+
+@media (max-width: 480px) {
+    .match-item-actions {
+        padding-left: 0;
+    }
+
+    .match-tooltip {
+        position: static;
+        display: none;
+        padding-top: 8px;
+    }
+
+    .match-card:hover .match-tooltip {
+        display: block;
+    }
+
+    .match-tooltip-content::before {
+        display: none;
     }
 }
 

@@ -103,19 +103,24 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-cancel': "Cancel",
             'feedback-submit': "Send Feedback",
             'tooltip-feedback-required': "Please provide your feedback message",
-            'find-vacancies': "Find Vacancies",
+            'find-vacancies': "View matches",
             'searching': "Searching...",
-            'finding-vacancies': "Finding vacancies that match your profile...",
-            'matching-vacancies': "Matching Vacancies",
-            'no-vacancies': "No matching vacancies found at the moment.",
-            'check-later': "Check back later, new vacancies are added regularly!",
-            'error-vacancies': "Error fetching vacancies. Please try again later.",
+            'finding-vacancies': "Finding matches...",
+            'matching-vacancies': "Your Matches",
+            'apply-now': "Apply Now",
+            'no-vacancies': "No matches found yet.",
+            'check-later': "We are actively searching for matching jobs for you!",
+            'error-vacancies': "Error fetching matches. Please try again later.",
             'btn-view-cv': "View CV",
-            'btn-find-vacancies': "Browse vacancies",
-            'btn-contact-recruiter': "Contact recruiter",
-            'desc-find-vacancies': "Search for vacancies yourself",
-            'desc-contact-recruiter': "A personal recruiter will help you find a job",
-            'recruiter-confirmation': "A recruiter will contact you shortly!",
+            'btn-find-vacancies': "Match me",
+            'btn-contact-recruiter': "Get a recruiter",
+            'desc-find-vacancies': "Your CV will be matched with vacancies using our AI",
+            'desc-contact-recruiter': "A recruiter from BeyondJobs will help you personally",
+            'recruiter-confirmation': "A recruiter from BeyondJobs will contact you shortly!",
+            'apply-vacancy-btn': "Apply now",
+            'apply-vacancy-sending': "Sending...",
+            'apply-vacancy-success': "Your application has been sent!",
+            'apply-vacancy-error': "Something went wrong. Please try again.",
             'choice-title': "How would you like to create your CV?",
             'choice-upload-title': "I have a CV, upload it",
             'choice-upload-desc': "Upload your PDF or Word document and we'll fill in the form automatically with AI",
@@ -237,19 +242,24 @@ document.addEventListener('DOMContentLoaded', function() {
             'feedback-cancel': "Annuleren",
             'feedback-submit': "Feedback Versturen",
             'tooltip-feedback-required': "Geef je feedback bericht",
-            'find-vacancies': "Zoek Vacatures",
+            'find-vacancies': "Bekijk matches",
             'searching': "Zoeken...",
-            'finding-vacancies': "Vacatures zoeken die bij jouw profiel passen...",
-            'matching-vacancies': "Passende Vacatures",
-            'no-vacancies': "Geen passende vacatures gevonden op dit moment.",
-            'check-later': "Kom later terug, er worden regelmatig nieuwe vacatures toegevoegd!",
-            'error-vacancies': "Fout bij ophalen vacatures. Probeer het later opnieuw.",
+            'finding-vacancies': "Matches zoeken...",
+            'matching-vacancies': "Jouw Matches",
+            'apply-now': "Solliciteren",
+            'no-vacancies': "Nog geen matches gevonden.",
+            'check-later': "We zoeken actief naar passende vacatures voor jou!",
+            'error-vacancies': "Fout bij ophalen matches. Probeer het later opnieuw.",
             'btn-view-cv': "Bekijk CV",
-            'btn-find-vacancies': "Vacatures bekijken",
+            'btn-find-vacancies': "Match mij",
             'btn-contact-recruiter': "Recruiter inschakelen",
-            'desc-find-vacancies': "Bekijk zelf vacatures die bij je passen",
-            'desc-contact-recruiter': "Een persoonlijke recruiter helpt je aan een baan",
-            'recruiter-confirmation': "Een recruiter neemt z.s.m. contact met je op!",
+            'desc-find-vacancies': "Je CV wordt met onze AI gematcht met vacatures",
+            'desc-contact-recruiter': "Een recruiter van BeyondJobs helpt je persoonlijk",
+            'recruiter-confirmation': "Een recruiter van BeyondJobs neemt contact met je op!",
+            'apply-vacancy-btn': "Solliciteer nu",
+            'apply-vacancy-sending': "Versturen...",
+            'apply-vacancy-success': "Je sollicitatie is verstuurd!",
+            'apply-vacancy-error': "Er ging iets mis. Probeer het opnieuw.",
             'choice-title': "Hoe wil je je CV maken?",
             'choice-upload-title': "Ik heb al een CV, uploaden",
             'choice-upload-desc': "Upload je PDF of Word document en wij vullen het formulier automatisch in met AI",
@@ -375,15 +385,20 @@ document.addEventListener('DOMContentLoaded', function() {
             'searching': "Buscando...",
             'finding-vacancies': "Buscando vacantes que coincidan con tu perfil...",
             'matching-vacancies': "Vacantes Coincidentes",
+            'apply-now': "Aplicar Ahora",
             'no-vacancies': "No se encontraron vacantes coincidentes en este momento.",
             'check-later': "¡Vuelve más tarde, se añaden nuevas vacantes regularmente!",
             'error-vacancies': "Error al obtener vacantes. Por favor, inténtalo más tarde.",
             'btn-view-cv': "Ver CV",
-            'btn-find-vacancies': "Ver vacantes",
+            'btn-find-vacancies': "Emparejarme",
             'btn-contact-recruiter': "Contactar reclutador",
-            'desc-find-vacancies': "Busca vacantes por ti mismo",
-            'desc-contact-recruiter': "Un reclutador personal te ayudará a encontrar trabajo",
-            'recruiter-confirmation': "¡Un reclutador se pondrá en contacto contigo pronto!",
+            'desc-find-vacancies': "Tu CV será emparejado con vacantes usando nuestra IA",
+            'desc-contact-recruiter': "Un reclutador de BeyondJobs te ayudará personalmente",
+            'recruiter-confirmation': "¡Un reclutador de BeyondJobs se pondrá en contacto contigo pronto!",
+            'apply-vacancy-btn': "Aplicar ahora",
+            'apply-vacancy-sending': "Enviando...",
+            'apply-vacancy-success': "¡Tu solicitud ha sido enviada!",
+            'apply-vacancy-error': "Algo salió mal. Inténtalo de nuevo.",
             'choice-title': "¿Cómo quieres crear tu CV?",
             'choice-upload-title': "Tengo un CV, subirlo",
             'choice-upload-desc': "Sube tu documento PDF o Word y completaremos el formulario automáticamente con IA",
@@ -1308,13 +1323,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function showQuestion(questionIndex) {
-        // Hide choice and upload screens
+        // Hide choice, upload, and account screens
         const choiceScreen = document.getElementById('choiceScreen');
         const uploadScreen = document.getElementById('uploadScreen');
+        const accountScreen = document.getElementById('accountScreen');
         if (choiceScreen) choiceScreen.classList.remove('active');
         if (uploadScreen) {
             uploadScreen.classList.remove('active');
             uploadScreen.style.display = 'none';
+        }
+        if (accountScreen) {
+            accountScreen.style.display = 'none';
         }
 
         // Show the correct question
@@ -1844,17 +1863,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         <button type="button" id="viewCVBtn" class="generate-btn view-cv-btn">📄 ${t['btn-view-cv'] || 'Bekijk CV'}</button>
                     </div>
                     <div class="success-button-group">
-                        <button type="button" id="findVacanciesBtn" class="generate-btn find-vacancies-btn">🔍 ${t['btn-find-vacancies'] || 'Vacatures bekijken'}</button>
-                        <p class="success-option-desc">${t['desc-find-vacancies'] || 'Bekijk zelf vacatures die bij je passen'}</p>
+                        <button type="button" id="findVacanciesBtn" class="generate-btn find-vacancies-btn">🔍 ${t['btn-find-vacancies'] || 'Match mij'}</button>
+                        <p class="success-option-desc">${t['desc-find-vacancies'] || 'Je CV wordt met onze AI gematcht met vacatures'}</p>
                     </div>
                     <div class="success-button-group">
-                        <button type="button" id="contactRecruiterBtn" class="generate-btn contact-recruiter-btn">👤 ${t['btn-contact-recruiter'] || 'Recruiter inschakelen'}</button>
-                        <p class="success-option-desc">${t['desc-contact-recruiter'] || 'Een persoonlijke recruiter helpt je aan een baan'}</p>
+                        <button type="button" id="requestRecruiterBtn" class="generate-btn contact-recruiter-btn">📞 ${t['btn-contact-recruiter'] || 'Recruiter inschakelen'}</button>
+                        <p class="success-option-desc">${t['desc-contact-recruiter'] || 'Een recruiter van BeyondJobs helpt je persoonlijk'}</p>
                     </div>
                 </div>
                 <div id="recruiterConfirmation" class="recruiter-confirmation" style="display: none;">
                     <span class="confirmation-icon">✅</span>
-                    <span>${t['recruiter-confirmation'] || 'Een recruiter neemt z.s.m. contact met je op!'}</span>
+                    <span>${t['recruiter-confirmation'] || 'Een recruiter van BeyondJobs neemt contact met je op!'}</span>
                 </div>
                 <div id="matchingVacancies" class="matching-vacancies" style="display: none;"></div>
             </div>
@@ -1875,27 +1894,43 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('findVacanciesBtn').addEventListener('click', function() {
                 findMatchingVacancies(cvId);
             });
+
+            // Add click handler for Request Recruiter button
+            document.getElementById('requestRecruiterBtn').addEventListener('click', function() {
+                requestRecruiter(cvId);
+            });
         }
+    }
 
-        // Add click handler for Contact Recruiter button
-        document.getElementById('contactRecruiterBtn').addEventListener('click', function() {
-            const confirmation = document.getElementById('recruiterConfirmation');
-            const btn = document.getElementById('contactRecruiterBtn');
+    async function requestRecruiter(cvId) {
+        const btn = document.getElementById('requestRecruiterBtn');
+        const confirmation = document.getElementById('recruiterConfirmation');
+        const t = translations[currentLanguage];
 
-            // Disable button and show confirmation
-            btn.disabled = true;
-            btn.classList.add('clicked');
-            confirmation.style.display = 'flex';
+        btn.disabled = true;
+        btn.textContent = '⏳ ' + (t['searching'] || 'Zoeken...');
 
-            // Optionally: send notification to backend
-            if (cvId) {
-                fetch('/api/request-recruiter', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cvId: cvId })
-                }).catch(err => console.log('Recruiter request logged'));
+        try {
+            const response = await fetch('/api/request-recruiter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cvId })
+            });
+
+            if (response.ok) {
+                btn.style.display = 'none';
+                // Also hide the description below the button
+                btn.closest('.success-button-group').style.display = 'none';
+                confirmation.style.display = 'flex';
+            } else {
+                throw new Error('Failed to request recruiter');
             }
-        });
+        } catch (error) {
+            console.error('Error requesting recruiter:', error);
+            btn.disabled = false;
+            btn.textContent = '📞 ' + (t['btn-contact-recruiter'] || 'Recruiter inschakelen');
+            alert(t['apply-vacancy-error'] || 'Er ging iets mis. Probeer het opnieuw.');
+        }
     }
 
     async function findMatchingVacancies(cvId) {
@@ -1915,23 +1950,189 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         try {
+            // Use local database matching (includes imported external vacancies)
             const response = await fetch(`/api/cvs/${cvId}/matching-vacancies?lang=${currentLanguage}`);
             const result = await response.json();
 
             if (result.success && result.matches && result.matches.length > 0) {
+                // Group matches by job title and location for summary
+                const groupedMatches = {};
+                result.matches.forEach((v, idx) => {
+                    const key = `${v.title || 'Vacature'}|${v.location || 'Nederland'}`;
+                    // Use description or requirements as fallback
+                    const desc = v.description || v.requirements || '';
+                    if (!groupedMatches[key]) {
+                        groupedMatches[key] = {
+                            title: v.title || 'Vacature',
+                            location: v.location || 'Nederland',
+                            count: 0,
+                            id: `match-${idx}`,
+                            description: desc,
+                            employmentType: v.employmentType || '',
+                            isRemote: v.isRemote || false,
+                            salary: v.salary || null,
+                            matchScore: v.matchScore || 0
+                        };
+                    }
+                    groupedMatches[key].count++;
+                    // Keep the longest description and highest match score
+                    if (desc && desc.length > (groupedMatches[key].description?.length || 0)) {
+                        groupedMatches[key].description = desc;
+                    }
+                    if (v.matchScore > groupedMatches[key].matchScore) {
+                        groupedMatches[key].matchScore = v.matchScore;
+                    }
+                });
+
+                const summaryItems = Object.values(groupedMatches);
+                const totalMatches = result.matches.length;
+
+                // Create anonymized summary (5-6 sentences, no company name)
+                const createTooltipSummary = (desc) => {
+                    if (!desc) return '';
+                    const clean = desc.replace(/<[^>]*>/g, '').trim();
+                    // Split into sentences and take first 5-6
+                    const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+                    return sentences.slice(0, 6).join(' ').trim();
+                };
+
                 container.innerHTML = `
-                    <h3 class="vacancies-title">🎯 ${t['matching-vacancies'] || 'Passende Vacatures'} (${result.matches.length})</h3>
-                    <div class="vacancies-grid">
-                        ${result.matches.map(v => `
-                            <div class="vacancy-card">
-                                <div class="vacancy-match-score">${v.matchScore}% match</div>
-                                <h4 class="vacancy-title">${escapeHtml(v.title)}</h4>
-                                ${v.location ? `<p class="vacancy-location">📍 ${escapeHtml(v.location)}</p>` : ''}
-                                ${v.description ? `<p class="vacancy-description">${escapeHtml(v.description).substring(0, 150)}${v.description.length > 150 ? '...' : ''}</p>` : ''}
-                            </div>
-                        `).join('')}
+                    <h3 class="vacancies-title">🎯 ${t['matching-vacancies'] || 'Jouw Matches'}</h3>
+                    <div class="matches-summary">
+                        <div class="matches-total">
+                            <span class="matches-count">${totalMatches}</span>
+                            <span class="matches-label">${currentLanguage === 'nl' ? 'passende vacatures gevonden' : currentLanguage === 'es' ? 'vacantes encontradas' : 'matching jobs found'}</span>
+                        </div>
+                        <div class="matches-list">
+                            ${summaryItems.slice(0, 10).map((item, idx) => `
+                                <div class="match-item match-card" data-idx="${idx}">
+                                    <div class="match-item-header">
+                                        <span class="match-count">${item.count}x</span>
+                                        <span class="match-title">${escapeHtml(item.title)}</span>
+                                        <span class="match-location">📍 ${escapeHtml(item.location)}</span>
+                                        <span class="match-score">🎯 ${item.matchScore}%</span>
+                                    </div>
+                                    ${item.description ? `<div class="match-tooltip"><div class="match-tooltip-content">${escapeHtml(createTooltipSummary(item.description))}</div></div>` : ''}
+                                    <div class="match-item-actions">
+                                        <button type="button" class="apply-vacancy-btn" data-idx="${idx}">
+                                            ✉️ ${t['apply-vacancy-btn'] || 'Solliciteer nu'}
+                                        </button>
+                                        <span class="match-info-icon" data-idx="${idx}">ℹ️</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${summaryItems.length > 10 ? `<p class="matches-more">+ ${summaryItems.length - 10} ${currentLanguage === 'nl' ? 'andere functies' : 'other positions'}...</p>` : ''}
+                        </div>
+                    </div>
+                    <div id="applyConfirmation" class="interest-confirmation" style="display: none;">
+                        <span class="confirmation-icon">✅</span>
+                        <span></span>
                     </div>
                 `;
+
+                // Create modal for vacancy details (no company name for privacy)
+                const modalHtml = `
+                    <div id="matchModal" class="match-modal" style="display: none;">
+                        <div class="match-modal-overlay"></div>
+                        <div class="match-modal-content">
+                            <button class="match-modal-close">&times;</button>
+                            <h3 class="match-modal-title"></h3>
+                            <div class="match-modal-meta"></div>
+                            <div class="match-modal-description"></div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', modalHtml);
+
+                const matchModal = document.getElementById('matchModal');
+                const modalTitle = matchModal.querySelector('.match-modal-title');
+                const modalMeta = matchModal.querySelector('.match-modal-meta');
+                const modalDesc = matchModal.querySelector('.match-modal-description');
+                const closeBtn = matchModal.querySelector('.match-modal-close');
+                const overlay = matchModal.querySelector('.match-modal-overlay');
+
+                // Close modal handlers
+                closeBtn.addEventListener('click', () => matchModal.style.display = 'none');
+                overlay.addEventListener('click', () => matchModal.style.display = 'none');
+
+                // Info icon click handlers - show modal popup
+                const infoIcons = container.querySelectorAll('.match-info-icon');
+                infoIcons.forEach(icon => {
+                    icon.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const idx = parseInt(icon.dataset.idx);
+                        const item = summaryItems[idx];
+                        if (item) {
+                            modalTitle.textContent = item.title;
+
+                            // Build meta info (no company name!)
+                            let metaHtml = `<p>📍 ${escapeHtml(item.location)}${item.isRemote ? ' • 🏠 Remote mogelijk' : ''}</p>`;
+                            if (item.employmentType) {
+                                metaHtml += `<p>⏰ ${escapeHtml(item.employmentType)}</p>`;
+                            }
+                            if (item.salary && (item.salary.min || item.salary.max)) {
+                                const salaryText = item.salary.min && item.salary.max
+                                    ? `€${item.salary.min.toLocaleString()} - €${item.salary.max.toLocaleString()}`
+                                    : item.salary.min ? `Vanaf €${item.salary.min.toLocaleString()}` : `Tot €${item.salary.max.toLocaleString()}`;
+                                metaHtml += `<p>💰 ${salaryText} ${item.salary.period === 'year' ? 'per jaar' : 'per maand'}</p>`;
+                            }
+                            metaHtml += `<p>🎯 ${item.matchScore}% match • ${item.count} vacature${item.count > 1 ? 's' : ''}</p>`;
+                            modalMeta.innerHTML = metaHtml;
+
+                            // Description (cleaned up)
+                            const cleanDesc = (item.description || '').replace(/<[^>]*>/g, '').trim();
+                            modalDesc.textContent = cleanDesc || (currentLanguage === 'nl' ? 'Geen beschrijving beschikbaar.' : 'No description available.');
+
+                            matchModal.style.display = 'flex';
+                        }
+                    });
+                });
+
+                // "Solliciteer nu" button click handlers
+                const applyBtns = container.querySelectorAll('.apply-vacancy-btn');
+                applyBtns.forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const idx = parseInt(btn.dataset.idx);
+                        const item = summaryItems[idx];
+                        if (!item) return;
+
+                        btn.disabled = true;
+                        btn.textContent = '⏳ ' + (t['apply-vacancy-sending'] || 'Versturen...');
+
+                        try {
+                            const response = await fetch('/api/apply-vacancy', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    cvId,
+                                    vacancy: {
+                                        title: item.title,
+                                        location: item.location,
+                                        count: item.count,
+                                        matchScore: item.matchScore,
+                                        employmentType: item.employmentType,
+                                        isRemote: item.isRemote
+                                    }
+                                })
+                            });
+
+                            if (response.ok) {
+                                btn.textContent = '✅ ' + (t['apply-vacancy-success'] || 'Je sollicitatie is verstuurd!');
+                                btn.classList.add('applied');
+                            } else {
+                                throw new Error('Failed to apply');
+                            }
+                        } catch (error) {
+                            console.error('Error applying to vacancy:', error);
+                            btn.disabled = false;
+                            btn.textContent = '✉️ ' + (t['apply-vacancy-btn'] || 'Solliciteer nu');
+                            alert(t['apply-vacancy-error'] || 'Er ging iets mis. Probeer het opnieuw.');
+                        }
+                    });
+                });
             } else if (result.message) {
                 container.innerHTML = `
                     <div class="vacancies-empty">
@@ -1955,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         } finally {
             btn.disabled = false;
-            btn.textContent = '🔍 ' + (t['find-vacancies'] || 'Zoek Vacatures');
+            btn.textContent = '🔍 ' + (t['btn-find-vacancies'] || 'Match mij');
         }
     }
 

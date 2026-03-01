@@ -25,6 +25,8 @@ const EmployerToken = require('./models/EmployerToken');
 const Analytics = require('./models/Analytics');
 const BackupContact = require('./models/BackupContact');
 const { generateEmbedding, generateTextHash, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI, parseVacancyWithAI } = require('./utils/embeddings');
+const { searchJobs, getJobDetails, findJobsForCV } = require('./utils/jsearch');
+const { searchAdzunaJobs, findAdzunaJobsForCV } = require('./utils/adzuna');
 const natural = require('natural');
 const TfIdf = natural.TfIdf;
 
@@ -379,6 +381,10 @@ app.get('/werkgevers', (req, res) => {
 
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/admin/vacatures', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin-vacancies.html'));
 });
 
 app.get('/analytics', (req, res) => {
@@ -966,7 +972,8 @@ app.get('/api/employer/cvs', requireEmployer, async (req, res) => {
         await connectDB();
 
         const { search, jobTitle, location } = req.query;
-        let query = {};
+        // Only show candidate-uploaded CVs, not internal platform CVs (GDPR/AVG)
+        let query = { isInternal: { $ne: true } };
 
         // Build search query with synonym expansion - ALL terms must match (AND logic)
         if (search) {
@@ -1144,6 +1151,11 @@ app.get('/api/employer/cvs/:id/download', requireEmployer, async (req, res) => {
 
         if (!cv) {
             return res.status(404).json({ success: false, message: 'CV not found' });
+        }
+
+        // Block access to internal CVs (GDPR/AVG)
+        if (cv.isInternal) {
+            return res.status(403).json({ success: false, message: 'Dit CV is niet beschikbaar' });
         }
 
         // If there's an uploaded file, return it
@@ -1637,7 +1649,8 @@ app.get('/api/employer/vacancies/:id/matches', requireEmployer, async (req, res)
         }
 
         const vacancyText = vacancy.fullText || `${vacancy.title} ${vacancy.description || ''} ${vacancy.requirements || ''}`;
-        const cvs = await CV.find().select('-fileData');
+        // Only match with candidate CVs, not internal platform CVs (GDPR/AVG)
+        const cvs = await CV.find({ isInternal: { $ne: true } }).select('-fileData');
 
         // === TF-IDF MATCHING ===
         console.log('TF-IDF Matching - Processing', cvs.length, 'CVs');
@@ -1777,9 +1790,11 @@ app.get('/api/employer/vacancies/:id/ai-matches', requireEmployer, async (req, r
             console.log(`Generated and cached embedding for vacancy: ${vacancy.title}`);
         }
 
-        // Get all CVs with embeddings
-        const cvs = await CV.find({ embedding: { $exists: true, $ne: [] } })
-            .select('+embedding -fileData');
+        // Get all CVs with embeddings (exclude internal CVs - GDPR/AVG)
+        const cvs = await CV.find({
+            embedding: { $exists: true, $ne: [] },
+            isInternal: { $ne: true }
+        }).select('+embedding -fileData');
 
         if (cvs.length === 0) {
             return res.json({
@@ -1905,6 +1920,87 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
     }
 });
 
+// ==================== EXTERNAL JOB SEARCH (JSearch API) ====================
+
+// Search external job vacancies
+app.get('/api/jobs/search', async (req, res) => {
+    try {
+        const {
+            query = 'developer',
+            location = 'Netherlands',
+            page = 1,
+            datePosted = 'all',
+            remoteOnly = 'false',
+            employmentType = ''
+        } = req.query;
+
+        const results = await searchJobs({
+            query,
+            location,
+            page: parseInt(page),
+            datePosted,
+            remoteOnly,
+            employmentType
+        });
+
+        res.json(results);
+    } catch (error) {
+        console.error('Job search error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error searching jobs: ' + error.message
+        });
+    }
+});
+
+// Get details for a specific external job
+app.get('/api/jobs/:jobId', async (req, res) => {
+    try {
+        const result = await getJobDetails(req.params.jobId);
+        res.json(result);
+    } catch (error) {
+        console.error('Job details error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching job details: ' + error.message
+        });
+    }
+});
+
+// Find external jobs matching a CV
+app.get('/api/cvs/:id/external-jobs', async (req, res) => {
+    try {
+        await connectDB();
+
+        const cv = await CV.findById(req.params.id);
+        if (!cv) {
+            return res.status(404).json({ success: false, message: 'CV not found' });
+        }
+
+        const location = req.query.location || cv.location || 'Netherlands';
+
+        const results = await findJobsForCV({
+            jobTitle: cv.jobTitle,
+            skills: cv.skills,
+            location: location
+        }, location);
+
+        console.log(`External job search for "${cv.fullName}": found ${results.totalJobs} jobs`);
+
+        res.json({
+            success: true,
+            cv: { _id: cv._id, fullName: cv.fullName, jobTitle: cv.jobTitle },
+            ...results
+        });
+    } catch (error) {
+        console.error('External job matching error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error finding matching jobs: ' + error.message
+        });
+    }
+});
+
 // Admin endpoint: Generate embeddings for all CVs without one
 // In test mode, mock embeddings are used (see utils/embeddings.js)
 app.post('/api/admin/generate-embeddings', requireAdmin, async (req, res) => {
@@ -2023,6 +2119,226 @@ app.get('/api/admin/embedding-progress', requireAdmin, async (req, res) => {
             ? Math.round((embeddingProgress.current / embeddingProgress.total) * 100)
             : 0
     });
+});
+
+// === ADMIN: Import vacancies from Adzuna API (Dutch jobs) ===
+app.post('/api/admin/import-vacancies', requireAdmin, async (req, res) => {
+    try {
+        const { query = 'developer', location = '', pages = 1 } = req.body;
+
+        if (!process.env.ADZUNA_APP_ID || !process.env.ADZUNA_APP_KEY) {
+            return res.status(503).json({
+                success: false,
+                message: 'ADZUNA_APP_ID of ADZUNA_APP_KEY niet geconfigureerd'
+            });
+        }
+
+        await connectDB();
+
+        let totalImported = 0;
+        let totalSkipped = 0;
+        let totalErrors = 0;
+
+        // Fetch multiple pages (max 10)
+        for (let page = 1; page <= Math.min(pages, 10); page++) {
+            try {
+                const results = await searchAdzunaJobs({
+                    query,
+                    location,
+                    page,
+                    resultsPerPage: 50,  // Max per page
+                    maxDaysOld: 30
+                });
+
+                if (!results.success || !results.jobs || results.jobs.length === 0) {
+                    console.log(`Page ${page}: No results`);
+                    continue;
+                }
+
+                for (const job of results.jobs) {
+                    try {
+                        // Check if already exists
+                        const existing = await Vacancy.findOne({
+                            externalId: job.id.toString(),
+                            source: 'adzuna'
+                        });
+
+                        if (existing) {
+                            totalSkipped++;
+                            continue;
+                        }
+
+                        // Create full text for matching
+                        const fullText = [
+                            job.title,
+                            job.company,
+                            job.description,
+                            job.location,
+                            job.category
+                        ].filter(Boolean).join(' ');
+
+                        // Create new vacancy
+                        const vacancy = new Vacancy({
+                            title: job.title,
+                            company: job.company,
+                            companyLogo: job.companyLogo,
+                            description: job.description ? job.description.substring(0, 5000) : '',
+                            location: job.location,
+                            externalId: job.id.toString(),
+                            source: 'adzuna',
+                            applyLink: job.applyLink,
+                            employmentType: job.employmentType,
+                            isRemote: job.isRemote || false,
+                            salary: job.salary,
+                            postedAt: job.postedAt ? new Date(job.postedAt) : new Date(),
+                            fullText: fullText,
+                            isActive: true
+                        });
+
+                        await vacancy.save();
+                        totalImported++;
+                        console.log(`Imported: ${job.title} at ${job.company}`);
+                    } catch (err) {
+                        if (err.code === 11000) {
+                            totalSkipped++;  // Duplicate
+                        } else {
+                            totalErrors++;
+                            console.error('Error importing job:', err.message);
+                        }
+                    }
+                }
+
+                console.log(`Page ${page}: ${results.jobs.length} jobs processed`);
+            } catch (pageError) {
+                console.error(`Error fetching page ${page}:`, pageError.message);
+                totalErrors++;
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Import voltooid`,
+            stats: {
+                imported: totalImported,
+                skipped: totalSkipped,
+                errors: totalErrors,
+                query,
+                location,
+                pages
+            }
+        });
+
+    } catch (error) {
+        console.error('Import vacancies error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Fout bij importeren: ' + error.message
+        });
+    }
+});
+
+// Get import stats
+app.get('/api/admin/vacancy-stats', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        const total = await Vacancy.countDocuments({ isActive: true });
+        const adzuna = await Vacancy.countDocuments({ source: 'adzuna', isActive: true });
+        const internal = await Vacancy.countDocuments({
+            $or: [{ source: 'internal' }, { source: { $exists: false } }],
+            isActive: true
+        });
+        const withEmbeddings = await Vacancy.countDocuments({
+            isActive: true,
+            embedding: { $exists: true, $ne: [] }
+        });
+
+        res.json({
+            success: true,
+            stats: {
+                total,
+                adzuna,
+                internal,
+                withEmbeddings
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// List all vacancies (paginated)
+app.get('/api/admin/vacancies', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || '';
+        const source = req.query.source || '';
+
+        // Build query
+        const query = { isActive: true };
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { company: { $regex: search, $options: 'i' } },
+                { location: { $regex: search, $options: 'i' } }
+            ];
+        }
+        if (source) {
+            query.source = source;
+        }
+
+        const total = await Vacancy.countDocuments(query);
+        const vacancies = await Vacancy.find(query)
+            .select('-fileData -embedding -fullText')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            success: true,
+            vacancies,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete a vacancy
+app.delete('/api/admin/vacancies/:id', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        await Vacancy.findByIdAndUpdate(req.params.id, { isActive: false });
+        res.json({ success: true, message: 'Vacature verwijderd' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete all external vacancies
+app.delete('/api/admin/vacancies/external/all', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const result = await Vacancy.updateMany(
+            { source: 'adzuna' },
+            { isActive: false }
+        );
+        res.json({
+            success: true,
+            message: `${result.modifiedCount} externe vacatures verwijderd`
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // === ADMIN: Test Matching (for testing TF-IDF without creating vacancy) ===
@@ -3015,6 +3331,8 @@ app.post('/api/request-recruiter', async (req, res) => {
         const { cvId } = req.body;
 
         if (cvId) {
+            await connectDB();
+
             // Update CV with recruiter request flag
             const cv = await CV.findById(cvId);
             if (cv) {
@@ -3022,6 +3340,42 @@ app.post('/api/request-recruiter', async (req, res) => {
                 cv.recruiterRequestedAt = new Date();
                 await cv.save();
                 console.log(`Recruiter requested for CV: ${cvId} (${cv.fullName})`);
+
+                // Send email notification to recruiter
+                const mailOptions = {
+                    from: process.env.EMAIL_USER,
+                    to: process.env.RECIPIENT_EMAIL,
+                    subject: `📞 Recruiter aangevraagd: ${cv.fullName}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #764ba2;">📞 Recruiter Aangevraagd</h2>
+                            <p>Een kandidaat wil graag persoonlijk geholpen worden door een recruiter van BeyondJobs.</p>
+
+                            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <h3 style="margin-top: 0;">Kandidaat Gegevens</h3>
+                                <p><strong>Naam:</strong> ${cv.fullName}</p>
+                                <p><strong>Email:</strong> ${cv.email || 'Niet opgegeven'}</p>
+                                <p><strong>Telefoon:</strong> ${cv.phone || 'Niet opgegeven'}</p>
+                                <p><strong>Locatie:</strong> ${cv.location || 'Niet opgegeven'}</p>
+                                <p><strong>Huidige/Gewenste functie:</strong> ${cv.jobTitle || 'Niet opgegeven'}</p>
+                            </div>
+
+                            <p style="margin-top: 20px; color: #718096; font-size: 14px;">
+                                CV ID: ${cvId}<br>
+                                Aangevraagd: ${new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' })}
+                            </p>
+
+                            <p style="margin-top: 20px;">
+                                <a href="${process.env.BASE_URL || 'http://localhost:3001'}/admin" style="background: #764ba2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                                    Bekijk in Admin Panel
+                                </a>
+                            </p>
+                        </div>
+                    `
+                };
+
+                await transporter.sendMail(mailOptions);
+                console.log(`Recruiter request email sent for CV: ${cvId} (${cv.fullName})`);
             }
         }
 
@@ -3029,6 +3383,152 @@ app.post('/api/request-recruiter', async (req, res) => {
     } catch (error) {
         console.error('Error saving recruiter request:', error);
         res.json({ success: true, message: 'Request logged' });
+    }
+});
+
+// Apply to a specific vacancy
+app.post('/api/apply-vacancy', async (req, res) => {
+    try {
+        const { cvId, vacancy } = req.body;
+
+        if (!cvId || !vacancy) {
+            return res.status(400).json({ success: false, message: 'Missing cvId or vacancy' });
+        }
+
+        await connectDB();
+
+        const cv = await CV.findById(cvId);
+        if (!cv) {
+            return res.status(404).json({ success: false, message: 'CV not found' });
+        }
+
+        // Send email notification
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: process.env.RECIPIENT_EMAIL,
+            subject: `✉️ Sollicitatie: ${cv.fullName} → ${vacancy.title}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #667eea;">✉️ Nieuwe Sollicitatie</h2>
+                    <p>Een kandidaat wil solliciteren op een vacature.</p>
+
+                    <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Kandidaat Gegevens</h3>
+                        <p><strong>Naam:</strong> ${cv.fullName}</p>
+                        <p><strong>Email:</strong> ${cv.email || 'Niet opgegeven'}</p>
+                        <p><strong>Telefoon:</strong> ${cv.phone || 'Niet opgegeven'}</p>
+                        <p><strong>Locatie:</strong> ${cv.location || 'Niet opgegeven'}</p>
+                        <p><strong>Huidige/Gewenste functie:</strong> ${cv.jobTitle || 'Niet opgegeven'}</p>
+                    </div>
+
+                    <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; border: 1px solid #90cdf4; margin: 20px 0;">
+                        <h3 style="margin-top: 0; color: #2b6cb0;">Vacature Details</h3>
+                        <p><strong>Functie:</strong> ${vacancy.title}</p>
+                        <p><strong>Locatie:</strong> ${vacancy.location}</p>
+                        <p><strong>Aantal vacatures:</strong> ${vacancy.count}</p>
+                        <p><strong>Match score:</strong> ${vacancy.matchScore}%</p>
+                        ${vacancy.employmentType ? `<p><strong>Dienstverband:</strong> ${vacancy.employmentType}</p>` : ''}
+                        ${vacancy.isRemote ? '<p><strong>Remote:</strong> Ja</p>' : ''}
+                    </div>
+
+                    <p style="margin-top: 20px; color: #718096; font-size: 14px;">
+                        CV ID: ${cvId}<br>
+                        Gesolliciteerd: ${new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' })}
+                    </p>
+
+                    <p style="margin-top: 20px;">
+                        <a href="${process.env.BASE_URL || 'http://localhost:3001'}/admin" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                            Bekijk in Admin Panel
+                        </a>
+                    </p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Application email sent: ${cv.fullName} → ${vacancy.title}`);
+
+        res.json({ success: true, message: 'Application sent successfully' });
+    } catch (error) {
+        console.error('Error applying to vacancy:', error);
+        res.status(500).json({ success: false, message: 'Failed to send application' });
+    }
+});
+
+// Send candidate interests (selected job matches)
+app.post('/api/send-interests', async (req, res) => {
+    try {
+        const { cvId, interests } = req.body;
+
+        if (!cvId || !interests || interests.length === 0) {
+            return res.status(400).json({ success: false, message: 'Missing cvId or interests' });
+        }
+
+        await connectDB();
+
+        // Get CV details
+        const cv = await CV.findById(cvId);
+        if (!cv) {
+            return res.status(404).json({ success: false, message: 'CV not found' });
+        }
+
+        // Format interests for email
+        const interestsList = interests.map(i =>
+            `• ${i.title} (${i.location}) - ${i.count} vacature${i.count > 1 ? 's' : ''}`
+        ).join('\n');
+
+        // Send email notification
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: process.env.RECIPIENT_EMAIL,
+            subject: `🎯 Nieuwe interesse: ${cv.fullName}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #38a169;">Nieuwe Kandidaat Interesse</h2>
+
+                    <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Kandidaat Gegevens</h3>
+                        <p><strong>Naam:</strong> ${cv.fullName}</p>
+                        <p><strong>Email:</strong> ${cv.email || 'Niet opgegeven'}</p>
+                        <p><strong>Telefoon:</strong> ${cv.phone || 'Niet opgegeven'}</p>
+                        <p><strong>Locatie:</strong> ${cv.location || 'Niet opgegeven'}</p>
+                        <p><strong>Huidige/Gewenste functie:</strong> ${cv.jobTitle || 'Niet opgegeven'}</p>
+                    </div>
+
+                    <div style="background: #f0fff4; padding: 20px; border-radius: 8px; border: 1px solid #9ae6b4;">
+                        <h3 style="margin-top: 0; color: #276749;">Geselecteerde Interesses</h3>
+                        <p>De kandidaat heeft interesse in de volgende vacatures:</p>
+                        <ul style="list-style: none; padding: 0;">
+                            ${interests.map(i => `
+                                <li style="padding: 8px 0; border-bottom: 1px solid #c6f6d5;">
+                                    <strong>${i.title}</strong><br>
+                                    📍 ${i.location} • ${i.count} vacature${i.count > 1 ? 's' : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+
+                    <p style="margin-top: 20px; color: #718096; font-size: 14px;">
+                        CV ID: ${cvId}<br>
+                        Ontvangen: ${new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' })}
+                    </p>
+
+                    <p style="margin-top: 20px;">
+                        <a href="http://localhost:3001/admin" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                            Bekijk in Admin Panel
+                        </a>
+                    </p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Interest email sent for CV: ${cvId} (${cv.fullName}) - ${interests.length} interests`);
+
+        res.json({ success: true, message: 'Interests sent successfully' });
+    } catch (error) {
+        console.error('Error sending interests:', error);
+        res.status(500).json({ success: false, message: 'Failed to send interests' });
     }
 });
 
