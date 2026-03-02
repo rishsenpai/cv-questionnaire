@@ -1841,6 +1841,11 @@ app.get('/api/cvs/:id/matching-vacancies', async (req, res) => {
         const lang = req.query.lang || 'en';
         const t = errorMessages[lang] || errorMessages.en;
 
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ success: false, message: t.cvNotFound });
+        }
+
         if (!process.env.OPENAI_API_KEY) {
             return res.status(503).json({
                 success: false,
@@ -3330,7 +3335,7 @@ app.post('/api/request-recruiter', async (req, res) => {
     try {
         const { cvId } = req.body;
 
-        if (cvId) {
+        if (cvId && mongoose.Types.ObjectId.isValid(cvId)) {
             await connectDB();
 
             // Update CV with recruiter request flag
