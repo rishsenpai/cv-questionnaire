@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vacatures Beheer - Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .vacancies-table {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .vacancies-table th,
+        .vacancies-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .vacancies-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .vacancies-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .vacancy-title {
+            font-weight: 500;
+            color: #fff;
+            max-width: 300px;
+        }
+
+        .vacancy-company {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+        }
+
+        .vacancy-location {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+        }
+
+        .vacancy-source {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .vacancy-source.adzuna {
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+        }
+
+        .vacancy-salary {
+            color: #48bb78;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .vacancy-date {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+        }
+
+        .vacancy-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-icon {
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-icon.delete:hover {
+            background: rgba(229, 62, 62, 0.2);
+            border-color: #e53e3e;
+            color: #e53e3e;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .pagination-info {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+        }
+
+        .import-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .import-section h3 {
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .import-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .import-form input {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .import-form input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            background: #48bb78;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: #e53e3e;
+        }
+
+        /* Login */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-box h2 {
+            margin-bottom: 24px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .login-box .btn {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+            <h2>Admin Login</h2>
+            <input type="password" id="loginPassword" placeholder="Wachtwoord" onkeypress="if(event.key==='Enter')login()">
+            <button class="btn btn-primary" onclick="login()">Inloggen</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" style="display: none;">
+        <header class="header">
+            <h1>Vacatures Beheer</h1>
+            <div class="header-actions">
+                <a href="/admin" class="btn btn-secondary">← Terug naar Dashboard</a>
+                <button class="btn btn-danger" onclick="deleteAllExternal()">Verwijder extern geïmporteerd</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">-</div>
+                    <div class="stat-label">Totaal Vacatures</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statAdzuna">-</div>
+                    <div class="stat-label">Adzuna (NL)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statInternal">-</div>
+                    <div class="stat-label">Werkgevers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statEmbeddings">-</div>
+                    <div class="stat-label">Met AI Matching</div>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="import-section">
+                <h3>Vacatures Importeren (Adzuna)</h3>
+                <div class="import-form">
+                    <input type="text" id="importQuery" placeholder="Zoekterm (bijv. developer)">
+                    <input type="text" id="importLocation" placeholder="Locatie (optioneel)">
+                    <input type="number" id="importPages" placeholder="Pagina's" value="2" min="1" max="10">
+                    <button class="btn btn-primary" onclick="importVacancies()" id="importBtn">Importeren</button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <input type="text" class="search-input" id="searchInput" placeholder="Zoek op titel, bedrijf of locatie..." oninput="debounceSearch()">
+                <select class="filter-select" id="sourceFilter" onchange="loadVacancies()">
+                    <option value="">Alle bronnen</option>
+                    <option value="adzuna">Adzuna</option>
+                    <option value="internal">Werkgevers</option>
+                </select>
+            </div>
+
+            <!-- Vacancies Table -->
+            <table class="vacancies-table">
+                <thead>
+                    <tr>
+                        <th>Vacature</th>
+                        <th>Locatie</th>
+                        <th>Salaris</th>
+                        <th>Bron</th>
+                        <th>Datum</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody id="vacanciesBody">
+                    <tr><td colspan="6" class="loading">Laden...</td></tr>
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <button class="btn btn-secondary btn-small" onclick="prevPage()" id="prevBtn">← Vorige</button>
+                <span class="pagination-info" id="paginationInfo">Pagina 1 van 1</span>
+                <button class="btn btn-secondary btn-small" onclick="nextPage()" id="nextBtn">Volgende →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let adminToken = localStorage.getItem('adminToken');
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchTimeout;
+
+        // Check if logged in
+        if (adminToken) {
+            verifyToken();
+        }
+
+        async function login() {
+            const password = document.getElementById('loginPassword').value;
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    adminToken = data.token;
+                    localStorage.setItem('adminToken', adminToken);
+                    showMain();
+                } else {
+                    showToast('Onjuist wachtwoord', true);
+                }
+            } catch (err) {
+                showToast('Login mislukt', true);
+            }
+        }
+
+        async function verifyToken() {
+            try {
+                const res = await fetch('/api/admin/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: adminToken })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showMain();
+                } else {
+                    localStorage.removeItem('adminToken');
+                }
+            } catch (err) {
+                localStorage.removeItem('adminToken');
+            }
+        }
+
+        function showMain() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            loadStats();
+            loadVacancies();
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/admin/vacancy-stats', {
+                    headers: { 'x-admin-token': adminToken }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('statTotal').textContent = data.stats.total;
+                    document.getElementById('statAdzuna').textContent = data.stats.adzuna;
+                    document.getElementById('statInternal').textContent = data.stats.internal;
+                    document.getElementById('statEmbeddings').textContent = data.stats.withEmbeddings;
+                }
+            } catch (err) {
+                console.error('Error loading stats:', err);
+            }
+        }
+
+        async function loadVacancies() {
+            const search = document.getElementById('searchInput').value;
+            const source = document.getElementById('sourceFilter').value;
+
+            const params = new URLSearchParams({
+                page: currentPage,
+                limit: 20
+            });
+            if (search) params.append('search', search);
+            if (source) params.append('source', source);
+
+            try {
+                const res = await fetch(`/api/admin/vacancies?${params}`, {
+                    headers: { 'x-admin-token': adminToken }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    renderVacancies(data.vacancies);
+                    totalPages = data.pagination.pages;
+                    updatePagination(data.pagination);
+                }
+            } catch (err) {
+                console.error('Error loading vacancies:', err);
+            }
+        }
+
+        function renderVacancies(vacancies) {
+            const tbody = document.getElementById('vacanciesBody');
+
+            if (vacancies.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Geen vacatures gevonden</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = vacancies.map(v => `
+                <tr>
+                    <td>
+                        <div class="vacancy-title">${escapeHtml(v.title)}</div>
+                        <div class="vacancy-company">${escapeHtml(v.company || '-')}</div>
+                    </td>
+                    <td class="vacancy-location">${escapeHtml(v.location || '-')}</td>
+                    <td class="vacancy-salary">${formatSalary(v.salary)}</td>
+                    <td><span class="vacancy-source ${v.source}">${v.source || 'internal'}</span></td>
+                    <td class="vacancy-date">${formatDate(v.createdAt)}</td>
+                    <td class="vacancy-actions">
+                        ${v.applyLink ? `<a href="${v.applyLink}" target="_blank" class="btn btn-icon">🔗</a>` : ''}
+                        <button class="btn btn-icon delete" onclick="deleteVacancy('${v._id}')">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function formatSalary(salary) {
+            if (!salary || (!salary.min && !salary.max)) return '-';
+            const min = salary.min ? `€${(salary.min/1000).toFixed(0)}k` : '';
+            const max = salary.max ? `€${(salary.max/1000).toFixed(0)}k` : '';
+            if (min && max) return `${min} - ${max}`;
+            return min || max;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('nl-NL');
+        }
+
+        function updatePagination(pagination) {
+            document.getElementById('paginationInfo').textContent =
+                `Pagina ${pagination.page} van ${pagination.pages} (${pagination.total} vacatures)`;
+            document.getElementById('prevBtn').disabled = pagination.page <= 1;
+            document.getElementById('nextBtn').disabled = pagination.page >= pagination.pages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadVacancies();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadVacancies();
+            }
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadVacancies();
+            }, 300);
+        }
+
+        async function importVacancies() {
+            const query = document.getElementById('importQuery').value || 'developer';
+            const location = document.getElementById('importLocation').value;
+            const pages = parseInt(document.getElementById('importPages').value) || 2;
+
+            const btn = document.getElementById('importBtn');
+            btn.textContent = 'Importeren...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/admin/import-vacancies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-token': adminToken
+                    },
+                    body: JSON.stringify({ query, location, pages })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(`${data.stats.imported} vacatures geïmporteerd!`);
+                    loadStats();
+                    loadVacancies();
+                } else {
+                    showToast(data.message, true);
+                }
+            } catch (err) {
+                showToast('Import mislukt', true);
+            } finally {
+                btn.textContent = 'Importeren';
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteVacancy(id) {
+            if (!confirm('Weet je zeker dat je deze vacature wilt verwijderen?')) return;
+
+            try {
+                const res = await fetch(`/api/admin/vacancies/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'x-admin-token': adminToken }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('Vacature verwijderd');
+                    loadStats();
+                    loadVacancies();
+                } else {
+                    showToast(data.message, true);
+                }
+            } catch (err) {
+                showToast('Verwijderen mislukt', true);
+            }
+        }
+
+        async function deleteAllExternal() {
+            if (!confirm('Weet je zeker dat je ALLE externe vacatures wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+
+            try {
+                const res = await fetch('/api/admin/vacancies/external/all', {
+                    method: 'DELETE',
+                    headers: { 'x-admin-token': adminToken }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(data.message);
+                    loadStats();
+                    loadVacancies();
+                } else {
+                    showToast(data.message, true);
+                }
+            } catch (err) {
+                showToast('Verwijderen mislukt', true);
+            }
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast' + (isError ? ' error' : '');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

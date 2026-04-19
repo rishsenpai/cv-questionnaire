@@ -96,6 +96,11 @@ const cvSchema = new mongoose.Schema({
     },
     recruiterRequestedAt: {
         type: Date
+    },
+    // Internal CV (uploaded by platform, not visible to employers)
+    isInternal: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
