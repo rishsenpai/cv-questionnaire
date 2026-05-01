@@ -10,6 +10,7 @@ node_modules/
 next-app/.next/
 next-app/out/
 next-app/.turbo/
+next-app/tsconfig.tsbuildinfo
 DEVELOPMENT.md
 AI-MATCHING.md
 CLAUDE.md
