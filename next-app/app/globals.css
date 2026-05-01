@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/typography";
+
+body {
+  @apply antialiased bg-slate-50 text-slate-900;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-brutal-black: #000000;
+  --color-brutal-white: #ffffff;
+  --color-brutal-yellow: #facc15;
+}
+
+/* Custom Utilities for Brutalist Styles */
+@utility brutal-shadow {
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+}
+
+@utility brutal-shadow-lg {
+  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 1);
+}
+
+@utility brutal-card {
+  @apply bg-white border-4 border-black brutal-shadow transition-all;
+  
+  &:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+  }
+}
+
+@utility brutal-button {
+  @apply bg-white border-2 border-black px-4 py-2 font-bold brutal-shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all;
+}
