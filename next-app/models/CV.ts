@@ -1,0 +1,62 @@
+import mongoose, { Schema, Model, Document } from 'mongoose';
+
+export interface ICV extends Document {
+    fullName: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    birthDate?: string;
+    jobTitle?: string;
+    summary?: string;
+    languages?: string;
+    experience?: string;
+    education?: string;
+    skills?: string;
+    achievements?: string;
+    emailSent?: boolean;
+    fullText?: string;
+    fileName?: string;
+    fileData?: string;
+    fileType?: string;
+    fileSize?: number;
+    embedding?: number[];
+    embeddingModel?: string;
+    textHash?: string;
+    recruiterRequested?: boolean;
+    recruiterRequestedAt?: Date;
+    isInternal?: boolean;
+    driveFileId?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+const cvSchema = new Schema<ICV>({
+    fullName: { type: String, required: true, trim: true },
+    email: { type: String, required: false, trim: true, lowercase: true },
+    phone: { type: String, trim: true },
+    location: { type: String, trim: true },
+    birthDate: { type: String, trim: true },
+    jobTitle: { type: String, trim: true },
+    summary: { type: String, trim: true },
+    languages: { type: String, trim: true },
+    experience: { type: String, trim: true },
+    education: { type: String, trim: true },
+    skills: { type: String, trim: true },
+    achievements: { type: String, trim: true },
+    emailSent: { type: Boolean, default: false },
+    fullText: { type: String },
+    fileName: { type: String, trim: true },
+    fileData: { type: String },
+    fileType: { type: String, trim: true },
+    fileSize: { type: Number },
+    embedding: { type: [Number], select: false },
+    embeddingModel: { type: String, default: 'text-embedding-3-small' },
+    textHash: { type: String, index: true },
+    recruiterRequested: { type: Boolean, default: false },
+    recruiterRequestedAt: { type: Date },
+    isInternal: { type: Boolean, default: false },
+    driveFileId: { type: String, trim: true, index: { unique: true, sparse: true } },
+}, { timestamps: true });
+
+const CV: Model<ICV> = (mongoose.models.CV as Model<ICV>) || mongoose.model<ICV>('CV', cvSchema);
+export default CV;
