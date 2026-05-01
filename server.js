@@ -24,9 +24,14 @@ const Vacancy = require('./models/Vacancy');
 const EmployerToken = require('./models/EmployerToken');
 const Analytics = require('./models/Analytics');
 const BackupContact = require('./models/BackupContact');
+const SyncState = require('./models/SyncState');
+const AdminToken = require('./models/AdminToken');
 const { generateEmbedding, generateTextHash, prepareCVText, cosineSimilarity, findMatches, parseCVWithAI, parseVacancyWithAI } = require('./utils/embeddings');
 const { searchJobs, getJobDetails, findJobsForCV } = require('./utils/jsearch');
 const { searchAdzunaJobs, findAdzunaJobsForCV } = require('./utils/adzuna');
+const { extractText } = require('./utils/cvTextExtract');
+const { getStartPageToken, listFolderFiles, listChanges, downloadFile, getFolderId } = require('./utils/googleDrive');
+const { ingestCvFromBuffer } = require('./utils/cvIngestion');
 const natural = require('natural');
 const TfIdf = natural.TfIdf;
 
@@ -249,23 +254,40 @@ const PORT = process.env.PORT || 3000;
 // MongoDB connection with caching for serverless
 let cachedConnection = null;
 
+// Resolve the right Mongo URI for the current env, with a hard guard against
+// test runs accidentally writing to the production database.
+function resolveMongoUri() {
+    if (process.env.NODE_ENV === 'test') {
+        const testUri = process.env.MONGODB_URI_TEST;
+        if (!testUri) {
+            throw new Error('NODE_ENV=test but MONGODB_URI_TEST is not set. Refusing to start to avoid hitting production. Add MONGODB_URI_TEST to .env (database name must contain "test").');
+        }
+        if (!/test/i.test(testUri)) {
+            throw new Error('MONGODB_URI_TEST must point to a database whose name contains "test" (current does not). Refusing to start to avoid hitting production.');
+        }
+        return testUri;
+    }
+    return process.env.MONGODB_URI;
+}
+
 const connectDB = async () => {
     if (cachedConnection && mongoose.connection.readyState === 1) {
         return cachedConnection;
     }
 
+    const uri = resolveMongoUri();
+    if (!uri) {
+        console.log('No Mongo URI provided, running without database');
+        return null;
+    }
+
     try {
-        if (process.env.MONGODB_URI) {
-            cachedConnection = await mongoose.connect(process.env.MONGODB_URI, {
-                bufferCommands: false,
-                maxPoolSize: 10
-            });
-            console.log('MongoDB connected successfully');
-            return cachedConnection;
-        } else {
-            console.log('No MONGODB_URI provided, running without database');
-            return null;
-        }
+        cachedConnection = await mongoose.connect(uri, {
+            bufferCommands: false,
+            maxPoolSize: 10
+        });
+        console.log(`MongoDB connected successfully (${process.env.NODE_ENV === 'test' ? 'TEST DB' : 'prod/dev DB'})`);
+        return cachedConnection;
     } catch (error) {
         console.error('MongoDB connection error:', error.message);
         return null;
@@ -306,7 +328,11 @@ const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: isTestMode ? 10000 : 100, // Much higher limit for tests
     message: { success: false, message: 'Too many requests, please try again later' },
-    skip: () => isTestMode // Skip rate limiting entirely in test mode
+    // Skip in tests, and skip for admin-authenticated requests so bulk operations
+    // (like uploading 100+ CVs from the admin dashboard) don't hit this limit.
+    // The token is still verified by requireAdmin on each protected route, so an
+    // invalid header just hits 401 immediately.
+    skip: (req) => isTestMode || Boolean(req.headers['x-admin-token'])
 });
 
 const authLimiter = rateLimit({
@@ -765,26 +791,35 @@ app.get('/api/analytics/summary', async (req, res) => {
     }
 });
 
-// Admin authentication
+// Admin authentication — token store lives in MongoDB so it survives serverless
+// cold starts (an in-memory Map gets wiped between Vercel invocations and would
+// log users out at random).
 const ADMIN_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
-const activeTokens = new Map();
 
 function generateToken() {
     return crypto.randomBytes(32).toString('hex');
 }
 
-function validateToken(token) {
-    const tokenData = activeTokens.get(token);
-    if (!tokenData) return false;
-    if (Date.now() > tokenData.expires) {
-        activeTokens.delete(token);
+async function validateToken(token) {
+    if (!token || typeof token !== 'string') return false;
+    try {
+        await connectDB();
+        const doc = await AdminToken.findOne({ token });
+        if (!doc) return false;
+        if (doc.expires.getTime() <= Date.now()) {
+            // TTL index will eventually clean this up, but be eager.
+            await AdminToken.deleteOne({ _id: doc._id }).catch(() => {});
+            return false;
+        }
+        return true;
+    } catch (err) {
+        console.error('validateToken error:', err.message);
         return false;
     }
-    return true;
 }
 
 // Admin login endpoint
-app.post('/api/admin/login', authLimiter, (req, res) => {
+app.post('/api/admin/login', authLimiter, async (req, res) => {
     const { password } = req.body;
     const adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -796,10 +831,19 @@ app.post('/api/admin/login', authLimiter, (req, res) => {
     }
 
     if (password === adminPassword) {
-        const token = generateToken();
-        activeTokens.set(token, { expires: Date.now() + ADMIN_TOKEN_EXPIRY });
-        console.log(`[SECURITY] Admin login successful from IP: ${getClientIP(req)}`);
-        res.json({ success: true, token });
+        try {
+            await connectDB();
+            const token = generateToken();
+            await AdminToken.create({
+                token,
+                expires: new Date(Date.now() + ADMIN_TOKEN_EXPIRY)
+            });
+            console.log(`[SECURITY] Admin login successful from IP: ${getClientIP(req)}`);
+            res.json({ success: true, token });
+        } catch (err) {
+            console.error('Admin login error:', err.message);
+            res.status(500).json({ success: false, message: 'Login failed' });
+        }
     } else {
         console.warn(`[SECURITY] Failed admin login attempt from IP: ${getClientIP(req)}`);
         res.status(401).json({ success: false, message: 'Invalid password' });
@@ -807,9 +851,9 @@ app.post('/api/admin/login', authLimiter, (req, res) => {
 });
 
 // Verify token endpoint
-app.post('/api/admin/verify', (req, res) => {
+app.post('/api/admin/verify', async (req, res) => {
     const { token } = req.body;
-    if (validateToken(token)) {
+    if (await validateToken(token)) {
         res.json({ success: true });
     } else {
         res.status(401).json({ success: false, message: 'Invalid or expired token' });
@@ -817,9 +861,9 @@ app.post('/api/admin/verify', (req, res) => {
 });
 
 // Admin middleware for protected routes
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
     const token = req.headers['x-admin-token'];
-    if (!validateToken(token)) {
+    if (!(await validateToken(token))) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     next();
@@ -3140,41 +3184,18 @@ app.post('/api/parse-cv', uploadLimiter, async (req, res) => {
             return res.status(503).json({ success: false, message: t.aiNotConfigured });
         }
 
-        let extractedText = '';
-
-        // Extract text based on file type
-        if (fileType === 'application/pdf' || fileName?.toLowerCase().endsWith('.pdf')) {
-            // PDF parsing
-            if (!pdfParse) {
-                return res.status(500).json({ success: false, message: 'PDF parsing not available' });
-            }
-            const buffer = Buffer.from(fileData, 'base64');
-            const pdfData = await pdfParse(buffer, { max: 0 });
-            extractedText = pdfData.text;
-        } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                   fileName?.toLowerCase().endsWith('.docx')) {
-            // Word document parsing - use simple text extraction
-            const buffer = Buffer.from(fileData, 'base64');
-            // For Word docs, we'll extract text using a simple approach
-            // The docx format is a zip containing XML files
-            const AdmZip = require('adm-zip');
-            try {
-                const zip = new AdmZip(buffer);
-                const documentXml = zip.readAsText('word/document.xml');
-                // Extract text from XML, removing tags
-                extractedText = documentXml
-                    .replace(/<[^>]*>/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-            } catch (zipError) {
-                console.error('Error parsing Word document:', zipError);
-                return res.status(400).json({ success: false, message: t.parseError });
-            }
-        } else {
+        const buffer = Buffer.from(fileData, 'base64');
+        const { text: extractedText, error: extractErr } = await extractText({ buffer, fileName, fileType });
+        if (extractErr === 'pdfParserUnavailable') {
+            return res.status(500).json({ success: false, message: 'PDF parsing not available' });
+        }
+        if (extractErr === 'unsupported') {
             return res.status(400).json({ success: false, message: t.unsupportedFormat });
         }
-
-        if (!extractedText || extractedText.trim().length < 50) {
+        if (extractErr === 'parseFailed') {
+            return res.status(400).json({ success: false, message: t.parseError });
+        }
+        if (extractErr === 'tooShort') {
             return res.status(400).json({ success: false, message: t.textTooShort });
         }
 
@@ -4149,6 +4170,232 @@ app.post('/api/cvs/upload', requireAdmin, async (req, res) => {
             success: false,
             message: 'Failed to upload CV'
         });
+    }
+});
+
+// Bulk-friendly admin upload — server-side parse + dedup. The frontend posts
+// one file per request and renders per-file status (created / duplicate / error).
+app.post('/api/cvs/auto-upload', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ success: false, message: 'Database not connected' });
+        }
+
+        const { fileName, fileType, fileSize, fileData, lang } = req.body || {};
+        if (!fileData || !fileName) {
+            return res.status(400).json({ success: false, message: 'fileName and fileData are required' });
+        }
+
+        let buffer;
+        try {
+            buffer = Buffer.from(fileData, 'base64');
+        } catch (err) {
+            return res.status(400).json({ success: false, message: 'Invalid base64 fileData' });
+        }
+
+        const result = await ingestCvFromBuffer({
+            buffer,
+            fileName,
+            fileType,
+            fileSize: fileSize != null ? Number(fileSize) : buffer.length,
+            isInternal: true,
+            lang: lang || 'nl'
+        });
+
+        if (result.created) {
+            return res.json({ success: true, status: 'created', cvId: result.cvId, fileName });
+        }
+        // Treat duplicate-name-and-experience as a 200 with status flag — easier for the UI to render.
+        return res.json({
+            success: false,
+            status: 'skipped',
+            reason: result.reason,
+            fileName,
+            existingCvId: result.existingCvId,
+            existingCvName: result.existingCvName
+        });
+    } catch (err) {
+        console.error('auto-upload error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Upload failed' });
+    }
+});
+
+// =========================================================================
+// Google Drive auto-sync
+// =========================================================================
+
+function verifyCronSecret(req) {
+    const expected = process.env.CRON_SECRET;
+    if (!expected) return false;
+    const header = req.headers.authorization || '';
+    return header === `Bearer ${expected}`;
+}
+
+// Limits per cron invocation. Keeps a single run well under Vercel's 300s function
+// timeout even when the folder contains hundreds of unprocessed files; remainder
+// is picked up on the next run via dedup-by-driveFileId.
+const DRIVE_SYNC_CONCURRENCY = 5;
+const DRIVE_SYNC_MAX_WORK_PER_RUN = 200;
+
+async function runDriveSync() {
+    const folderId = getFolderId();
+    const stats = {
+        runAt: new Date().toISOString(),
+        mode: 'incremental',
+        totalInFolder: 0,
+        processed: 0,
+        created: 0,
+        skipped: 0,
+        errors: [],
+        truncated: false
+    };
+
+    const tokenDoc = await SyncState.findOne({ key: 'drive:pageToken' });
+    let pageToken = tokenDoc && tokenDoc.value;
+
+    let filesToProcess;
+    let newPageToken;
+
+    if (!pageToken) {
+        stats.mode = 'first-run-backfill';
+        const startToken = await getStartPageToken();
+        filesToProcess = await listFolderFiles(folderId);
+        newPageToken = startToken;
+    } else {
+        const res = await listChanges(pageToken, folderId);
+        filesToProcess = res.files;
+        newPageToken = res.newPageToken;
+    }
+
+    stats.totalInFolder = filesToProcess.length;
+
+    const persistStats = async () => {
+        try {
+            await SyncState.findOneAndUpdate(
+                { key: 'drive:lastSyncStats' },
+                { value: stats },
+                { upsert: true, new: true }
+            );
+        } catch (err) {
+            console.error('persistStats error:', err.message);
+        }
+    };
+
+    // Initial snapshot so the admin UI shows the run started even before the first file finishes.
+    await persistStats();
+
+    let workDone = 0; // counts only non-pre-dedup-skipped files (the expensive ones)
+    const queue = filesToProcess.slice();
+
+    const worker = async () => {
+        while (queue.length > 0) {
+            if (stats.truncated) return;
+            const f = queue.shift();
+            if (!f) return;
+
+            stats.processed += 1;
+
+            // Cheap pre-dedup so re-runs over a partially-processed folder cost almost nothing.
+            try {
+                if (await CV.exists({ driveFileId: f.id })) {
+                    stats.skipped += 1;
+                    stats.errors.push({ driveFileId: f.id, name: f.name, reason: 'driveFileId-exists' });
+                    await persistStats();
+                    continue;
+                }
+            } catch (err) {
+                stats.errors.push({ driveFileId: f.id, name: f.name, reason: `dedupCheck:${err.message}` });
+                await persistStats();
+                continue;
+            }
+
+            // Hard cap on real work per run — protects the 300s function budget.
+            if (workDone >= DRIVE_SYNC_MAX_WORK_PER_RUN) {
+                stats.truncated = true;
+                return;
+            }
+            workDone += 1;
+
+            try {
+                const buffer = await downloadFile(f.id);
+                const result = await ingestCvFromBuffer({
+                    buffer,
+                    fileName: f.name,
+                    fileType: f.mimeType,
+                    fileSize: f.size != null ? Number(f.size) : buffer.length,
+                    driveFileId: f.id,
+                    lang: 'nl'
+                });
+                if (result.created) {
+                    stats.created += 1;
+                } else {
+                    stats.skipped += 1;
+                    stats.errors.push({ driveFileId: f.id, name: f.name, reason: result.reason });
+                }
+            } catch (err) {
+                console.error(`Drive sync error for ${f.name} (${f.id}):`, err.message);
+                stats.errors.push({ driveFileId: f.id, name: f.name, reason: err.message });
+            }
+            await persistStats();
+        }
+    };
+
+    const workers = Array.from({ length: DRIVE_SYNC_CONCURRENCY }, () => worker());
+    await Promise.all(workers);
+
+    // Only advance pageToken when the entire batch is drained — otherwise next run
+    // will re-list the same change-set, dedup-skip already-processed files cheaply,
+    // and ingest the remainder. Prevents permanent loss when we hit the work cap.
+    if (!stats.truncated) {
+        await SyncState.findOneAndUpdate(
+            { key: 'drive:pageToken' },
+            { value: newPageToken },
+            { upsert: true, new: true }
+        );
+    }
+    await persistStats();
+
+    return stats;
+}
+
+// Vercel cron endpoint — hit hourly. Auth via Bearer CRON_SECRET header.
+app.get('/api/cron/sync-drive', async (req, res) => {
+    if (!verifyCronSecret(req)) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    try {
+        await connectDB();
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ success: false, message: 'Database not connected' });
+        }
+        const stats = await runDriveSync();
+        res.json({ success: true, stats });
+    } catch (err) {
+        console.error('Drive sync failed:', err);
+        res.status(500).json({ success: false, message: err.message || 'Drive sync failed' });
+    }
+});
+
+// Admin-readable view of the last sync run — no Drive credentials needed to consume.
+app.get('/api/admin/sync-status', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const tokenDoc = await SyncState.findOne({ key: 'drive:pageToken' });
+        const statsDoc = await SyncState.findOne({ key: 'drive:lastSyncStats' });
+        const cvsWithDriveId = await CV.countDocuments({ driveFileId: { $exists: true, $ne: null } });
+        res.json({
+            success: true,
+            data: {
+                hasPageToken: Boolean(tokenDoc && tokenDoc.value),
+                cvsWithDriveId,
+                lastSyncStats: statsDoc ? statsDoc.value : null,
+                lastUpdatedAt: statsDoc ? statsDoc.updatedAt : null
+            }
+        });
+    } catch (err) {
+        console.error('sync-status error:', err);
+        res.status(500).json({ success: false, message: 'Failed to load sync status' });
     }
 });
 

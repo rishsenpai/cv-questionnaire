@@ -193,8 +193,12 @@ async function parseCVWithAI(cvText, lang = 'en') {
     // Use mock response in test mode to avoid API costs
     if (process.env.NODE_ENV === 'test') {
         console.log('Test mode: using mock CV parsing');
+        // Derive a short deterministic suffix from the input text so batched tests
+        // (e.g. Drive sync with multiple files in one run) don't collide on the
+        // secondary fullName+experience dedup.
+        const suffix = crypto.createHash('sha256').update(cvText).digest('hex').slice(0, 8);
         return {
-            fullName: 'Test User',
+            fullName: `Test User ${suffix}`,
             email: 'test@example.com',
             phone: '+31612345678',
             location: 'Amsterdam, Netherlands',
@@ -202,7 +206,7 @@ async function parseCVWithAI(cvText, lang = 'en') {
             languages: 'Dutch (native), English (fluent)',
             jobTitle: 'Software Developer',
             summary: 'Experienced developer with 5 years of experience.',
-            experience: 'Software Developer at TestCorp (2019-present)',
+            experience: `Software Developer at TestCorp-${suffix} (2019-present)`,
             education: 'BSc Computer Science, University of Amsterdam',
             skills: 'JavaScript, Python, React, Node.js',
             achievements: 'Led team of 5 developers'

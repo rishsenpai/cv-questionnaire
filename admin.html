@@ -281,6 +281,46 @@
             margin-bottom: 20px;
         }
 
+        .drive-sync-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .drive-sync-info { display: flex; flex-direction: column; gap: 4px; }
+        .drive-sync-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+        .drive-sync-main { font-size: 16px; color: rgba(255,255,255,0.95); }
+        .drive-sync-meta { font-size: 13px; color: rgba(255,255,255,0.6); }
+        .drive-sync-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .drive-sync-badge.idle { background: rgba(100, 200, 100, 0.2); color: #8de08d; }
+        .drive-sync-badge.partial { background: rgba(255, 180, 80, 0.2); color: #ffc66b; }
+        .drive-sync-badge.errors { background: rgba(255, 100, 100, 0.2); color: #ff8888; }
+        .drive-sync-refresh {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.85);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .drive-sync-refresh:hover { background: rgba(255, 255, 255, 0.14); }
+        .drive-sync-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
         .search-wrapper {
             display: flex;
             flex-direction: column;
@@ -2049,47 +2089,91 @@
         .upload-errors {
             display: none;
             margin-top: 16px;
-            padding: 12px 16px;
-            background: rgba(229, 62, 62, 0.15);
-            border: 1px solid rgba(229, 62, 62, 0.4);
-            border-radius: 8px;
-            max-height: 150px;
-            overflow-y: auto;
+            background: rgba(229, 62, 62, 0.10);
+            border: 1px solid rgba(229, 62, 62, 0.35);
+            border-radius: 10px;
+            overflow: hidden;
         }
+        .upload-errors.show { display: block; }
 
-        .upload-errors.show {
-            display: block;
-        }
-
-        .upload-errors-title {
-            color: #fc8181;
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 8px;
+        .upload-errors-summary {
             display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .summary-chip {
+            display: inline-flex;
             align-items: center;
             gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
         }
+        .summary-chip.uploaded { background: rgba(46, 196, 182, 0.18); color: #6ee7da; }
+        .summary-chip.duplicates { background: rgba(255, 180, 80, 0.18); color: #ffc66b; }
+        .summary-chip.failures { background: rgba(255, 100, 100, 0.18); color: #ff8888; }
+
+        .errors-section { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+        .errors-section:last-child { border-bottom: none; }
+        .errors-section > summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .errors-section > summary::-webkit-details-marker { display: none; }
+        .errors-section > summary::after {
+            content: '▾';
+            font-size: 11px;
+            opacity: 0.5;
+            transition: transform 0.15s ease;
+        }
+        .errors-section[open] > summary::after { transform: rotate(180deg); }
+        .errors-section > summary:hover { background: rgba(255, 255, 255, 0.04); }
 
         .upload-errors-list {
             list-style: none;
             padding: 0;
             margin: 0;
+            max-height: min(50vh, 400px);
+            overflow-y: auto;
         }
 
         .upload-errors-list li {
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.85);
             font-size: 13px;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 12px;
         }
-
-        .upload-errors-list li:last-child {
-            border-bottom: none;
+        .upload-errors-list li .duplicate-info { min-width: 0; flex: 1; }
+        .upload-errors-list li .duplicate-info strong {
+            display: inline-block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: bottom;
+            font-weight: 600;
+        }
+        .upload-errors-list li .reason {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 12px;
+            margin-top: 2px;
+            display: block;
         }
 
         .duplicate-info {
@@ -3014,6 +3098,14 @@
 
             <!-- CV Tab -->
             <div class="tab-content active" id="cvTab">
+                <div class="drive-sync-card" id="driveSyncCard" style="display: none;">
+                    <div class="drive-sync-info">
+                        <span class="drive-sync-title">Google Drive sync</span>
+                        <span class="drive-sync-main" id="driveSyncMain">Laden…</span>
+                        <span class="drive-sync-meta" id="driveSyncMeta"></span>
+                    </div>
+                    <button class="drive-sync-refresh" id="driveSyncRefreshBtn" onclick="loadDriveSyncStatus()">Vernieuwen</button>
+                </div>
                 <div class="toolbar">
                     <div class="search-wrapper">
                         <div class="search-input-wrapper">
@@ -3193,8 +3285,15 @@
                     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
                 </div>
                 <div class="upload-errors" id="uploadErrors">
-                    <div class="upload-errors-title">⚠️ Duplicaten overgeslagen:</div>
-                    <ul class="upload-errors-list" id="uploadErrorsList"></ul>
+                    <div class="upload-errors-summary" id="uploadErrorsSummary"></div>
+                    <details open class="errors-section" id="dupSection" style="display:none;">
+                        <summary><span id="dupHeading">Duplicaten</span></summary>
+                        <ul class="upload-errors-list" id="uploadErrorsList"></ul>
+                    </details>
+                    <details open class="errors-section" id="failSection" style="display:none;">
+                        <summary><span id="failHeading">Mislukt</span></summary>
+                        <ul class="upload-errors-list" id="uploadFailList"></ul>
+                    </details>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-cancel" onclick="closeAddModal()">Annuleren</button>
@@ -3344,7 +3443,7 @@
 
         // Session timeout manager
         const SessionManager = {
-            timeout: 15 * 60 * 1000, // 15 minutes
+            timeout: 30 * 60 * 1000, // 30 minutes
             warningTime: 60 * 1000, // Show warning 60 seconds before timeout
             timer: null,
             warningTimer: null,
@@ -3394,7 +3493,7 @@
 
             extend() {
                 this.resetTimer();
-                Toast.success('Sessie verlengd', 'Je sessie is met 15 minuten verlengd.');
+                Toast.success('Sessie verlengd', 'Je sessie is met 30 minuten verlengd.');
             },
 
             sessionExpired() {
@@ -4120,6 +4219,68 @@
             SessionManager.init();
         }
 
+        function formatRelativeTime(iso) {
+            if (!iso) return '';
+            const ms = Date.now() - new Date(iso).getTime();
+            if (ms < 0 || isNaN(ms)) return '';
+            const sec = Math.floor(ms / 1000);
+            if (sec < 60) return `${sec}s geleden`;
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `${min} min geleden`;
+            const hr = Math.floor(min / 60);
+            if (hr < 24) return `${hr} uur geleden`;
+            const day = Math.floor(hr / 24);
+            return `${day} dag${day === 1 ? '' : 'en'} geleden`;
+        }
+
+        async function loadDriveSyncStatus() {
+            const mainEl = document.getElementById('driveSyncMain');
+            const metaEl = document.getElementById('driveSyncMeta');
+            const btn = document.getElementById('driveSyncRefreshBtn');
+            if (!mainEl || !metaEl) return;
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch('/api/admin/sync-status', {
+                    headers: { 'X-Admin-Token': authToken }
+                });
+                if (res.status === 401) { logout(); return; }
+                const json = await res.json();
+                if (!json.success) {
+                    mainEl.textContent = `Fout: ${json.message || 'onbekend'}`;
+                    metaEl.textContent = '';
+                    return;
+                }
+                const d = json.data || {};
+                const stats = d.lastSyncStats;
+                const cvCount = d.cvsWithDriveId || 0;
+
+                if (!stats) {
+                    mainEl.innerHTML = `${cvCount} CV's met Drive ID <span class="drive-sync-badge idle">nog geen run</span>`;
+                    metaEl.textContent = d.hasPageToken ? 'Page token aanwezig — wacht op volgende cron.' : 'Geen page token. Eerste run doet backfill.';
+                    return;
+                }
+
+                let badge;
+                if (stats.truncated) {
+                    badge = `<span class="drive-sync-badge partial">batch limit — meer files wachten</span>`;
+                } else if (stats.errors && stats.errors.filter(e => e.reason !== 'driveFileId-exists').length > 0) {
+                    badge = `<span class="drive-sync-badge errors">${stats.errors.filter(e => e.reason !== 'driveFileId-exists').length} errors</span>`;
+                } else {
+                    badge = `<span class="drive-sync-badge idle">klaar</span>`;
+                }
+
+                mainEl.innerHTML = `${cvCount} CV's met Drive ID ${badge}`;
+                const when = formatRelativeTime(d.lastUpdatedAt || stats.runAt);
+                const total = stats.totalInFolder != null ? stats.totalInFolder : '?';
+                metaEl.textContent = `Laatste run (${when}) — mode: ${stats.mode}, batch: ${stats.processed}/${total}, nieuw: ${stats.created}, geskipt: ${stats.skipped}.`;
+            } catch (err) {
+                mainEl.textContent = `Fout bij laden: ${err.message}`;
+                metaEl.textContent = '';
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
         // Login form handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -4578,6 +4739,10 @@
             document.getElementById('progressFill').style.width = '0%';
             document.getElementById('uploadErrors').classList.remove('show');
             document.getElementById('uploadErrorsList').innerHTML = '';
+            const _failList = document.getElementById('uploadFailList');
+            if (_failList) _failList.innerHTML = '';
+            const _summary = document.getElementById('uploadErrorsSummary');
+            if (_summary) _summary.innerHTML = '';
             document.getElementById('closeUploadBtn').style.display = 'none';
             document.getElementById('addModal').classList.add('active');
         }
@@ -4709,51 +4874,28 @@
             let failed = 0;
             let duplicates = 0;
             let duplicateMessages = [];
+            let failureMessages = [];
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                progressText.textContent = `Verwerken: ${i + 1} / ${files.length} - ${file.name}`;
+                progressText.textContent = `Verwerken: ${i + 1} / ${files.length} — ${file.name}`;
                 progressFill.style.width = `${((i) / files.length) * 100}%`;
 
                 try {
-                    // Parse PDF client-side first
-                    let parsedData = null;
-                    if (file.type === 'application/pdf') {
-                        progressText.textContent = `PDF parsen: ${file.name}...`;
-                        parsedData = await parseLinkedInPDF(file);
-                    }
-
                     const fileData = await readFileAsBase64(file);
 
-                    // Use parsed data or fallback to filename/defaults
-                    const fullName = parsedData?.fullName || file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
-                    const email = parsedData?.email || defaultEmail || ''; // Geen nep-email meer
-                    const jobTitle = parsedData?.jobTitle || defaultJobTitle || '';
-                    const location = parsedData?.location || defaultLocation || '';
-
-                    progressText.textContent = `Uploaden: ${i + 1} / ${files.length} - ${file.name}`;
-
-                    const response = await fetch('/api/cvs/upload', {
+                    const response = await fetch('/api/cvs/auto-upload', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-Admin-Token': authToken
                         },
                         body: JSON.stringify({
-                            fullName,
-                            email,
-                            phone: parsedData?.phone || '',
-                            jobTitle,
-                            location,
-                            summary: parsedData?.summary || '',
-                            experience: parsedData?.experience || '',
-                            education: parsedData?.education || '',
-                            skills: parsedData?.skills || '',
-                            fullText: parsedData?.fullText || '', // All text for searching
                             fileName: file.name,
-                            fileData,
                             fileType: file.type,
-                            fileSize: file.size
+                            fileSize: file.size,
+                            fileData,
+                            lang: 'nl'
                         })
                     });
 
@@ -4762,26 +4904,36 @@
                         return;
                     }
 
-                    const result = await response.json();
-                    if (result.success) {
+                    let result;
+                    try {
+                        result = await response.json();
+                    } catch (err) {
+                        // Non-JSON response (Vercel 413 sends an HTML error page).
+                        result = {
+                            status: 'failed',
+                            reason: response.status === 413 ? 'tooLarge' : `serverError${response.status}`
+                        };
+                    }
+                    if (result.status === 'created') {
                         uploaded++;
-                        console.log(`✓ ${file.name}: ${parsedData ? 'Data extracted' : 'Uploaded'} - ${fullName}, ${jobTitle || 'geen functie'}, ${location || 'geen locatie'}`);
-                    } else if (result.duplicate) {
+                    } else if (result.reason === 'duplicateNameAndExperience' || result.reason === 'sameFileNameAndSize') {
                         duplicates++;
+                        const msg = result.reason === 'sameFileNameAndSize'
+                            ? 'Identiek bestand al geüpload'
+                            : `Bestaat al als "${result.existingCvName || 'onbekend'}"`;
                         duplicateMessages.push({
                             fileName: file.name,
-                            message: result.message,
+                            message: msg,
                             existingCvId: result.existingCvId,
                             existingCvName: result.existingCvName
                         });
-                        console.warn(`⚠ ${file.name}: ${result.message}`);
                     } else {
                         failed++;
-                        console.error(`Failed to upload ${file.name}:`, result.message);
+                        failureMessages.push({ fileName: file.name, reason: result.reason || result.message || 'onbekend' });
                     }
                 } catch (error) {
                     failed++;
-                    console.error(`Error uploading ${file.name}:`, error);
+                    failureMessages.push({ fileName: file.name, reason: error.message || 'netwerkfout' });
                 }
             }
 
@@ -4791,22 +4943,58 @@
             if (failed > 0) statusMsg += `, ${failed} mislukt`;
             progressText.textContent = statusMsg;
 
-            // Show duplicate errors if any
-            if (duplicateMessages.length > 0) {
-                errorsList.innerHTML = duplicateMessages.map(dup => `
-                    <li>
-                        <span class="duplicate-info">
-                            <strong>${dup.fileName}</strong>: ${dup.message}
-                        </span>
-                        ${dup.existingCvId ? `
-                            <button type="button" class="btn-view-duplicate" onclick="viewDuplicateCV('${dup.existingCvId}'); return false;">
-                                Bekijken
-                            </button>
-                        ` : ''}
-                    </li>
-                `).join('');
+            // Show duplicates and failures so the admin can inspect what was skipped.
+            const reasonLabel = (r) => ({
+                tooShort: 'Geen tekst extracten (mogelijk een scan-PDF)',
+                aiParseFailed: 'AI-parsing mislukt',
+                tooLarge: 'Bestand te groot voor server (>4.5 MB)',
+                unsupported: 'Niet-ondersteund formaat',
+                parseFailed: 'Bestand kon niet worden gelezen',
+                sameFileNameAndSize: 'Identiek bestand al geüpload'
+            })[r] || r;
+
+            const dupListEl = document.getElementById('uploadErrorsList');
+            const failListEl = document.getElementById('uploadFailList');
+            const dupSection = document.getElementById('dupSection');
+            const failSection = document.getElementById('failSection');
+            const summaryEl = document.getElementById('uploadErrorsSummary');
+
+            dupListEl.innerHTML = duplicateMessages.map(dup => `
+                <li>
+                    <span class="duplicate-info">
+                        <strong title="${escapeHtml(dup.fileName)}">${escapeHtml(dup.fileName)}</strong>
+                        <span class="reason">${escapeHtml(dup.message)}</span>
+                    </span>
+                    ${dup.existingCvId ? `
+                        <button type="button" class="btn-view-duplicate" onclick="viewDuplicateCV('${dup.existingCvId}'); return false;">
+                            Bekijken
+                        </button>
+                    ` : ''}
+                </li>
+            `).join('');
+
+            failListEl.innerHTML = failureMessages.map(f => `
+                <li>
+                    <span class="duplicate-info">
+                        <strong title="${escapeHtml(f.fileName)}">${escapeHtml(f.fileName)}</strong>
+                        <span class="reason">${escapeHtml(reasonLabel(f.reason))}</span>
+                    </span>
+                </li>
+            `).join('');
+
+            const summaryChips = [];
+            if (uploaded > 0) summaryChips.push(`<span class="summary-chip uploaded">✓ ${uploaded} nieuw</span>`);
+            if (duplicates > 0) summaryChips.push(`<span class="summary-chip duplicates">⊘ ${duplicates} duplicaten</span>`);
+            if (failed > 0) summaryChips.push(`<span class="summary-chip failures">⚠ ${failed} mislukt</span>`);
+            summaryEl.innerHTML = summaryChips.join('');
+
+            document.getElementById('dupHeading').textContent = `Duplicaten (${duplicates})`;
+            document.getElementById('failHeading').textContent = `Mislukt (${failed})`;
+            dupSection.style.display = duplicates > 0 ? '' : 'none';
+            failSection.style.display = failed > 0 ? '' : 'none';
+
+            if (duplicates > 0 || failed > 0) {
                 errorsDiv.classList.add('show');
-                // Show close button for manual closing
                 document.getElementById('closeUploadBtn').style.display = 'inline-block';
             } else {
                 // Auto-close only if no duplicates
@@ -4829,6 +5017,10 @@
             document.getElementById('progressFill').style.width = '0%';
             document.getElementById('uploadErrors').classList.remove('show');
             document.getElementById('uploadErrorsList').innerHTML = '';
+            const _failList = document.getElementById('uploadFailList');
+            if (_failList) _failList.innerHTML = '';
+            const _summary = document.getElementById('uploadErrorsSummary');
+            if (_summary) _summary.innerHTML = '';
             document.getElementById('closeUploadBtn').style.display = 'none';
         }
 

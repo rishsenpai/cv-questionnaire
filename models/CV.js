@@ -101,6 +101,12 @@ const cvSchema = new mongoose.Schema({
     isInternal: {
         type: Boolean,
         default: false
+    },
+    // Google Drive file ID for auto-synced CVs (sparse unique, set only for Drive-sourced CVs)
+    driveFileId: {
+        type: String,
+        trim: true,
+        index: { unique: true, sparse: true }
     }
 }, {
     timestamps: true

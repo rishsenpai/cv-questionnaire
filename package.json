@@ -15,7 +15,8 @@
     "test:cv": "npx playwright test tests/cv-submission.spec.js",
     "test:quick": "npx playwright test tests/api.spec.js tests/success-screen.spec.js",
     "test:phone": "npx playwright test tests/phone-validation.spec.js",
-    "test:full": "npx playwright test tests/api.spec.js tests/questionnaire-flow.spec.js tests/success-screen.spec.js tests/cv-submission.spec.js tests/phone-validation.spec.js",
+    "test:drive": "npx playwright test tests/drive-sync.spec.js",
+    "test:full": "npx playwright test tests/api.spec.js tests/questionnaire-flow.spec.js tests/success-screen.spec.js tests/cv-submission.spec.js tests/phone-validation.spec.js tests/drive-sync.spec.js",
     "postinstall": "node -e \"try{require('fs').rmSync('node_modules/pdf-parse/test',{recursive:true,force:true})}catch(e){}\""
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "express": "^4.18.2",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.2.1",
+    "googleapis": "^171.4.0",
     "helmet": "^8.1.0",
     "mongoose": "^9.0.2",
     "natural": "^8.1.0",
