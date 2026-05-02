@@ -6,6 +6,8 @@ import { findJobsForCV } from '@/lib/server/jsearch';
 
 export const maxDuration = 30;
 
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dagen
+
 interface Params {
     params: Promise<{ id: string }>;
 }
@@ -24,16 +26,43 @@ export async function GET(req: NextRequest, { params }: Params) {
         }
 
         const url = new URL(req.url);
+        const force = url.searchParams.get('force') === '1';
         const location = url.searchParams.get('location') || cv.location || 'Netherlands';
+
+        // Cache: hergebruik eerdere fetch als nog vers (<7 dagen) tenzij ?force=1
+        if (!force && cv.externalJobsCache && cv.externalJobsCache.fetchedAt) {
+            const age = Date.now() - new Date(cv.externalJobsCache.fetchedAt).getTime();
+            if (age < CACHE_TTL_MS) {
+                return NextResponse.json({
+                    success: true,
+                    cached: true,
+                    fetchedAt: cv.externalJobsCache.fetchedAt,
+                    totalJobs: cv.externalJobsCache.totalJobs,
+                    jobs: cv.externalJobsCache.jobs,
+                    cv: { _id: cv._id, fullName: cv.fullName, jobTitle: cv.jobTitle },
+                });
+            }
+        }
 
         const results = await findJobsForCV(
             { jobTitle: cv.jobTitle, skills: cv.skills, location },
             location,
         );
 
-        console.log(`External job search for "${cv.fullName}": found ${results.totalJobs} jobs`);
+        // Persist cache (zonder de embedding etc — alleen wat we tonen)
+        await CV.findByIdAndUpdate(cv._id, {
+            externalJobsCache: {
+                jobs: results.jobs,
+                totalJobs: results.totalJobs,
+                fetchedAt: new Date(),
+            },
+        });
+
+        console.log(`External job search for "${cv.fullName}": found ${results.totalJobs} jobs (cached for 7d)`);
         return NextResponse.json({
             ...results,
+            cached: false,
+            fetchedAt: new Date(),
             cv: { _id: cv._id, fullName: cv.fullName, jobTitle: cv.jobTitle },
         });
     } catch (err) {

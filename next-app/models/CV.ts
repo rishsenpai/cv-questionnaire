@@ -26,6 +26,7 @@ export interface ICV extends Document {
     recruiterRequestedAt?: Date;
     isInternal?: boolean;
     driveFileId?: string;
+    externalJobsCache?: { jobs: unknown[]; totalJobs: number; fetchedAt: Date };
     createdAt: Date;
     updatedAt: Date;
 }
@@ -56,6 +57,11 @@ const cvSchema = new Schema<ICV>({
     recruiterRequestedAt: { type: Date },
     isInternal: { type: Boolean, default: false },
     driveFileId: { type: String, trim: true, index: { unique: true, sparse: true } },
+    externalJobsCache: {
+        jobs: { type: [Schema.Types.Mixed], default: undefined },
+        totalJobs: Number,
+        fetchedAt: Date,
+    },
 }, { timestamps: true });
 
 const CV: Model<ICV> = (mongoose.models.CV as Model<ICV>) || mongoose.model<ICV>('CV', cvSchema);
