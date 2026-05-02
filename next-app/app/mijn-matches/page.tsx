@@ -241,11 +241,9 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
       <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-3 text-[10px] font-black uppercase tracking-widest">
-            {match.company && (
-              <span className="flex items-center gap-2 text-slate-500">
-                <Building2 className="w-3 h-3 text-blue-600" /> {match.company}
-              </span>
-            )}
+            <span className="flex items-center gap-2 text-slate-500">
+              <Building2 className="w-3 h-3 text-blue-600" /> Werkgever
+            </span>
           </div>
 
           <Link

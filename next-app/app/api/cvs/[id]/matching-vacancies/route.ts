@@ -73,6 +73,11 @@ export async function GET(req: NextRequest, { params }: Params) {
                 const score = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
                 const obj = vacancy.toObject() as unknown as Record<string, unknown>;
                 delete obj.embedding;
+                // GDPR-mask voor kandidaten — bedrijfsnaam/logo/apply-link niet tonen
+                delete obj.company;
+                delete obj.companyLogo;
+                delete obj.applyLink;
+                delete obj.fullText;
                 return {
                     ...obj,
                     matchScore: Math.round(score * 100),

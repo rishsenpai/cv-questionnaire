@@ -68,11 +68,11 @@ function vacancyToCard(v: ApiVacancy): VacancyCard {
   return {
     id: v._id,
     title: v.title,
-    company: v.company || 'Onbekend bedrijf',
+    company: 'Werkgever',
     location: v.location || 'Locatie onbekend',
     type: v.employmentType || 'Full-time',
     salary: formatSalary(v.salary),
-    verified: Boolean(v.company),
+    verified: true,
     aiMatch: null,
     sector: '',
   };
@@ -462,9 +462,9 @@ export default function Home() {
                   className="group bg-white border border-slate-200 p-6 hover:border-black transition-colors cursor-pointer relative"
                 >
                   <div className="flex flex-col md:flex-row gap-6 items-center">
-                    {/* Logo Fallback (Initial) */}
-                    <div className="w-16 h-16 bg-black text-blue-600 flex-shrink-0 flex items-center justify-center font-black text-2xl border-2 border-blue-600 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)] group-hover:bg-blue-600 group-hover:text-white transition-all">
-                      {job.company[0]}
+                    {/* Logo placeholder */}
+                    <div className="w-16 h-16 bg-black text-blue-600 flex-shrink-0 flex items-center justify-center border-2 border-blue-600 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)] group-hover:bg-blue-600 group-hover:text-white transition-all">
+                      <Building2 className="w-7 h-7" />
                     </div>
 
                     {/* Content */}
@@ -496,7 +496,7 @@ export default function Home() {
                     <div className="flex flex-row md:flex-col items-center md:items-end gap-6 pt-4 md:pt-0">
                       <div className="flex items-center gap-3">
                         <a 
-                          href={`https://wa.me/5971234567?text=Hoi, ik heb interesse in de vacature voor ${job.title} bij ${job.company}`}
+                          href={`https://wa.me/5971234567?text=Hoi, ik heb interesse in de vacature voor ${job.title}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}

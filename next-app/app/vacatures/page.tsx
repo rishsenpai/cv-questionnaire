@@ -156,8 +156,7 @@ function VacaturesContent() {
   };
 
   const filteredJobs = jobs.filter(job => {
-    const matchesSearch = (job.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (job.company || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (job.title || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLocation = selectedLocation === 'Heel Suriname' || String(job.location || '').toLowerCase().includes(selectedLocation.toLowerCase());
     
     // Parse salary for filtering (handle both SRD and USD mock data)
@@ -437,11 +436,11 @@ function VacaturesContent() {
                       <div className="flex flex-wrap gap-x-8 gap-y-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-3 group/company relative">
-                            <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-black text-xs border-2 border-blue-600 shadow-[2px_2px_0px_0px_rgba(59,130,246,1)]">
-                              {job.company[0]}
+                            <div className="w-8 h-8 bg-black text-white flex items-center justify-center border-2 border-blue-600 shadow-[2px_2px_0px_0px_rgba(59,130,246,1)]">
+                              <Building2 className="w-4 h-4" />
                             </div>
-                            <span className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-blue-600" /> {job.company}
+                            <span className="flex items-center gap-2 text-slate-500">
+                              {job.company}
                             </span>
                           </span>
                         </div>
@@ -471,7 +470,7 @@ function VacaturesContent() {
                       </div>
                       <div className="flex gap-3 w-full">
                         <a 
-                          href={`https://wa.me/5971234567?text=Ik heb interesse in de vacature voor ${job.title} bij ${job.company}`}
+                          href={`https://wa.me/5971234567?text=Ik heb interesse in de vacature voor ${job.title}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 md:flex-none flex items-center justify-center gap-3 bg-emerald-500 text-white px-6 py-4 font-black uppercase tracking-widest text-[11px] hover:bg-emerald-600 transition-all border-2 border-black brutal-shadow"

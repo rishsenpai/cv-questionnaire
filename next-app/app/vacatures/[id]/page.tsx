@@ -205,8 +205,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     if (!job) return;
     const shareUrl = typeof window !== 'undefined' ? window.location.href : `/vacatures/${jobId}`;
     const sharePayload = {
-      title: `${job.title} bij ${job.company}`,
-      text: `Bekijk deze vacature op SuriJobs+: ${job.title} bij ${job.company}`,
+      title: job.title,
+      text: `Bekijk deze vacature op SuriJobs+: ${job.title}`,
       url: shareUrl,
     };
 
@@ -407,20 +407,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                  </div>
               </div>
 
-              {/* Company Preview Card */}
+              {/* Company Preview Card — generiek (identiteit geheim) */}
               <div className="bg-slate-900 text-white p-12 border-b-8 border-blue-600 flex flex-col md:flex-row justify-between items-center gap-12">
                  <div>
                     <h3 className="text-xs font-black uppercase tracking-[0.3em] text-blue-400 mb-4 italic">Over de Werkgever</h3>
-                    <h4 className="text-4xl font-black uppercase tracking-tighter italic mb-4">{job.company}</h4>
-                    <p className="text-slate-400 font-bold text-sm max-w-sm mb-8">
-                       Een van de meest gerespecteerde organisaties in Suriname, gedreven door innovatie en lokale groei.
+                    <h4 className="text-4xl font-black uppercase tracking-tighter italic mb-4">Geverifieerde Werkgever</h4>
+                    <p className="text-slate-400 font-bold text-sm max-w-sm">
+                       De identiteit van de werkgever wordt na een succesvolle match via SuriJobs+ gedeeld.
+                       Solliciteer hier om in contact te komen.
                     </p>
-                    <Link href={`/vacatures?q=${encodeURIComponent(job.company)}`} className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-widest border-2 border-white/20 px-6 py-3 hover:bg-white hover:text-black transition-all">
-                       Meer van dit bedrijf <ArrowRight className="w-4 h-4" />
-                    </Link>
                  </div>
-                 <div className="w-32 h-32 bg-white border-8 border-blue-600 flex items-center justify-center text-black font-black text-4xl -rotate-6 shadow-[16px_16px_0px_0px_rgba(59,130,246,0.2)]">
-                    {job.company[0]}
+                 <div className="w-32 h-32 bg-white border-8 border-blue-600 flex items-center justify-center text-black -rotate-6 shadow-[16px_16px_0px_0px_rgba(59,130,246,0.2)]">
+                    <Building2 className="w-16 h-16" />
                  </div>
               </div>
            </div>
@@ -467,7 +465,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                  {similarJobs.map(j => (
                    <Link key={j.id} href={`/vacatures/${j.id}`} className="block bg-white border-2 border-slate-100 p-6 hover:border-black transition-all group">
                       <h4 className="text-lg font-black uppercase tracking-tighter italic group-hover:text-blue-600 transition-colors mb-3">{j.title}</h4>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{j.company} • {j.location}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{j.location}</p>
                    </Link>
                  ))}
               </div>
@@ -503,7 +501,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   </div>
                   <h3 className="text-5xl font-black uppercase tracking-tighter italic mb-4">SOLLICITATIE VERZONDEN!</h3>
                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-10 max-w-sm mx-auto">
-                    Je profiel en documenten zijn succesvol gedeeld met {job.company}.
+                    Je profiel en documenten zijn succesvol gedeeld met de werkgever via SuriJobs+.
                   </p>
                   <button onClick={closeApplyModal} className="bg-black text-white px-12 py-5 font-black uppercase tracking-widest text-sm shadow-[8px_8px_0px_0px_rgba(59,130,246,1)]">
                     Sluiten
@@ -512,7 +510,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               ) : (
                 <form onSubmit={handleApply} className="space-y-8">
                    <h2 className="text-4xl font-black uppercase tracking-tighter italic leading-none border-b-4 border-slate-100 pb-6 mb-8">
-                     Solliciteren bij <span className="text-blue-600">{job.company}</span>
+                     Solliciteren via <span className="text-blue-600">SuriJobs+</span>
                    </h2>
 
                    <div className="bg-slate-50 p-8 border-l-8 border-blue-600">
