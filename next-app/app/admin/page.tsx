@@ -460,6 +460,8 @@ interface VacancyRow {
   createdAt: string;
 }
 
+const JSEARCH_PRESETS_SR = 'manager, engineer, officer, consultant, sales, developer, accountant, supervisor, coordinator, analyst';
+
 function VacanciesTab({ token }: { token: string }) {
   const [vacancies, setVacancies] = useState<VacancyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -469,6 +471,11 @@ function VacanciesTab({ token }: { token: string }) {
   const [importQuery, setImportQuery] = useState('developer');
   const [importLocation, setImportLocation] = useState('');
   const [importPages, setImportPages] = useState(1);
+  const [showJSearch, setShowJSearch] = useState(false);
+  const [jsImporting, setJsImporting] = useState(false);
+  const [jsResult, setJsResult] = useState<string | null>(null);
+  const [jsQueries, setJsQueries] = useState(JSEARCH_PRESETS_SR);
+  const [jsLocation, setJsLocation] = useState('Suriname');
   const [busy, setBusy] = useState(false);
 
   const reload = React.useCallback(async () => {
@@ -525,15 +532,41 @@ function VacanciesTab({ token }: { token: string }) {
     } finally { setBusy(false); }
   };
 
+  const runJSearchImport = async () => {
+    setJsImporting(true);
+    setJsResult(null);
+    try {
+      const res = await fetch('/api/admin/import-jsearch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ queries: jsQueries, location: jsLocation }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setJsResult(`✓ ${data.stats.imported} geïmporteerd · ${data.stats.skipped} duplicaat · ${data.stats.errors} fouten · ${data.stats.queriesUsed} queries`);
+        await reload();
+      } else {
+        setJsResult(`✗ ${data.message}`);
+      }
+    } catch {
+      setJsResult('✗ Verbinding mislukt');
+    } finally {
+      setJsImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
         title="Vacatures"
         subtitle={`${vacancies.length} actieve vacatures`}
         action={
-          <div className="flex gap-2">
-            <button onClick={() => setShowImport(true)} className="bg-blue-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
-              <Globe className="w-3 h-3" /> Adzuna Import
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setShowJSearch(s => !s)} className="bg-emerald-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
+              <Globe className="w-3 h-3" /> JSearch (SR)
+            </button>
+            <button onClick={() => setShowImport(s => !s)} className="bg-blue-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
+              <Globe className="w-3 h-3" /> Adzuna (NL)
             </button>
             <button onClick={deleteAllAdzuna} disabled={busy} className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors">
               Verwijder Adzuna
@@ -543,6 +576,44 @@ function VacanciesTab({ token }: { token: string }) {
       />
 
       <AnimatePresence>
+        {showJSearch && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white border-2 border-emerald-600 p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tighter italic">JSearch import — Suriname</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Per zoekterm ~10 vacatures · 200 free requests/maand</p>
+                </div>
+                <button onClick={() => setShowJSearch(false)} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Zoektermen (komma-gescheiden, max 20)</label>
+                  <textarea value={jsQueries} onChange={(e) => setJsQueries(e.target.value)} rows={2} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                  <p className="text-[10px] font-bold text-slate-400 mt-2 italic">
+                    Tip: elke zoekterm = 1 API-call. Begin klein (5 termen) om je rate-limit te sparen.
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Locatie</label>
+                  <input value={jsLocation} onChange={(e) => setJsLocation(e.target.value)} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                </div>
+              </div>
+              <div className="flex justify-between items-center gap-4">
+                <button onClick={runJSearchImport} disabled={jsImporting} className="bg-emerald-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50">
+                  {jsImporting ? <><Loader2 className="w-3 h-3 animate-spin" />Importeren...</> : <><Upload className="w-3 h-3" />Start JSearch Import</>}
+                </button>
+                {jsResult && <p className="text-[11px] font-bold flex-1">{jsResult}</p>}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {showImport && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -553,8 +624,8 @@ function VacanciesTab({ token }: { token: string }) {
             <div className="bg-white border-2 border-blue-600 p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-xl font-black uppercase tracking-tighter italic">Vacatures importeren</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adzuna API · max 50 per pagina</p>
+                  <h3 className="text-xl font-black uppercase tracking-tighter italic">Adzuna import — Nederland</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adzuna API · max 50 per pagina · 250 free requests/dag</p>
                 </div>
                 <button onClick={() => setShowImport(false)} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
               </div>
