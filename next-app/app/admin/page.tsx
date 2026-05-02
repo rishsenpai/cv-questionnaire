@@ -476,6 +476,14 @@ function VacanciesTab({ token }: { token: string }) {
   const [jsResult, setJsResult] = useState<string | null>(null);
   const [jsQueries, setJsQueries] = useState(JSEARCH_PRESETS_SR);
   const [jsLocation, setJsLocation] = useState('Suriname');
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: '', company: '', location: 'Paramaribo', description: '', requirements: '',
+    employmentType: 'Full-time', isRemote: false,
+    salaryMin: '', salaryMax: '', salaryCurrency: 'SRD', salaryPeriod: 'month',
+  });
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = React.useCallback(async () => {
@@ -532,6 +540,31 @@ function VacanciesTab({ token }: { token: string }) {
     } finally { setBusy(false); }
   };
 
+  const submitCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError(null);
+    setCreateBusy(true);
+    try {
+      const res = await fetch('/api/admin/vacancies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify(createForm),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setCreateError(data.message);
+        return;
+      }
+      setShowCreate(false);
+      setCreateForm({
+        title: '', company: '', location: 'Paramaribo', description: '', requirements: '',
+        employmentType: 'Full-time', isRemote: false,
+        salaryMin: '', salaryMax: '', salaryCurrency: 'SRD', salaryPeriod: 'month',
+      });
+      await reload();
+    } finally { setCreateBusy(false); }
+  };
+
   const runJSearchImport = async () => {
     setJsImporting(true);
     setJsResult(null);
@@ -562,6 +595,9 @@ function VacanciesTab({ token }: { token: string }) {
         subtitle={`${vacancies.length} actieve vacatures`}
         action={
           <div className="flex flex-wrap gap-2">
+            <button onClick={() => setShowCreate(s => !s)} className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2">
+              <Plus className="w-3 h-3" /> Nieuwe Vacature
+            </button>
             <button onClick={() => setShowJSearch(s => !s)} className="bg-emerald-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
               <Globe className="w-3 h-3" /> JSearch (SR)
             </button>
@@ -576,6 +612,96 @@ function VacanciesTab({ token }: { token: string }) {
       />
 
       <AnimatePresence>
+        {showCreate && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <form onSubmit={submitCreate} className="bg-white border-2 border-black p-6 space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tighter italic">Nieuwe Vacature</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Handmatig toevoegen — geen API-limiet</p>
+                </div>
+                <button type="button" onClick={() => setShowCreate(false)} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Functietitel *</label>
+                  <input required value={createForm.title} onChange={(e) => setCreateForm(f => ({ ...f, title: e.target.value }))} placeholder="Senior Software Developer" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Bedrijf</label>
+                  <input value={createForm.company} onChange={(e) => setCreateForm(f => ({ ...f, company: e.target.value }))} placeholder="Telesur N.V." className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Locatie</label>
+                  <input value={createForm.location} onChange={(e) => setCreateForm(f => ({ ...f, location: e.target.value }))} placeholder="Paramaribo" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Type dienstverband</label>
+                  <select value={createForm.employmentType} onChange={(e) => setCreateForm(f => ({ ...f, employmentType: e.target.value }))} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm">
+                    <option value="Full-time">Full-time</option>
+                    <option value="Part-time">Part-time</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Temporary">Tijdelijk</option>
+                    <option value="Internship">Stage</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 pt-7">
+                  <input type="checkbox" id="isRemote" checked={createForm.isRemote} onChange={(e) => setCreateForm(f => ({ ...f, isRemote: e.target.checked }))} className="w-4 h-4" />
+                  <label htmlFor="isRemote" className="text-[10px] font-black uppercase tracking-widest text-slate-700">Remote / hybride mogelijk</label>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Beschrijving</label>
+                  <textarea value={createForm.description} onChange={(e) => setCreateForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Wat houdt de functie in? Wie zoeken we?" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Vereisten</label>
+                  <textarea value={createForm.requirements} onChange={(e) => setCreateForm(f => ({ ...f, requirements: e.target.value }))} rows={4} placeholder="Welke ervaring, opleiding, vaardigheden?" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                </div>
+
+                <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Salaris min (optioneel)</label>
+                    <input type="number" value={createForm.salaryMin} onChange={(e) => setCreateForm(f => ({ ...f, salaryMin: e.target.value }))} placeholder="3000" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Salaris max (optioneel)</label>
+                    <input type="number" value={createForm.salaryMax} onChange={(e) => setCreateForm(f => ({ ...f, salaryMax: e.target.value }))} placeholder="5000" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Valuta</label>
+                    <select value={createForm.salaryCurrency} onChange={(e) => setCreateForm(f => ({ ...f, salaryCurrency: e.target.value }))} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm">
+                      <option value="SRD">SRD</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Periode</label>
+                    <select value={createForm.salaryPeriod} onChange={(e) => setCreateForm(f => ({ ...f, salaryPeriod: e.target.value }))} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm">
+                      <option value="month">Per maand</option>
+                      <option value="year">Per jaar</option>
+                      <option value="hour">Per uur</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {createError && <p className="text-[11px] font-bold text-red-600">{createError}</p>}
+
+              <div className="flex gap-3 pt-4 border-t border-slate-100">
+                <button type="submit" disabled={createBusy} className="bg-black text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50">
+                  {createBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Vacature toevoegen
+                </button>
+                <button type="button" onClick={() => setShowCreate(false)} className="border-2 border-black px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white">
+                  Annuleren
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+
         {showJSearch && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
