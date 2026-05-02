@@ -72,9 +72,9 @@ function vacancyToCard(v: ApiVacancy): VacancyCard {
     location: v.location || 'Locatie onbekend',
     type: v.employmentType || 'Full-time',
     salary: formatSalary(v.salary),
-    verified: v.source === 'adzuna' || Boolean(v.company),
+    verified: Boolean(v.company),
     aiMatch: null,
-    sector: v.source === 'adzuna' ? 'Adzuna' : 'Lokaal',
+    sector: '',
   };
 }
 

@@ -54,7 +54,6 @@ interface JobDetail {
   location: string;
   type: string;
   salary: string;
-  sector: string;
   match: number;
   verified: boolean;
   description?: string;
@@ -78,9 +77,8 @@ function vacancyToJob(v: ApiVacancy): JobDetail {
     location: v.location || 'Locatie onbekend',
     type: v.employmentType || 'Full-time',
     salary: formatSalary(v.salary),
-    sector: v.source === 'adzuna' ? 'Adzuna' : 'Lokaal',
     match: 0,
-    verified: v.source === 'adzuna' || Boolean(v.company),
+    verified: Boolean(v.company),
     description: v.description,
     requirements: v.requirements ? v.requirements.split('\n').filter(Boolean) : undefined,
     postedAt: v.postedAt || v.createdAt,
@@ -302,7 +300,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <div className="flex flex-col lg:flex-row justify-between items-start gap-12">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-6">
-                <span className="bg-blue-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em]">{job.sector}</span>
                 {job.verified && (
                   <div className="flex items-center gap-2 text-blue-400 italic">
                     <ShieldCheck className="w-4 h-4" />
@@ -436,8 +433,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     {[
                       { icon: Globe, label: 'Locatie', val: job.location },
                       { icon: Briefcase, label: 'Dienstverband', val: job.type },
-                      { icon: GraduationCap, label: 'Sector', val: job.sector },
-                      { icon: Calendar, label: 'Geplaatst', val: job.postedAt || 'Vandaag' }
+                      { icon: Calendar, label: 'Geplaatst', val: job.postedAt || 'Vandaag' },
                     ].map((item, i) => (
                       <div key={i} className="flex items-center gap-4">
                          <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-blue-600 rounded-sm">
@@ -470,7 +466,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                  <h3 className="text-xs font-black uppercase tracking-widest mb-6 italic">Vergelijkbare Vacatures</h3>
                  {similarJobs.map(j => (
                    <Link key={j.id} href={`/vacatures/${j.id}`} className="block bg-white border-2 border-slate-100 p-6 hover:border-black transition-all group">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-blue-600 mb-2">{j.sector}</p>
                       <h4 className="text-lg font-black uppercase tracking-tighter italic group-hover:text-blue-600 transition-colors mb-3">{j.title}</h4>
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{j.company} • {j.location}</p>
                    </Link>

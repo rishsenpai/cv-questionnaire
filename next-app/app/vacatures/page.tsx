@@ -26,7 +26,6 @@ interface JobCard {
   location: string;
   type: string;
   salary: string;
-  sector: string;
   match: number;
   verified: boolean;
   description?: string;
@@ -64,9 +63,8 @@ function vacancyToCard(v: ApiVacancy): JobCard {
     location: v.location || 'Locatie onbekend',
     type: v.employmentType || 'Full-time',
     salary: formatSalary(v.salary),
-    sector: v.source === 'adzuna' ? 'Adzuna' : 'Lokaal',
     match: 0,
-    verified: v.source === 'adzuna' || Boolean(v.company),
+    verified: Boolean(v.company),
     description: v.description,
     requirements: v.requirements ? [v.requirements] : undefined,
     postedAt: v.postedAt || v.createdAt,
@@ -76,7 +74,6 @@ function vacancyToCard(v: ApiVacancy): JobCard {
 function VacaturesContent() {
   const router = useRouter();
 
-  const [activeSector, setActiveSector] = useState('Alle');
   const [activeType, setActiveType] = useState('Alle');
   const [searchQuery, setSearchQuery] = useState(() => {
     if (typeof window === 'undefined') return '';
@@ -118,7 +115,6 @@ function VacaturesContent() {
     };
   }, [refreshVacaturesState]);
 
-  const sectors = ['Alle', ...Array.from(new Set(jobs.map(j => j.sector).filter(Boolean)))];
   const types = ['Alle', ...Array.from(new Set(jobs.map(j => j.type).filter(Boolean)))];
 
   const suggestions = searchQuery.length > 1 
@@ -160,8 +156,7 @@ function VacaturesContent() {
   };
 
   const filteredJobs = jobs.filter(job => {
-    const matchesSector = activeSector === 'Alle' || job.sector === activeSector;
-    const matchesSearch = (job.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = (job.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (job.company || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLocation = selectedLocation === 'Heel Suriname' || String(job.location || '').toLowerCase().includes(selectedLocation.toLowerCase());
     
@@ -170,7 +165,7 @@ function VacaturesContent() {
     const matchesType = activeType === 'Alle' || job.type === activeType;
     const matchesPrice = salaryNum >= 0 && salaryNum <= priceRange;
 
-    return matchesSector && matchesSearch && matchesPrice && matchesType && matchesLocation;
+    return matchesSearch && matchesPrice && matchesType && matchesLocation;
   }).sort((a, b) => {
     if (sortBy === 'Match Score') return b.match - a.match;
     if (sortBy === 'Salaris') {
@@ -313,28 +308,6 @@ function VacaturesContent() {
             </div>
 
             <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 border-b-2 border-blue-600 pb-2 w-fit">Sectoren</h3>
-              <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-                {sectors.map(s => (
-                  <button 
-                    key={s}
-                    onClick={() => {
-                      setActiveSector(s);
-                      setCurrentPage(1);
-                    }}
-                    className={cn(
-                      "text-left font-black uppercase tracking-widest text-[11px] py-2 px-3 transition-all flex justify-between items-center group shrink-0",
-                      activeSector === s ? "bg-black text-white" : "hover:bg-slate-50 text-slate-400"
-                    )}
-                  >
-                    {s}
-                    <ChevronRight className={cn("w-3 h-3 translate-x-4 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100", activeSector === s && "opacity-100 translate-x-0")} />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
               <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 border-b-2 border-blue-600 pb-2 w-fit">Salaris Filter</h3>
               <div className="space-y-4">
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -400,7 +373,7 @@ function VacaturesContent() {
 
             <div className="flex justify-between items-center border-b-2 border-slate-100 pb-6">
               <h2 className="text-2xl font-black uppercase tracking-tighter italic">
-                {activeSector} <span className="text-slate-300">Vacatures</span>
+                Alle <span className="text-slate-300">Vacatures</span>
               </h2>
               <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                 <span>Sorteer op:</span>
@@ -439,7 +412,6 @@ function VacaturesContent() {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-4">
-                        <span className="bg-slate-100 text-[9px] font-black px-2 py-1 uppercase tracking-widest text-slate-500 italic border border-slate-200">{job.sector}</span>
                         {job.verified && (
                           <div className="relative group/tooltip">
                             <div className="flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 border-2 border-blue-600 italic cursor-help brutal-shadow">

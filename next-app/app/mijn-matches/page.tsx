@@ -159,7 +159,7 @@ function MatchesContent() {
                   {matches.length === 0 ? 'Nog geen matches' : `Top ${matches.length} matches`}
                 </h3>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 italic">
-                  Lokale + geïmporteerde vacatures (Adzuna, JSearch) — gerangschikt op AI similarity.
+                  Gerangschikt op AI similarity met je profiel.
                 </p>
               </div>
               <Link
@@ -245,12 +245,6 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
               <span className="flex items-center gap-2 text-slate-500">
                 <Building2 className="w-3 h-3 text-blue-600" /> {match.company}
               </span>
-            )}
-            {match.source === 'adzuna' && (
-              <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 border-2 border-emerald-600 italic">Adzuna</span>
-            )}
-            {match.source === 'jsearch' && (
-              <span className="bg-blue-50 text-blue-700 px-2 py-0.5 border-2 border-blue-600 italic">JSearch</span>
             )}
           </div>
 
