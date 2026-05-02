@@ -15,6 +15,8 @@ import {
   DollarSign,
   Building2,
   Calendar,
+  UploadCloud,
+  Sparkles,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -58,6 +60,9 @@ export default function CompanyDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [parsedFromFile, setParsedFromFile] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
     if (!employerToken) return;
@@ -85,6 +90,52 @@ export default function CompanyDashboard() {
   const handleLogout = () => {
     logoutEmployer();
     router.push('/');
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (file.size > 4.5 * 1024 * 1024) {
+      setError('Bestand is groter dan 4.5 MB.');
+      return;
+    }
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isDocx = file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
+    if (!isPdf && !isDocx) {
+      setError('Alleen PDF of Word (.docx) ondersteund.');
+      return;
+    }
+    setError(null);
+    setParsing(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(((reader.result as string).split(',')[1] || ''));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/parse-vacancy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileData: base64, fileType: file.type, fileName: file.name }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || 'Vacature analyseren mislukt');
+        return;
+      }
+      // Map parsed fields naar form. Parser geeft: title, location, requirements.
+      // 'requirements' bevat de complete tekst, dus die zetten we in description.
+      setForm(f => ({
+        ...f,
+        title: data.data.title || f.title,
+        location: data.data.location || f.location,
+        description: data.data.requirements || f.description,
+      }));
+      setParsedFromFile(file.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verbinding mislukt');
+    } finally {
+      setParsing(false);
+    }
   };
 
   const submitCreate = async (e: React.FormEvent) => {
@@ -201,6 +252,45 @@ export default function CompanyDashboard() {
                   </div>
                   <button type="button" onClick={() => setShowCreate(false)} className="p-2 hover:bg-slate-100">
                     <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* AI-fill: upload bestaande vacature */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileUpload(f);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+                <div className="bg-slate-50 border-2 border-dashed border-slate-200 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">
+                      <Sparkles className="w-3 h-3" /> AI Auto-Fill
+                    </div>
+                    <p className="text-sm font-bold text-slate-700">
+                      Heb je al een vacature in een Word- of PDF-bestand?
+                    </p>
+                    <p className="text-[11px] font-bold text-slate-400 italic">
+                      Upload het bestand → AI vult de velden automatisch in. Je kan daarna nog alles bewerken.
+                    </p>
+                    {parsedFromFile && (
+                      <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mt-2 flex items-center gap-2">
+                        <CheckCircle2 className="w-3 h-3" /> Ingevuld vanuit: {parsedFromFile}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={parsing}
+                    className="bg-black text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0"
+                  >
+                    {parsing ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyseren...</> : <><UploadCloud className="w-3 h-3" /> Upload Bestand</>}
                   </button>
                 </div>
 
