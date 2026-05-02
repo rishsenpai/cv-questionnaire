@@ -280,6 +280,7 @@ function CvsTab({ token }: { token: string }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -351,7 +352,13 @@ function CvsTab({ token }: { token: string }) {
         title="CVs"
         subtitle={`${cvs.length} totaal · ${filtered.length} getoond`}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowBulkUpload(s => !s)}
+              className="bg-blue-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2"
+            >
+              <Upload className="w-3 h-3" /> Bulk Upload
+            </button>
             {selected.size > 0 && (
               <button
                 onClick={bulkDelete}
@@ -371,6 +378,14 @@ function CvsTab({ token }: { token: string }) {
           </div>
         }
       />
+
+      <AnimatePresence>
+        {showBulkUpload && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <BulkUploadPanel token={token} onClose={() => setShowBulkUpload(false)} onComplete={reload} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
@@ -1054,6 +1069,311 @@ function SystemTab({ token }: { token: string }) {
 
         {message && <p className="mt-4 text-[11px] font-bold">{message}</p>}
       </div>
+    </div>
+  );
+}
+
+// ============================ BULK UPLOAD ============================
+
+type UploadStatus = 'pending' | 'uploading' | 'created' | 'duplicate' | 'failed';
+
+interface UploadItem {
+  id: string;
+  file: File;
+  status: UploadStatus;
+  message?: string;
+  cvId?: string;
+}
+
+const CONCURRENCY = 5;
+const MAX_FILE_BYTES = 4.5 * 1024 * 1024; // Vercel hobby plan body limit
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve((result.split(',')[1] || ''));
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function BulkUploadPanel({
+  token, onClose, onComplete,
+}: {
+  token: string;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const [items, setItems] = useState<UploadItem[]>([]);
+  const [running, setRunning] = useState(false);
+  const cancelledRef = React.useRef(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const stats = React.useMemo(() => {
+    const byStatus: Record<UploadStatus, number> = {
+      pending: 0, uploading: 0, created: 0, duplicate: 0, failed: 0,
+    };
+    items.forEach(i => { byStatus[i.status]++; });
+    return byStatus;
+  }, [items]);
+
+  const addFiles = (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    const newItems: UploadItem[] = arr.map(f => ({
+      id: `${f.name}-${f.size}-${f.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+      file: f,
+      status: f.size > MAX_FILE_BYTES ? 'failed' : 'pending',
+      message: f.size > MAX_FILE_BYTES ? 'Bestand te groot (>4.5 MB)' : undefined,
+    }));
+    setItems(prev => [...prev, ...newItems]);
+  };
+
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) addFiles(e.target.files);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  };
+
+  const removeItem = (id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const clearCompleted = () => {
+    setItems(prev => prev.filter(i => i.status === 'pending' || i.status === 'uploading'));
+  };
+
+  const updateItem = (id: string, patch: Partial<UploadItem>) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+  };
+
+  const processOne = async (item: UploadItem): Promise<void> => {
+    if (cancelledRef.current) return;
+    updateItem(item.id, { status: 'uploading', message: undefined });
+
+    try {
+      const fileData = await readFileAsBase64(item.file);
+      const res = await fetch('/api/cvs/auto-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({
+          fileName: item.file.name,
+          fileType: item.file.type || 'application/octet-stream',
+          fileSize: item.file.size,
+          fileData,
+          lang: 'nl',
+        }),
+      });
+
+      // Some Vercel error pages return HTML — wrap json parse defensively.
+      let data: { success?: boolean; status?: string; reason?: string; cvId?: string; existingCvName?: string; message?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        if (res.status === 413) {
+          updateItem(item.id, { status: 'failed', message: 'Bestand te groot voor server (>4.5 MB)' });
+          return;
+        }
+        updateItem(item.id, { status: 'failed', message: `HTTP ${res.status}` });
+        return;
+      }
+
+      if (data.success && data.status === 'created') {
+        updateItem(item.id, { status: 'created', cvId: data.cvId });
+      } else if (data.status === 'skipped') {
+        const reasonLabel = ({
+          'driveFileId-exists': 'Al bekend (Drive)',
+          'sameFileNameAndSize': 'Duplicaat (zelfde bestand)',
+          'duplicateNameAndExperience': 'Duplicaat (naam+ervaring)',
+          'tooLarge': 'Bestand te groot',
+          'tooShort': 'Te weinig tekst',
+          'unsupported': 'Niet ondersteund',
+          'parseFailed': 'Parse mislukt',
+          'aiParseFailed': 'AI-parse mislukt',
+          'noFile': 'Geen bestand',
+          'pdfParserUnavailable': 'PDF-parser niet beschikbaar',
+        } as Record<string, string>)[data.reason || ''] || data.reason || 'Onbekend';
+
+        const isDup = data.reason === 'sameFileNameAndSize' || data.reason === 'duplicateNameAndExperience' || data.reason === 'driveFileId-exists';
+        updateItem(item.id, {
+          status: isDup ? 'duplicate' : 'failed',
+          message: isDup && data.existingCvName ? `${reasonLabel} → ${data.existingCvName}` : reasonLabel,
+        });
+      } else {
+        updateItem(item.id, { status: 'failed', message: data.message || 'Onbekende fout' });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Verbinding mislukt';
+      updateItem(item.id, { status: 'failed', message: msg });
+    }
+  };
+
+  const start = async () => {
+    if (running) return;
+    cancelledRef.current = false;
+    setRunning(true);
+
+    // Pull queue from current state via ref to handle additions during processing
+    const queue = [...items.filter(i => i.status === 'pending')];
+
+    const workers = Array.from({ length: CONCURRENCY }, async () => {
+      while (queue.length > 0 && !cancelledRef.current) {
+        const next = queue.shift();
+        if (!next) return;
+        await processOne(next);
+      }
+    });
+    await Promise.all(workers);
+
+    setRunning(false);
+    onComplete();
+  };
+
+  const cancel = () => {
+    cancelledRef.current = true;
+  };
+
+  const totalDone = stats.created + stats.duplicate + stats.failed;
+  const total = items.length;
+  const pct = total > 0 ? Math.round((totalDone / total) * 100) : 0;
+
+  return (
+    <div className="bg-white border-2 border-blue-600 p-6 mb-4">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-xl font-black uppercase tracking-tighter italic">Bulk CV Upload</h3>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            PDF/Word · max 4.5 MB per bestand · concurrency {CONCURRENCY}
+          </p>
+        </div>
+        <button onClick={onClose} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        multiple
+        onChange={handleSelect}
+        className="hidden"
+      />
+
+      <div
+        onClick={() => !running && fileInputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => !running && handleDrop(e)}
+        className={cn(
+          'border-4 border-dashed p-8 text-center transition-all',
+          running ? 'border-slate-200 cursor-not-allowed opacity-60' : 'border-slate-200 hover:border-blue-600 hover:bg-blue-50/30 cursor-pointer',
+        )}
+      >
+        <Upload className="w-10 h-10 text-blue-600 mx-auto mb-3" />
+        <p className="text-sm font-black uppercase tracking-widest mb-1">
+          Sleep CV-bestanden hierheen of klik
+        </p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Meerdere selecteren toegestaan
+        </p>
+      </div>
+
+      {items.length > 0 && (
+        <>
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <StatChip label="Totaal" value={total} />
+            <StatChip label="Wachten" value={stats.pending} color="slate" />
+            <StatChip label="Geüpload" value={stats.created} color="emerald" />
+            <StatChip label="Duplicaat" value={stats.duplicate} color="amber" />
+            <StatChip label="Mislukt" value={stats.failed} color="red" />
+          </div>
+
+          {(running || totalDone > 0) && (
+            <div className="mt-4">
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
+                <span>{running ? 'Bezig...' : 'Voltooid'}</span>
+                <span>{totalDone}/{total} ({pct}%)</span>
+              </div>
+              <div className="h-1.5 bg-slate-100 overflow-hidden">
+                <div className="h-full bg-blue-600 transition-all" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {!running ? (
+              <button
+                onClick={start}
+                disabled={stats.pending === 0}
+                className="bg-blue-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2 disabled:opacity-50"
+              >
+                <Upload className="w-3 h-3" /> Start Upload ({stats.pending})
+              </button>
+            ) : (
+              <button onClick={cancel} className="bg-red-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2">
+                <X className="w-3 h-3" /> Stoppen
+              </button>
+            )}
+            {totalDone > 0 && !running && (
+              <button onClick={clearCompleted} className="border-2 border-black px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white">
+                Wis voltooide
+              </button>
+            )}
+          </div>
+
+          <div className="mt-6 max-h-[40vh] overflow-y-auto border-2 border-slate-100">
+            <ul className="divide-y divide-slate-100">
+              {items.map(item => (
+                <li key={item.id} className="flex items-center gap-3 p-3 text-sm">
+                  <StatusIcon status={item.status} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold truncate" title={item.file.name}>{item.file.name}</p>
+                    {item.message && (
+                      <p className="text-[10px] font-bold text-slate-400 truncate" title={item.message}>{item.message}</p>
+                    )}
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 shrink-0">
+                    {(item.file.size / 1024).toFixed(0)} KB
+                  </span>
+                  {item.status === 'pending' && !running && (
+                    <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-600 shrink-0">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StatusIcon({ status }: { status: UploadStatus }) {
+  if (status === 'pending') return <div className="w-3 h-3 bg-slate-200 rounded-full shrink-0" />;
+  if (status === 'uploading') return <Loader2 className="w-3 h-3 animate-spin text-blue-600 shrink-0" />;
+  if (status === 'created') return <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />;
+  if (status === 'duplicate') return <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />;
+  return <AlertCircle className="w-3 h-3 text-red-600 shrink-0" />;
+}
+
+function StatChip({ label, value, color = 'blue' }: { label: string; value: number; color?: 'blue' | 'slate' | 'emerald' | 'amber' | 'red' }) {
+  const colors = {
+    blue: 'border-blue-600 text-blue-700 bg-blue-50',
+    slate: 'border-slate-300 text-slate-600 bg-slate-50',
+    emerald: 'border-emerald-600 text-emerald-700 bg-emerald-50',
+    amber: 'border-amber-600 text-amber-700 bg-amber-50',
+    red: 'border-red-600 text-red-700 bg-red-50',
+  }[color];
+  return (
+    <div className={cn('border-2 p-3 text-center', colors)}>
+      <div className="text-2xl font-black tracking-tighter italic leading-none">{value}</div>
+      <div className="text-[9px] font-black uppercase tracking-widest mt-1">{label}</div>
     </div>
   );
 }
