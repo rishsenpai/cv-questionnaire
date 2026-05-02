@@ -153,7 +153,7 @@ function MatchesContent() {
         <div className="absolute -top-20 -right-20 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
       </section>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 space-y-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10 space-y-12">
         {loading && (
           <div className="bg-white border-4 border-black p-16 shadow-[16px_16px_0px_0px_rgba(59,130,246,1)] text-center">
             <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-spin" />
@@ -238,27 +238,29 @@ function MatchesContent() {
           </section>
         )}
 
-        <div className="bg-blue-50 border-4 border-blue-600 p-12 text-center">
-          <TrendingUp className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-          <h3 className="text-2xl font-black uppercase tracking-tighter italic mb-3">Vond je niet wat je zocht?</h3>
-          <p className="text-sm font-bold text-slate-600 mb-6 max-w-md mx-auto">
-            Update je CV met meer details of bouw een nieuwe versie via onze vragenlijst.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/cv-upload"
-              className="bg-blue-600 text-white px-8 py-4 font-black uppercase tracking-widest text-sm hover:bg-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]"
-            >
-              Nieuwe CV Uploaden
-            </Link>
-            <Link
-              href="/cv-builder"
-              className="bg-white border-2 border-black px-8 py-4 font-black uppercase tracking-widest text-sm hover:bg-black hover:text-white transition-all"
-            >
-              CV Bouwen
-            </Link>
+        {!loading && internalMatches !== null && !errorMsg && (
+          <div className="bg-blue-50 border-4 border-blue-600 p-12 text-center">
+            <TrendingUp className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+            <h3 className="text-2xl font-black uppercase tracking-tighter italic mb-3">Vond je niet wat je zocht?</h3>
+            <p className="text-sm font-bold text-slate-600 mb-6 max-w-md mx-auto">
+              Update je CV met meer details of bouw een nieuwe versie via onze vragenlijst.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/cv-upload"
+                className="bg-blue-600 text-white px-8 py-4 font-black uppercase tracking-widest text-sm hover:bg-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]"
+              >
+                Nieuwe CV Uploaden
+              </Link>
+              <Link
+                href="/cv-builder"
+                className="bg-white border-2 border-black px-8 py-4 font-black uppercase tracking-widest text-sm hover:bg-black hover:text-white transition-all"
+              >
+                CV Bouwen
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
