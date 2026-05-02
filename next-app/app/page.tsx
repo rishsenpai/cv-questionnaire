@@ -33,30 +33,70 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { readJson } from '@/lib/storage';
 
-// Mock Data
-const JOBS = [
-  { id: 1, title: 'Senior Software Engineer', company: 'Telesur', location: 'Paramaribo', type: 'Full-time', salary: 'SRD 35.000+', verified: true, aiMatch: 98, sector: 'Technologie & IT' },
-  { id: 2, title: 'Marketing Coordinator', company: 'Finabank', location: 'Paramaribo', type: 'Full-time', salary: 'SRD 12.000+', verified: true, aiMatch: 85, sector: 'Financiën & Verzekeringen' },
-  { id: 3, title: 'Project Manager Mining', company: 'IAMGOLD', location: 'Brokopondo', type: 'Projectbasis', salary: 'USD 3.500+', verified: true, aiMatch: 92, sector: 'Mijnbouw & Natuurlijke Hulpbronnen' },
-  { id: 4, title: 'Sales Consultant', company: 'Kuldipsingh', location: 'Wanica', type: 'Full-time', salary: 'Market-conform', verified: false, aiMatch: 80, sector: 'Bouw & Infrastructuur' },
-];
+interface VacancyCard {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  salary: string;
+  verified: boolean;
+  aiMatch: number | null;
+  sector: string;
+}
+
+interface ApiVacancy {
+  _id: string;
+  title: string;
+  company?: string;
+  location?: string;
+  employmentType?: string;
+  salary?: { min?: number; max?: number; currency?: string; period?: string };
+  source?: string;
+}
+
+function formatSalary(salary?: ApiVacancy['salary']): string {
+  if (!salary || (!salary.min && !salary.max)) return 'Op aanvraag';
+  const cur = salary.currency || 'SRD';
+  if (salary.min && salary.max) return `${cur} ${salary.min.toLocaleString()}-${salary.max.toLocaleString()}`;
+  if (salary.min) return `${cur} ${salary.min.toLocaleString()}+`;
+  return `${cur} tot ${salary.max!.toLocaleString()}`;
+}
+
+function vacancyToCard(v: ApiVacancy): VacancyCard {
+  return {
+    id: v._id,
+    title: v.title,
+    company: v.company || 'Onbekend bedrijf',
+    location: v.location || 'Locatie onbekend',
+    type: v.employmentType || 'Full-time',
+    salary: formatSalary(v.salary),
+    verified: v.source === 'adzuna' || Boolean(v.company),
+    aiMatch: null,
+    sector: v.source === 'adzuna' ? 'Adzuna' : 'Lokaal',
+  };
+}
 
 export default function Home() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [useAI, setUseAI] = useState(true);
-  
-  const [dynamicJobs, setDynamicJobs] = useState<any[]>([]);
+
+  const [dynamicJobs, setDynamicJobs] = useState<VacancyCard[]>([]);
 
   useEffect(() => {
-    const loadDynamicJobs = () => {
-      setDynamicJobs([...readJson<any[]>('suri_jobs', []), ...JOBS]);
-    };
-    loadDynamicJobs();
-    window.addEventListener('storage', loadDynamicJobs);
-    return () => window.removeEventListener('storage', loadDynamicJobs);
+    let cancelled = false;
+    fetch('/api/vacancies?limit=20')
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled || !data.success) return;
+        setDynamicJobs((data.vacancies as ApiVacancy[]).map(vacancyToCard));
+      })
+      .catch(() => {
+        // Empty state is fine for the home preview
+      });
+    return () => { cancelled = true; };
   }, []);
 
   const [isScanning, setIsScanning] = useState(false);
