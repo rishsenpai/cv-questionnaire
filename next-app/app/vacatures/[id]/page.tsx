@@ -30,9 +30,62 @@ import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 import { useFocusTrap } from '@/hooks/use-focus-trap';
 import { dedupeBy, isNonEmpty, isValidEmail } from '@/lib/validation';
 import { readJson, writeJson } from '@/lib/storage';
-import { DEMO_JOBS } from '@/lib/jobs';
 
 const DEFAULT_UPLOADED_CV_NAME = 'CV_Jurgen_Dijkstra_2026.pdf';
+
+interface ApiVacancy {
+  _id: string;
+  title: string;
+  description?: string;
+  requirements?: string;
+  company?: string;
+  location?: string;
+  employmentType?: string;
+  salary?: { min?: number; max?: number; currency?: string; period?: string };
+  source?: string;
+  postedAt?: string;
+  createdAt?: string;
+}
+
+interface JobDetail {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  salary: string;
+  sector: string;
+  match: number;
+  verified: boolean;
+  description?: string;
+  requirements?: string[];
+  postedAt?: string;
+}
+
+function formatSalary(s?: ApiVacancy['salary']): string {
+  if (!s || (!s.min && !s.max)) return 'Op aanvraag';
+  const cur = s.currency || 'SRD';
+  if (s.min && s.max) return `${cur} ${s.min.toLocaleString()}-${s.max.toLocaleString()}`;
+  if (s.min) return `${cur} ${s.min.toLocaleString()}+`;
+  return `${cur} tot ${s.max!.toLocaleString()}`;
+}
+
+function vacancyToJob(v: ApiVacancy): JobDetail {
+  return {
+    id: v._id,
+    title: v.title,
+    company: v.company || 'Onbekend bedrijf',
+    location: v.location || 'Locatie onbekend',
+    type: v.employmentType || 'Full-time',
+    salary: formatSalary(v.salary),
+    sector: v.source === 'adzuna' ? 'Adzuna' : 'Lokaal',
+    match: 0,
+    verified: v.source === 'adzuna' || Boolean(v.company),
+    description: v.description,
+    requirements: v.requirements ? v.requirements.split('\n').filter(Boolean) : undefined,
+    postedAt: v.postedAt || v.createdAt,
+  };
+}
 
 function getNextLocalApplicationId(existingApplications: Array<{ id?: number | string }>) {
   const numericIds = existingApplications
@@ -47,7 +100,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const jobId = resolvedParams.id;
   const router = useRouter();
   
-  const [job, setJob] = useState<any>(null);
+  const [job, setJob] = useState<JobDetail | null>(null);
+  const [similarJobs, setSimilarJobs] = useState<JobDetail[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -74,26 +128,51 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   useFocusTrap(showApplyModal, modalRef);
 
   useEffect(() => {
-    const loadData = () => {
-      const storedJobs = readJson<any[]>('suri_jobs', []);
-      const allJobs = [...storedJobs, ...DEMO_JOBS];
-      const found = allJobs.find(j => j.id.toString() === jobId);
-
-      const saved = readJson<number[]>('suri_saved_jobs', []);
-
+    let cancelled = false;
+    const loadAuthState = () => {
+      const saved = readJson<string[]>('suri_saved_jobs', []);
       const storedUser = readJson('suri_user', null);
       startTransition(() => {
-        setJob(found);
-        setIsSaved(saved.includes(Number(jobId)));
+        setIsSaved(saved.includes(jobId));
         setUser(storedUser);
-        setHasLoaded(true);
       });
     };
 
-    loadData();
-    window.addEventListener('storage', loadData);
+    fetch(`/api/vacancies/${jobId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        startTransition(() => {
+          setJob(data.success && data.vacancy ? vacancyToJob(data.vacancy as ApiVacancy) : null);
+          setHasLoaded(true);
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          startTransition(() => {
+            setJob(null);
+            setHasLoaded(true);
+          });
+        }
+      });
+
+    fetch('/api/vacancies?limit=3')
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled || !data.success) return;
+        const others = (data.vacancies as ApiVacancy[])
+          .filter(v => v._id !== jobId)
+          .slice(0, 2)
+          .map(vacancyToJob);
+        setSimilarJobs(others);
+      })
+      .catch(() => { /* ignore */ });
+
+    loadAuthState();
+    window.addEventListener('storage', loadAuthState);
     return () => {
-      window.removeEventListener('storage', loadData);
+      cancelled = true;
+      window.removeEventListener('storage', loadAuthState);
     };
   }, [jobId]);
 
@@ -115,16 +194,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       router.push('/auth');
       return;
     }
-    const saved = readJson<number[]>('suri_saved_jobs', []);
-    const newSaved = saved.includes(Number(jobId))
-      ? saved.filter((id: number) => id !== Number(jobId))
-      : [...saved, Number(jobId)];
-    
+    const saved = readJson<string[]>('suri_saved_jobs', []);
+    const newSaved = saved.includes(jobId)
+      ? saved.filter(id => id !== jobId)
+      : [...saved, jobId];
+
     writeJson('suri_saved_jobs', newSaved);
     setIsSaved(!isSaved);
   };
 
   const handleShareJob = async () => {
+    if (!job) return;
     const shareUrl = typeof window !== 'undefined' ? window.location.href : `/vacatures/${jobId}`;
     const sharePayload = {
       title: `${job.title} bij ${job.company}`,
@@ -151,6 +231,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!job) return;
     const nextErrors: Record<string, string> = {};
     if (!isNonEmpty(applyData.name)) nextErrors.name = 'Naam is verplicht.';
     if (!isValidEmail(applyData.email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
@@ -387,7 +468,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               {/* Similar Jobs Simulation */}
               <div className="space-y-6">
                  <h3 className="text-xs font-black uppercase tracking-widest mb-6 italic">Vergelijkbare Vacatures</h3>
-                 {DEMO_JOBS.filter(j => j.id !== Number(jobId)).slice(0, 2).map(j => (
+                 {similarJobs.map(j => (
                    <Link key={j.id} href={`/vacatures/${j.id}`} className="block bg-white border-2 border-slate-100 p-6 hover:border-black transition-all group">
                       <p className="text-[9px] font-black uppercase tracking-widest text-blue-600 mb-2">{j.sector}</p>
                       <h4 className="text-lg font-black uppercase tracking-tighter italic group-hover:text-blue-600 transition-colors mb-3">{j.title}</h4>

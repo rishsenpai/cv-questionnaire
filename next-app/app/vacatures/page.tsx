@@ -18,7 +18,60 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isValidEmail } from '@/lib/validation';
 import { readJson, writeJson } from '@/lib/storage';
-import { DEMO_JOBS } from '@/lib/jobs';
+
+interface JobCard {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  salary: string;
+  sector: string;
+  match: number;
+  verified: boolean;
+  description?: string;
+  requirements?: string[];
+  postedAt?: string;
+}
+
+interface ApiVacancy {
+  _id: string;
+  title: string;
+  description?: string;
+  requirements?: string;
+  company?: string;
+  location?: string;
+  employmentType?: string;
+  salary?: { min?: number; max?: number; currency?: string; period?: string };
+  source?: string;
+  postedAt?: string;
+  createdAt?: string;
+}
+
+function formatSalary(s?: ApiVacancy['salary']): string {
+  if (!s || (!s.min && !s.max)) return 'Op aanvraag';
+  const cur = s.currency || 'SRD';
+  if (s.min && s.max) return `${cur} ${s.min.toLocaleString()}-${s.max.toLocaleString()}`;
+  if (s.min) return `${cur} ${s.min.toLocaleString()}+`;
+  return `${cur} tot ${s.max!.toLocaleString()}`;
+}
+
+function vacancyToCard(v: ApiVacancy): JobCard {
+  return {
+    id: v._id,
+    title: v.title,
+    company: v.company || 'Onbekend bedrijf',
+    location: v.location || 'Locatie onbekend',
+    type: v.employmentType || 'Full-time',
+    salary: formatSalary(v.salary),
+    sector: v.source === 'adzuna' ? 'Adzuna' : 'Lokaal',
+    match: 0,
+    verified: v.source === 'adzuna' || Boolean(v.company),
+    description: v.description,
+    requirements: v.requirements ? [v.requirements] : undefined,
+    postedAt: v.postedAt || v.createdAt,
+  };
+}
 
 function VacaturesContent() {
   const router = useRouter();
@@ -37,20 +90,29 @@ function VacaturesContent() {
   const [jobAlertEmail, setJobAlertEmail] = useState('');
   const [jobAlertMessage, setJobAlertMessage] = useState('');
   const [priceRange, setPriceRange] = useState(50000);
-  const [jobs, setJobs] = useState<any[]>(() => [...readJson<any[]>('suri_jobs', []), ...DEMO_JOBS]);
-  const [user, setUser] = useState<any>(() => readJson('suri_user', null));
-  const [savedJobs, setSavedJobs] = useState<number[]>(() => readJson<number[]>('suri_saved_jobs', []));
+  const [jobs, setJobs] = useState<JobCard[]>([]);
+  const [user, setUser] = useState<{ isLoggedIn?: boolean } | null>(() => readJson('suri_user', null));
+  const [savedJobs, setSavedJobs] = useState<string[]>(() => readJson<string[]>('suri_saved_jobs', []));
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/vacancies?limit=100')
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled || !data.success) return;
+        setJobs((data.vacancies as ApiVacancy[]).map(vacancyToCard));
+      })
+      .catch(() => { /* ignore — empty list is OK */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const refreshVacaturesState = useCallback(() => {
-    const storedJobs = readJson<any[]>('suri_jobs', []);
-    setJobs([...storedJobs, ...DEMO_JOBS]);
     setUser(readJson('suri_user', null));
-    setSavedJobs(readJson<number[]>('suri_saved_jobs', []));
+    setSavedJobs(readJson<string[]>('suri_saved_jobs', []));
   }, []);
 
   useEffect(() => {
     window.addEventListener('storage', refreshVacaturesState);
-
     return () => {
       window.removeEventListener('storage', refreshVacaturesState);
     };
@@ -83,7 +145,7 @@ function VacaturesContent() {
     router.replace(params.toString() ? `/vacatures?${params.toString()}` : '/vacatures');
   };
 
-  const toggleSaveJob = (jobId: number) => {
+  const toggleSaveJob = (jobId: string) => {
     if (!user) {
       router.push('/auth');
       return;
@@ -91,7 +153,7 @@ function VacaturesContent() {
     const newSaved = savedJobs.includes(jobId)
       ? savedJobs.filter(id => id !== jobId)
       : [...savedJobs, jobId];
-    
+
     setSavedJobs(newSaved);
     writeJson('suri_saved_jobs', newSaved);
     refreshVacaturesState();
@@ -116,8 +178,10 @@ function VacaturesContent() {
       const salB = parseInt(b.salary.replace(/[^0-9]/g, '')) || 0;
       return salB - salA;
     }
-    // Default: newest (mocked by ID)
-    return b.id - a.id;
+    // Default: newest first (postedAt desc)
+    const tA = a.postedAt ? Date.parse(a.postedAt) : 0;
+    const tB = b.postedAt ? Date.parse(b.postedAt) : 0;
+    return tB - tA;
   });
 
   const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
