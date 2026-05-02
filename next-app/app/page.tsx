@@ -484,13 +484,9 @@ export default function Home() {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <Link 
-                          href={`/bedrijven/${encodeURIComponent(job.company)}`} 
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[10px] font-black uppercase tracking-tighter text-slate-400 hover:text-blue-600 transition-colors"
-                        >
+                        <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400">
                           {job.company}
-                        </Link>
+                        </span>
                         {job.verified && (
                           <div className="text-[10px] font-black uppercase tracking-tighter text-blue-600 flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" /> Geverifieerd
@@ -630,8 +626,8 @@ export default function Home() {
               <p className="text-slate-600 font-bold text-lg leading-relaxed mb-8">
                 Ontrafel de Surinaamse salarisstandaarden. Onze database van 2026 biedt real-time inzicht in wat je écht hoort te verdienen.
               </p>
-              <Link href="/salariswijzer" className="bg-black text-white px-8 py-4 font-black uppercase tracking-tighter flex items-center gap-4 group">
-                Check de Salariswijzer <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              <Link href="/vacatures" className="bg-black text-white px-8 py-4 font-black uppercase tracking-tighter flex items-center gap-4 group">
+                Bekijk Vacatures <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
               </Link>
             </div>
             <div className="lg:col-span-7 flex flex-col gap-4">
@@ -667,11 +663,9 @@ export default function Home() {
               <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">Platform</h4>
               <ul className="space-y-2 text-[10px] font-black uppercase tracking-widest">
                 <li><Link href="/vacatures" className="hover:text-blue-600 transition-colors">Vacatures</Link></li>
-                <li><Link href="/bedrijven" className="hover:text-blue-600 transition-colors">Bedrijven</Link></li>
-                <li><Link href="/salariswijzer" className="hover:text-blue-600 transition-colors">Salariswijzer</Link></li>
-                <li><Link href="/kandidaten" className="hover:text-blue-600 transition-colors">Kandidaten</Link></li>
-                <li><Link href="/dashboard/candidate" className="hover:text-blue-600 transition-colors">Kandidaat Dashboard</Link></li>
-                <li><Link href="/dashboard/company" className="hover:text-blue-600 transition-colors">Bedrijfs Dashboard</Link></li>
+                <li><Link href="/cv-upload" className="hover:text-blue-600 transition-colors">CV Upload</Link></li>
+                <li><Link href="/mijn-matches" className="hover:text-blue-600 transition-colors">Mijn Matches</Link></li>
+                <li><Link href="/over-ons" className="hover:text-blue-600 transition-colors">Over Ons</Link></li>
               </ul>
             </div>
             <div className="space-y-4">

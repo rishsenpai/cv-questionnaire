@@ -56,6 +56,7 @@ interface AuthContextValue {
     logoutCandidate: () => void;
 
     loginEmployer: (username: string, password: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+    registerEmployer: (data: { username: string; password: string; companyName: string; contactEmail?: string }) => Promise<{ ok: true } | { ok: false; message: string }>;
     logoutEmployer: () => void;
 
     loginAdmin: (password: string) => Promise<{ ok: true } | { ok: false; message: string }>;
@@ -189,6 +190,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: true };
     }, []);
 
+    const registerEmployer = useCallback<AuthContextValue['registerEmployer']>(async (data) => {
+        const res = await fetch('/api/employer/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+            return { ok: false, message: result.message || 'Registratie mislukt' };
+        }
+        localStorage.setItem(EMPLOYER_TOKEN_KEY, result.token);
+        setEmployerToken(result.token);
+        setEmployer({ companyName: result.employer.companyName, plan: result.employer.plan });
+        writeLegacyUser({ role: 'employer', name: result.employer.companyName, isLoggedIn: true, onboarded: true });
+        return { ok: true };
+    }, []);
+
     const logoutEmployer = useCallback(() => {
         localStorage.removeItem(EMPLOYER_TOKEN_KEY);
         setEmployerToken(null);
@@ -222,7 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         adminToken,
         isLoading,
         loginCandidate, registerCandidate, logoutCandidate,
-        loginEmployer, logoutEmployer,
+        loginEmployer, registerEmployer, logoutEmployer,
         loginAdmin, logoutAdmin,
     };
 

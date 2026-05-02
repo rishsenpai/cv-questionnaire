@@ -314,9 +314,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {job.title}
               </h1>
               <div className="flex flex-wrap gap-8 text-xs font-black uppercase tracking-widest text-slate-400">
-                 <Link href={`/bedrijven/${job.company}`} className="flex items-center gap-3 hover:text-white transition-colors">
+                 <span className="flex items-center gap-3">
                     <Building2 className="w-5 h-5 text-blue-600" /> {job.company}
-                 </Link>
+                 </span>
                  <span className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-blue-600" /> {job.location}
                  </span>
@@ -418,8 +418,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     <p className="text-slate-400 font-bold text-sm max-w-sm mb-8">
                        Een van de meest gerespecteerde organisaties in Suriname, gedreven door innovatie en lokale groei.
                     </p>
-                    <Link href={`/bedrijven/${job.company}`} className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-widest border-2 border-white/20 px-6 py-3 hover:bg-white hover:text-black transition-all">
-                       Bekijk Bedrijfsprofiel <ArrowRight className="w-4 h-4" />
+                    <Link href={`/vacatures?q=${encodeURIComponent(job.company)}`} className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-widest border-2 border-white/20 px-6 py-3 hover:bg-white hover:text-black transition-all">
+                       Meer van dit bedrijf <ArrowRight className="w-4 h-4" />
                     </Link>
                  </div>
                  <div className="w-32 h-32 bg-white border-8 border-blue-600 flex items-center justify-center text-black font-black text-4xl -rotate-6 shadow-[16px_16px_0px_0px_rgba(59,130,246,0.2)]">

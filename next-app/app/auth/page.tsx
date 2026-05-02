@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
-  Building2,
   ArrowRight,
   CheckCircle2,
   ShieldCheck,
@@ -12,9 +11,8 @@ import {
   Lock,
   Mail,
   Smartphone,
-  ChevronLeft
+  ChevronLeft,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isValidEmail } from '@/lib/validation';
@@ -22,30 +20,21 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [role, setRole] = useState<'candidate' | 'employer'>('candidate');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [formValues, setFormValues] = useState({ email: '', password: '', fullName: '', username: '' });
-  const [formErrors, setFormErrors] = useState<{ email?: string; password?: string; fullName?: string; username?: string; form?: string }>({});
+  const [formValues, setFormValues] = useState({ email: '', password: '', fullName: '' });
+  const [formErrors, setFormErrors] = useState<{ email?: string; password?: string; fullName?: string; form?: string }>({});
   const router = useRouter();
-  const { loginCandidate, registerCandidate, loginEmployer } = useAuth();
+  const { loginCandidate, registerCandidate } = useAuth();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const nextErrors: typeof formErrors = {};
     const password = formValues.password;
+    const email = formValues.email.trim().toLowerCase();
 
-    if (role === 'employer') {
-      if (!isLogin) {
-        setFormErrors({ form: 'Werkgevers krijgen een account via de admin. Neem contact op om toegang te krijgen.' });
-        return;
-      }
-      if (!formValues.username.trim()) nextErrors.username = 'Voer een gebruikersnaam in.';
-    } else {
-      const email = formValues.email.trim().toLowerCase();
-      if (!isValidEmail(email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
-      if (!isLogin && !formValues.fullName.trim()) nextErrors.fullName = 'Voer je volledige naam in.';
-    }
+    if (!isValidEmail(email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
+    if (!isLogin && !formValues.fullName.trim()) nextErrors.fullName = 'Voer je volledige naam in.';
     if (password.length < 8) nextErrors.password = 'Gebruik minimaal 8 tekens.';
 
     if (Object.keys(nextErrors).length > 0) {
@@ -56,21 +45,9 @@ export default function AuthPage() {
     setFormErrors({});
     setIsLoading(true);
 
-    let result: { ok: true } | { ok: false; message: string };
-    if (role === 'candidate') {
-      const email = formValues.email.trim().toLowerCase();
-      if (isLogin) {
-        result = await loginCandidate(email, password);
-      } else {
-        result = await registerCandidate({
-          email,
-          password,
-          fullName: formValues.fullName.trim(),
-        });
-      }
-    } else {
-      result = await loginEmployer(formValues.username.trim().toLowerCase(), password);
-    }
+    const result = isLogin
+      ? await loginCandidate(email, password)
+      : await registerCandidate({ email, password, fullName: formValues.fullName.trim() });
 
     setIsLoading(false);
 
@@ -81,8 +58,7 @@ export default function AuthPage() {
 
     setIsSuccess(true);
     setTimeout(() => {
-      if (role === 'candidate') router.push('/dashboard/candidate');
-      else router.push('/dashboard/company');
+      router.push('/mijn-matches');
     }, 1500);
   };
 
@@ -148,7 +124,7 @@ export default function AuthPage() {
                 <CheckCircle2 className="w-12 h-12" />
               </div>
               <h2 className="text-4xl font-black uppercase tracking-tighter italic mb-4">Succesvol!</h2>
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Je wordt nu doorverwezen naar je dashboard...</p>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Je wordt nu doorverwezen naar je matches...</p>
             </motion.div>
           ) : (
             <div className="h-full flex flex-col">
@@ -172,40 +148,17 @@ export default function AuthPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <button
-                  type="button"
-                  onClick={() => setRole('candidate')}
-                  className={cn(
-                    'flex flex-col items-center gap-3 p-6 border-2 transition-all group',
-                    role === 'candidate' ? 'border-black bg-black text-white' : 'border-slate-100 hover:border-black text-slate-400',
-                  )}
-                >
-                  <User className={cn('w-6 h-6', role === 'candidate' ? 'text-blue-400' : 'group-hover:text-black')} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Kandidaat</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('employer')}
-                  className={cn(
-                    'flex flex-col items-center gap-3 p-6 border-2 transition-all group',
-                    role === 'employer' ? 'border-black bg-black text-white' : 'border-slate-100 hover:border-black text-slate-400',
-                  )}
-                >
-                  <Building2 className={cn('w-6 h-6', role === 'employer' ? 'text-blue-400' : 'group-hover:text-black')} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Werkgever</span>
-                </button>
-              </div>
-
-              <div className="mb-8">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  {isLogin ? 'Kies de rol van het account waarmee je wilt doorgaan.' : 'Kies hoe je SuriJobs+ wilt gebruiken.'}
-                </p>
+              <div className="mb-8 p-6 border-2 border-slate-100 bg-slate-50 flex items-center gap-4">
+                <User className="w-6 h-6 text-blue-600" />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-black">Kandidaat-account</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Upload je CV en vind matchende vacatures</p>
+                </div>
               </div>
 
               <form onSubmit={handleAuth} className="space-y-6 flex-1">
                 <div className="space-y-4">
-                  {role === 'candidate' && !isLogin && (
+                  {!isLogin && (
                     <div className="relative group">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
                       <input
@@ -221,35 +174,19 @@ export default function AuthPage() {
                   )}
                   {formErrors.fullName && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.fullName}</p>}
 
-                  {role === 'employer' ? (
-                    <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-                      <input
-                        name="username"
-                        type="text"
-                        placeholder="GEBRUIKERSNAAM"
-                        value={formValues.username}
-                        onChange={(e) => setFormValues((prev) => ({ ...prev, username: e.target.value }))}
-                        aria-invalid={Boolean(formErrors.username)}
-                        className="w-full p-4 pl-12 border-2 border-slate-100 outline-none focus:border-black font-black uppercase tracking-widest text-[11px] bg-slate-50 focus:bg-white transition-all"
-                      />
-                    </div>
-                  ) : (
-                    <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-                      <input
-                        name="email"
-                        type="email"
-                        placeholder="E-MAILADRES"
-                        value={formValues.email}
-                        onChange={(e) => setFormValues((prev) => ({ ...prev, email: e.target.value }))}
-                        aria-invalid={Boolean(formErrors.email)}
-                        className="w-full p-4 pl-12 border-2 border-slate-100 outline-none focus:border-black font-black uppercase tracking-widest text-[11px] bg-slate-50 focus:bg-white transition-all"
-                      />
-                    </div>
-                  )}
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+                    <input
+                      name="email"
+                      type="email"
+                      placeholder="E-MAILADRES"
+                      value={formValues.email}
+                      onChange={(e) => setFormValues((prev) => ({ ...prev, email: e.target.value }))}
+                      aria-invalid={Boolean(formErrors.email)}
+                      className="w-full p-4 pl-12 border-2 border-slate-100 outline-none focus:border-black font-black uppercase tracking-widest text-[11px] bg-slate-50 focus:bg-white transition-all"
+                    />
+                  </div>
                   {formErrors.email && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.email}</p>}
-                  {formErrors.username && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.username}</p>}
 
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />

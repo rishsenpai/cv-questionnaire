@@ -464,27 +464,14 @@ function VacaturesContent() {
                       </Link>
                       <div className="flex flex-wrap gap-x-8 gap-y-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">
                         <div className="flex items-center gap-4">
-                          <Link href={`/bedrijven/${job.company}`} className="flex items-center gap-3 hover:text-black transition-colors group/company relative">
-                            <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-black text-xs border-2 border-blue-600 shadow-[2px_2px_0px_0px_rgba(59,130,246,1)] group-hover/company:scale-110 transition-transform">
+                          <span className="flex items-center gap-3 group/company relative">
+                            <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-black text-xs border-2 border-blue-600 shadow-[2px_2px_0px_0px_rgba(59,130,246,1)]">
                               {job.company[0]}
                             </div>
                             <span className="flex items-center gap-2">
                               <Building2 className="w-4 h-4 text-blue-600" /> {job.company}
                             </span>
-                            
-                            {/* Company Tooltip */}
-                            <div className="absolute bottom-full left-0 mb-3 w-52 p-4 bg-black text-white text-[9px] font-bold uppercase tracking-widest leading-relaxed opacity-0 group-hover/company:opacity-100 transition-all z-50 pointer-events-none border-2 border-blue-600 shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] scale-95 group-hover/company:scale-100">
-                              <div className="text-blue-600 mb-1 border-b border-white/10 pb-1">Bedrijfsinfo</div>
-                              <div className="mb-2 italic opacity-60">Sector: {job.sector}</div>
-                              <div className="italic opacity-60">Locatie: {job.location}</div>
-                            </div>
-                          </Link>
-                          <Link 
-                            href={`/bedrijven/${job.company}`}
-                            className="bg-slate-100 px-2 py-0.5 text-[8px] border-2 border-black hover:bg-black hover:text-white transition-colors brutal-shadow"
-                          >
-                            Profiel
-                          </Link>
+                          </span>
                         </div>
                         <span className="flex items-center gap-2"><MapPin className="w-4 h-4 text-blue-600" /> {job.location}</span>
                         <span className="flex items-center gap-2 text-black"><DollarSign className="w-4 h-4 text-emerald-600" /> {job.salary}</span>
@@ -592,8 +579,8 @@ function VacaturesContent() {
               <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">Platform</h4>
               <ul className="space-y-2 text-[10px] font-black uppercase tracking-widest">
                 <li><Link href="/vacatures" className="hover:text-blue-600">Vacatures</Link></li>
-                <li><Link href="/bedrijven" className="hover:text-blue-600">Bedrijven</Link></li>
-                <li><Link href="/salariswijzer" className="hover:text-blue-600">Salariswijzer</Link></li>
+                <li><Link href="/cv-upload" className="hover:text-blue-600">CV Upload</Link></li>
+                <li><Link href="/mijn-matches" className="hover:text-blue-600">Mijn Matches</Link></li>
               </ul>
             </div>
             <div className="space-y-4">
