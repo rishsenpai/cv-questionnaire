@@ -21,8 +21,55 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { readJson, writeJson } from '@/lib/storage';
-import { COMPANY_PROFILES, findCompanyProfile, matchesCompanyName } from '@/lib/companies';
-import { DEMO_JOBS } from '@/lib/jobs';
+import { COMPANY_PROFILES, findCompanyProfile } from '@/lib/companies';
+
+interface ApiVacancy {
+  _id: string;
+  title: string;
+  description?: string;
+  requirements?: string;
+  company?: string;
+  location?: string;
+  employmentType?: string;
+  salary?: { min?: number; max?: number; currency?: string; period?: string };
+  source?: string;
+  postedAt?: string;
+  createdAt?: string;
+}
+
+interface JobCard {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  salary: string;
+  sector: string;
+  match: number;
+  verified: boolean;
+}
+
+function formatSalary(s?: ApiVacancy['salary']): string {
+  if (!s || (!s.min && !s.max)) return 'Op aanvraag';
+  const cur = s.currency || 'SRD';
+  if (s.min && s.max) return `${cur} ${s.min.toLocaleString()}-${s.max.toLocaleString()}`;
+  if (s.min) return `${cur} ${s.min.toLocaleString()}+`;
+  return `${cur} tot ${s.max!.toLocaleString()}`;
+}
+
+function vacancyToCard(v: ApiVacancy): JobCard {
+  return {
+    id: v._id,
+    title: v.title,
+    company: v.company || 'Onbekend bedrijf',
+    location: v.location || 'Locatie onbekend',
+    type: v.employmentType || 'Full-time',
+    salary: formatSalary(v.salary),
+    sector: v.source === 'adzuna' ? 'Adzuna' : 'Lokaal',
+    match: 0,
+    verified: v.source === 'adzuna' || Boolean(v.company),
+  };
+}
 
 export default function CompanyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -32,39 +79,42 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
     () => findCompanyProfile(companyName) || COMPANY_PROFILES.find((company) => company.name === companyName) || null,
     [companyName]
   );
-  
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [savedJobs, setSavedJobs] = useState<number[]>(() => readJson<number[]>('suri_saved_jobs', []));
+
+  const [jobs, setJobs] = useState<JobCard[]>([]);
+  const [savedJobs, setSavedJobs] = useState<string[]>(() => readJson<string[]>('suri_saved_jobs', []));
   const [isFollowing, setIsFollowing] = useState(false);
 
   const storageCompanyKey = companyProfile?.name || companyName;
 
-  const loadData = useCallback(() => {
-    const storedJobs = readJson<any[]>('suri_jobs', []);
-    const allJobs = [...storedJobs, ...DEMO_JOBS];
-    const companyJobs = allJobs.filter((job) => matchesCompanyName(job.company, companyName));
-    setJobs(companyJobs);
-
-    const saved = readJson<number[]>('suri_saved_jobs', []);
+  const loadAuthState = useCallback(() => {
+    const saved = readJson<string[]>('suri_saved_jobs', []);
     setSavedJobs(saved);
-
     const followed = readJson<string[]>('suri_followed_companies', []);
     setIsFollowing(
       followed.includes(storageCompanyKey) ||
-      followed.includes(companyName)
+      followed.includes(companyName),
     );
   }, [companyName, storageCompanyKey]);
 
   useEffect(() => {
-    const timer = window.setTimeout(loadData, 0);
-    window.addEventListener('storage', loadData);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('storage', loadData);
-    };
-  }, [loadData]);
+    let cancelled = false;
+    fetch(`/api/companies/${encodeURIComponent(companyName)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled || !data.success) return;
+        setJobs((data.vacancies as ApiVacancy[]).map(vacancyToCard));
+      })
+      .catch(() => { /* ignore */ });
 
-  const toggleSaveJob = (jobId: number) => {
+    loadAuthState();
+    window.addEventListener('storage', loadAuthState);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('storage', loadAuthState);
+    };
+  }, [companyName, loadAuthState]);
+
+  const toggleSaveJob = (jobId: string) => {
     const storedUser = readJson('suri_user', null);
     if (!storedUser) {
       router.push('/auth');
@@ -73,10 +123,10 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
     const newSaved = savedJobs.includes(jobId)
       ? savedJobs.filter(id => id !== jobId)
       : [...savedJobs, jobId];
-    
+
     setSavedJobs(newSaved);
     writeJson('suri_saved_jobs', newSaved);
-    loadData();
+    loadAuthState();
   };
 
   const toggleFollowCompany = () => {

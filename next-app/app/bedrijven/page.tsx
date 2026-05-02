@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Building2, 
-  MapPin, 
-  Users, 
-  ExternalLink, 
-  Sparkles, 
+import {
+  Building2,
+  MapPin,
+  Users,
+  ExternalLink,
+  Sparkles,
   Search,
   Filter,
   BarChart3,
@@ -19,21 +19,75 @@ import {
   ArrowRight,
   TrendingUp,
   LayoutDashboard,
-  MessageSquare
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
-import { COMPANY_PROFILES } from '@/lib/companies';
+import { COMPANY_PROFILES, findCompanyProfile } from '@/lib/companies';
+
+interface ApiCompany {
+  name: string;
+  openJobs: number;
+  location: string;
+  sector: string;
+  verified: boolean;
+  logo: string | null;
+}
+
+interface CompanyDisplay {
+  name: string;
+  openJobs: number;
+  location: string;
+  sector: string;
+  sectorDescription: string;
+  verified: boolean;
+  logo: string | null;
+  employees: string;
+  description: string;
+  topRoles: string[];
+}
+
+function enrich(c: ApiCompany): CompanyDisplay {
+  const profile = findCompanyProfile(c.name);
+  return {
+    name: c.name,
+    openJobs: c.openJobs,
+    location: profile?.location || c.location,
+    sector: profile?.sector || c.sector,
+    sectorDescription: profile?.sectorDescription || 'Werkgever uit onze platform-gids.',
+    verified: profile?.verified ?? c.verified,
+    logo: profile?.logo || c.logo,
+    employees: profile?.employees || '—',
+    description: profile?.description || `Werkgever met ${c.openJobs} open vacature${c.openJobs !== 1 ? 's' : ''}.`,
+    topRoles: profile?.topRoles || [],
+  };
+}
 
 export default function BedrijvenPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSector, setActiveSector] = useState('Alle');
+  const [companies, setCompanies] = useState<CompanyDisplay[]>([]);
 
-  const sectors = ['Alle', ...Array.from(new Set(COMPANY_PROFILES.map(c => c.sector)))];
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/companies')
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled || !data.success) return;
+        setCompanies((data.companies as ApiCompany[]).map(enrich));
+      })
+      .catch(() => { /* ignore */ });
+    return () => { cancelled = true; };
+  }, []);
 
-  const filteredCompanies = COMPANY_PROFILES.filter(company => {
-    const matchesSearch = company.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const sectors = ['Alle', ...Array.from(new Set([
+    ...COMPANY_PROFILES.map(c => c.sector),
+    ...companies.map(c => c.sector),
+  ]))];
+
+  const filteredCompanies = companies.filter(company => {
+    const matchesSearch = company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           company.sector.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSector = activeSector === 'Alle' || company.sector === activeSector;
     return matchesSearch && matchesSector;
