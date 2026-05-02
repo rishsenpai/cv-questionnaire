@@ -81,8 +81,6 @@ function vacancyToCard(v: ApiVacancy): VacancyCard {
 export default function Home() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [useAI, setUseAI] = useState(true);
-
   const [dynamicJobs, setDynamicJobs] = useState<VacancyCard[]>([]);
 
   useEffect(() => {
@@ -405,30 +403,18 @@ export default function Home() {
           {/* Sidebar Filters */}
           <aside className="lg:w-80 flex-shrink-0 border-r border-slate-200 pr-12 pb-12">
             <div className="sticky top-24 space-y-12">
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Aanbevolen voor jou</h3>
-                <div 
-                  onClick={() => setUseAI(!useAI)}
-                  className={cn(
-                    "flex items-center justify-between p-6 transition-all border-2",
-                    useAI ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-100" : "bg-white border-black text-black hover:border-blue-600"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Sparkles className={cn("w-5 h-5", useAI ? "text-white" : "text-blue-600")} />
-                    <span className="font-black uppercase tracking-tighter">AI Matchmaker</span>
-                  </div>
-                  <div className={cn(
-                    "w-10 h-5 rounded-none relative transition-colors border-2",
-                    useAI ? "bg-white/20 border-white" : "bg-slate-200 border-black"
-                  )}>
-                    <motion.div 
-                      animate={{ x: useAI ? 18 : 0 }}
-                      className="absolute top-0 w-4 h-4 bg-white"
-                    />
-                  </div>
+              <Link
+                href="/cv-upload"
+                className="block bg-blue-600 text-white p-6 border-2 border-blue-600 hover:bg-black hover:border-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Sparkles className="w-5 h-5" />
+                  <span className="font-black uppercase tracking-tighter">Upload je CV</span>
                 </div>
-              </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">
+                  Krijg AI-matches op basis van je profiel
+                </p>
+              </Link>
 
               <div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Districten</h3>
@@ -460,7 +446,7 @@ export default function Home() {
           <div className="flex-1 space-y-8">
             <div className="flex items-center justify-between mb-8 border-b-2 border-slate-100 pb-4">
               <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-400 italic underline decoration-blue-600 decoration-4 underline-offset-8">
-                {searchTerm ? `Resultaten voor "${searchTerm}"` : 'Aanbevolen Vacatures'}
+                {searchTerm ? `Resultaten voor "${searchTerm}"` : 'Recente Vacatures'}
               </h2>
               <Link href="/vacatures" className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline decoration-2">Bekijk Alle →</Link>
             </div>
@@ -506,14 +492,8 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Action/Match */}
+                    {/* Action */}
                     <div className="flex flex-row md:flex-col items-center md:items-end gap-6 pt-4 md:pt-0">
-                      {useAI && (
-                        <div className="text-right">
-                          <div className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Match</div>
-                          <div className="text-xl font-black text-blue-600 leading-none">{job.aiMatch}%</div>
-                        </div>
-                      )}
                       <div className="flex items-center gap-3">
                         <a 
                           href={`https://wa.me/5971234567?text=Hoi, ik heb interesse in de vacature voor ${job.title} bij ${job.company}`}
