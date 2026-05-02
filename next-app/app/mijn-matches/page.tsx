@@ -11,8 +11,6 @@ import {
   Loader2,
   AlertCircle,
   FileText,
-  ExternalLink,
-  Globe,
   TrendingUp,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -48,22 +46,6 @@ interface MatchResponse {
   message?: string;
 }
 
-interface ExternalJobsResponse {
-  success: boolean;
-  cv?: { _id: string; fullName: string; jobTitle?: string };
-  jobs?: Array<{
-    id: string;
-    title: string;
-    company: string;
-    location: string;
-    employmentType?: string;
-    description?: string;
-    applyLink?: string;
-    salary?: { min?: number | null; max?: number | null; currency?: string | null };
-  }>;
-  totalJobs?: number;
-}
-
 function formatSalary(s?: MatchVacancy['salary']): string {
   if (!s || (!s.min && !s.max)) return 'Op aanvraag';
   const cur = s.currency || 'SRD';
@@ -79,8 +61,7 @@ function MatchesContent() {
 
   const [activeCvId, setActiveCvId] = useState<string | null>(cvIdFromUrl);
   const [cv, setCv] = useState<{ _id: string; fullName: string; jobTitle?: string } | null>(null);
-  const [internalMatches, setInternalMatches] = useState<MatchVacancy[] | null>(null);
-  const [externalMatches, setExternalMatches] = useState<ExternalJobsResponse['jobs']>([]);
+  const [matches, setMatches] = useState<MatchVacancy[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -90,31 +71,25 @@ function MatchesContent() {
     setLoading(true);
     setErrorMsg(null);
 
-    Promise.all([
-      fetch(`/api/cvs/${activeCvId}/matching-vacancies?lang=nl`).then(r => r.json()),
-      fetch(`/api/cvs/${activeCvId}/external-jobs`).then(r => r.json()).catch(() => ({ success: false })),
-    ]).then(([internal, external]: [MatchResponse, ExternalJobsResponse]) => {
-      if (cancelled) return;
-      if (!internal.success) {
-        setErrorMsg(internal.message || 'Matching mislukt.');
-        setInternalMatches([]);
-      } else {
-        setCv(internal.cv);
-        setInternalMatches(internal.matches);
-      }
-      if (external.success && external.jobs) {
-        setExternalMatches(external.jobs);
-      } else {
-        setExternalMatches([]);
-      }
-    }).catch(() => {
-      if (!cancelled) {
-        setErrorMsg('Verbinding mislukt. Probeer het opnieuw.');
-        setInternalMatches([]);
-      }
-    }).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+    fetch(`/api/cvs/${activeCvId}/matching-vacancies?lang=nl`)
+      .then(r => r.json())
+      .then((data: MatchResponse) => {
+        if (cancelled) return;
+        if (!data.success) {
+          setErrorMsg(data.message || 'Matching mislukt.');
+          setMatches([]);
+          return;
+        }
+        setCv(data.cv);
+        setMatches(data.matches);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setErrorMsg('Verbinding mislukt. Probeer het opnieuw.');
+          setMatches([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
   }, [activeCvId]);
@@ -173,16 +148,19 @@ function MatchesContent() {
           </div>
         )}
 
-        {!loading && internalMatches !== null && (
+        {!loading && matches !== null && (
           <section>
             <div className="flex items-end justify-between mb-8 pb-4 border-b-2 border-slate-100">
               <div>
                 <h2 className="text-xs font-black uppercase tracking-[0.3em] text-blue-600 mb-2">
-                  Onze Vacatures
+                  Vacaturepool
                 </h2>
                 <h3 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic">
-                  {internalMatches.length === 0 ? 'Nog geen matches' : `Top ${internalMatches.length} matches`}
+                  {matches.length === 0 ? 'Nog geen matches' : `Top ${matches.length} matches`}
                 </h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 italic">
+                  Lokale + geïmporteerde vacatures (Adzuna, JSearch) — gerangschikt op AI similarity.
+                </p>
               </div>
               <Link
                 href="/vacatures"
@@ -192,20 +170,20 @@ function MatchesContent() {
               </Link>
             </div>
 
-            {internalMatches.length === 0 ? (
+            {matches.length === 0 ? (
               <div className="bg-white border-2 border-dashed border-slate-200 p-16 text-center">
                 <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                 <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                  Geen interne vacatures matchen op dit moment.
+                  Geen matchende vacatures gevonden.
                 </p>
                 <p className="text-[11px] font-bold text-slate-300 mt-2 italic">
-                  Bekijk de externe matches hieronder of kom later terug.
+                  Mogelijk staan er nog geen vacatures in onze database, of past je CV-profiel niet bij wat er nu open staat.
                 </p>
               </div>
             ) : (
               <div className="grid gap-4">
                 <AnimatePresence>
-                  {internalMatches.map((match, i) => (
+                  {matches.map((match, i) => (
                     <MatchCard key={match._id} match={match} index={i} />
                   ))}
                 </AnimatePresence>
@@ -214,31 +192,7 @@ function MatchesContent() {
           </section>
         )}
 
-        {!loading && externalMatches && externalMatches.length > 0 && (
-          <section>
-            <div className="flex items-end justify-between mb-8 pb-4 border-b-2 border-slate-100">
-              <div>
-                <h2 className="text-xs font-black uppercase tracking-[0.3em] text-blue-600 mb-2 flex items-center gap-2">
-                  <Globe className="w-4 h-4" /> Externe Bronnen
-                </h2>
-                <h3 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic">
-                  Internationale Matches
-                </h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 italic">
-                  Via JSearch API — wereldwijde vacatures relevant voor jouw profiel.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4">
-              {externalMatches.slice(0, 10).map((job) => (
-                <ExternalJobCard key={job.id} job={job} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {!loading && internalMatches !== null && !errorMsg && (
+        {!loading && matches !== null && !errorMsg && (
           <div className="bg-blue-50 border-4 border-blue-600 p-12 text-center">
             <TrendingUp className="w-12 h-12 text-blue-600 mx-auto mb-4" />
             <h3 className="text-2xl font-black uppercase tracking-tighter italic mb-3">Vond je niet wat je zocht?</h3>
@@ -295,6 +249,9 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
             {match.source === 'adzuna' && (
               <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 border-2 border-emerald-600 italic">Adzuna</span>
             )}
+            {match.source === 'jsearch' && (
+              <span className="bg-blue-50 text-blue-700 px-2 py-0.5 border-2 border-blue-600 italic">JSearch</span>
+            )}
           </div>
 
           <Link
@@ -337,34 +294,6 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
         </div>
       </div>
     </motion.div>
-  );
-}
-
-function ExternalJobCard({ job }: { job: NonNullable<ExternalJobsResponse['jobs']>[number] }) {
-  return (
-    <div className="bg-white border-2 border-slate-100 p-6 hover:border-blue-600 transition-colors flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-          <Building2 className="w-3 h-3 text-blue-600" /> {job.company}
-          <span className="bg-slate-100 px-2 py-0.5 border border-slate-200 italic">Extern</span>
-        </div>
-        <h4 className="text-lg font-black uppercase tracking-tighter italic mb-2">{job.title}</h4>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          {job.location && <span className="flex items-center gap-2"><MapPin className="w-3 h-3" /> {job.location}</span>}
-          {job.employmentType && <span>{job.employmentType}</span>}
-        </div>
-      </div>
-      {job.applyLink && (
-        <a
-          href={job.applyLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 bg-slate-50 border-2 border-black px-6 py-3 font-black uppercase tracking-widest text-[10px] hover:bg-black hover:text-white transition-colors"
-        >
-          Solliciteer <ExternalLink className="w-3 h-3" />
-        </a>
-      )}
-    </div>
   );
 }
 
