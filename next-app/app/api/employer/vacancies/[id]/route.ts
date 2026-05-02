@@ -11,12 +11,6 @@ interface Params {
 export async function DELETE(req: NextRequest, { params }: Params) {
     const auth = await requireEmployer(req);
     if (auth instanceof NextResponse) return auth;
-    if (auth.plan !== 'premium') {
-        return NextResponse.json(
-            { success: false, message: 'Upgrade naar Premium voor vacature matching' },
-            { status: 403 },
-        );
-    }
     try {
         const { id } = await params;
         if (!mongoose.Types.ObjectId.isValid(id)) {

@@ -13,7 +13,7 @@ import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ name?: string; onboarded?: boolean } | null>(null);
+  const [user, setUser] = useState<{ name?: string; onboarded?: boolean; role?: 'candidate' | 'employer' } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -32,6 +32,7 @@ export function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem('suri_candidate_token');
+    localStorage.removeItem('suri_employer_token');
     localStorage.removeItem('suri_user');
     setUser(null);
     setShowDropdown(false);
@@ -40,7 +41,13 @@ export function Navbar() {
     router.push('/');
   };
 
-  const links = [
+  const isEmployer = user?.role === 'employer';
+
+  const links = isEmployer ? [
+    { name: 'Mijn Vacatures', href: '/dashboard/company' },
+    { name: 'Vacatures', href: '/vacatures' },
+    { name: 'Over Ons', href: '/over-ons' },
+  ] : [
     { name: 'Vacatures', href: '/vacatures' },
     { name: 'CV Upload', href: '/cv-upload' },
     { name: 'Mijn Matches', href: '/mijn-matches' },
@@ -98,11 +105,11 @@ export function Navbar() {
                       className="absolute right-0 mt-2 w-48 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] p-2 z-[60]"
                     >
                       <Link
-                        href="/mijn-matches"
+                        href={isEmployer ? '/dashboard/company' : '/mijn-matches'}
                         onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors w-full text-left"
                       >
-                        Mijn Matches
+                        {isEmployer ? 'Mijn Vacatures' : 'Mijn Matches'}
                       </Link>
                       <button
                         onClick={handleLogout}

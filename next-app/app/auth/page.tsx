@@ -4,38 +4,63 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
+  Building2,
   ArrowRight,
   CheckCircle2,
   ShieldCheck,
   Zap,
   Lock,
   Mail,
-  Smartphone,
   ChevronLeft,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isValidEmail } from '@/lib/validation';
 import { useAuth } from '@/lib/auth-context';
 
+type Role = 'candidate' | 'employer';
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+  const [role, setRole] = useState<Role>('candidate');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [formValues, setFormValues] = useState({ email: '', password: '', fullName: '' });
-  const [formErrors, setFormErrors] = useState<{ email?: string; password?: string; fullName?: string; form?: string }>({});
+  const [formValues, setFormValues] = useState({
+    email: '', password: '', fullName: '', username: '', companyName: '',
+  });
+  const [formErrors, setFormErrors] = useState<{
+    email?: string; password?: string; fullName?: string;
+    username?: string; companyName?: string; form?: string;
+  }>({});
   const router = useRouter();
-  const { loginCandidate, registerCandidate } = useAuth();
+  const { loginCandidate, registerCandidate, loginEmployer, registerEmployer } = useAuth();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const nextErrors: typeof formErrors = {};
     const password = formValues.password;
-    const email = formValues.email.trim().toLowerCase();
 
-    if (!isValidEmail(email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
-    if (!isLogin && !formValues.fullName.trim()) nextErrors.fullName = 'Voer je volledige naam in.';
-    if (password.length < 8) nextErrors.password = 'Gebruik minimaal 8 tekens.';
+    if (role === 'candidate') {
+      const email = formValues.email.trim().toLowerCase();
+      if (!isValidEmail(email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
+      if (!isLogin && !formValues.fullName.trim()) nextErrors.fullName = 'Voer je volledige naam in.';
+      if (password.length < 8) nextErrors.password = 'Gebruik minimaal 8 tekens.';
+    } else {
+      // employer
+      if (!formValues.username.trim()) nextErrors.username = 'Voer een gebruikersnaam in.';
+      if (!isLogin) {
+        if (!formValues.companyName.trim()) nextErrors.companyName = 'Voer een bedrijfsnaam in.';
+        if (formValues.email.trim() && !isValidEmail(formValues.email.trim().toLowerCase())) {
+          nextErrors.email = 'Ongeldig contact-e-mailadres.';
+        }
+        if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)) {
+          nextErrors.password = 'Min. 8 tekens, met letter én cijfer.';
+        }
+      } else if (password.length < 8) {
+        nextErrors.password = 'Gebruik minimaal 8 tekens.';
+      }
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       setFormErrors(nextErrors);
@@ -45,9 +70,23 @@ export default function AuthPage() {
     setFormErrors({});
     setIsLoading(true);
 
-    const result = isLogin
-      ? await loginCandidate(email, password)
-      : await registerCandidate({ email, password, fullName: formValues.fullName.trim() });
+    let result: { ok: true } | { ok: false; message: string };
+    if (role === 'candidate') {
+      const email = formValues.email.trim().toLowerCase();
+      result = isLogin
+        ? await loginCandidate(email, password)
+        : await registerCandidate({ email, password, fullName: formValues.fullName.trim() });
+    } else {
+      const username = formValues.username.trim().toLowerCase();
+      result = isLogin
+        ? await loginEmployer(username, password)
+        : await registerEmployer({
+            username,
+            password,
+            companyName: formValues.companyName.trim(),
+            contactEmail: formValues.email.trim() || undefined,
+          });
+    }
 
     setIsLoading(false);
 
@@ -58,7 +97,7 @@ export default function AuthPage() {
 
     setIsSuccess(true);
     setTimeout(() => {
-      router.push('/mijn-matches');
+      router.push(role === 'candidate' ? '/mijn-matches' : '/dashboard/company');
     }, 1500);
   };
 
@@ -124,11 +163,13 @@ export default function AuthPage() {
                 <CheckCircle2 className="w-12 h-12" />
               </div>
               <h2 className="text-4xl font-black uppercase tracking-tighter italic mb-4">Succesvol!</h2>
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Je wordt nu doorverwezen naar je matches...</p>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">
+                Je wordt nu doorverwezen{role === 'candidate' ? ' naar je matches...' : ' naar je dashboard...'}
+              </p>
             </motion.div>
           ) : (
             <div className="h-full flex flex-col">
-              <div className="flex justify-between items-end mb-12">
+              <div className="flex justify-between items-end mb-8">
                 <div>
                   <h2 className="text-4xl font-black uppercase tracking-tighter italic leading-none mb-2">
                     {isLogin ? 'Inloggen' : 'Registreren'}
@@ -148,100 +189,104 @@ export default function AuthPage() {
                 </button>
               </div>
 
-              <div className="mb-8 p-6 border-2 border-slate-100 bg-slate-50 flex items-center gap-4">
-                <User className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-black">Kandidaat-account</p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Upload je CV en vind matchende vacatures</p>
-                </div>
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                <button
+                  type="button"
+                  onClick={() => { setRole('candidate'); setFormErrors({}); }}
+                  className={cn(
+                    'flex flex-col items-center gap-3 p-5 border-2 transition-all group',
+                    role === 'candidate' ? 'border-black bg-black text-white' : 'border-slate-100 hover:border-black text-slate-400',
+                  )}
+                >
+                  <User className={cn('w-5 h-5', role === 'candidate' ? 'text-blue-400' : 'group-hover:text-black')} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Kandidaat</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRole('employer'); setFormErrors({}); }}
+                  className={cn(
+                    'flex flex-col items-center gap-3 p-5 border-2 transition-all group',
+                    role === 'employer' ? 'border-black bg-black text-white' : 'border-slate-100 hover:border-black text-slate-400',
+                  )}
+                >
+                  <Building2 className={cn('w-5 h-5', role === 'employer' ? 'text-blue-400' : 'group-hover:text-black')} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Werkgever</span>
+                </button>
               </div>
 
-              <form onSubmit={handleAuth} className="space-y-6 flex-1">
-                <div className="space-y-4">
-                  {!isLogin && (
-                    <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-                      <input
-                        name="fullName"
-                        type="text"
-                        placeholder="VOLLEDIGE NAAM"
-                        value={formValues.fullName}
-                        onChange={(e) => setFormValues((prev) => ({ ...prev, fullName: e.target.value }))}
-                        aria-invalid={Boolean(formErrors.fullName)}
-                        className="w-full p-4 pl-12 border-2 border-slate-100 outline-none focus:border-black font-black uppercase tracking-widest text-[11px] bg-slate-50 focus:bg-white transition-all"
-                      />
-                    </div>
-                  )}
-                  {formErrors.fullName && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.fullName}</p>}
-
-                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-                    <input
-                      name="email"
-                      type="email"
-                      placeholder="E-MAILADRES"
-                      value={formValues.email}
-                      onChange={(e) => setFormValues((prev) => ({ ...prev, email: e.target.value }))}
-                      aria-invalid={Boolean(formErrors.email)}
-                      className="w-full p-4 pl-12 border-2 border-slate-100 outline-none focus:border-black font-black uppercase tracking-widest text-[11px] bg-slate-50 focus:bg-white transition-all"
-                    />
-                  </div>
-                  {formErrors.email && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.email}</p>}
-
-                  <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-                    <input
-                      name="password"
-                      type="password"
-                      placeholder="WACHTWOORD"
-                      value={formValues.password}
-                      onChange={(e) => setFormValues((prev) => ({ ...prev, password: e.target.value }))}
-                      aria-invalid={Boolean(formErrors.password)}
-                      className="w-full p-4 pl-12 border-2 border-slate-100 outline-none focus:border-black font-black uppercase tracking-widest text-[11px] bg-slate-50 focus:bg-white transition-all"
-                    />
-                  </div>
-                  {formErrors.password && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.password}</p>}
-                  {formErrors.form && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.form}</p>}
-                </div>
-
-                <div className="pt-6 space-y-4">
-                  <button
-                    disabled={isLoading}
-                    type="submit"
-                    className="w-full bg-blue-600 text-white py-6 font-black uppercase tracking-[0.2em] text-sm hover:bg-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-4 disabled:opacity-50 active:translate-x-1 active:translate-y-1 active:shadow-none"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Verwerken...
-                      </>
-                    ) : (
-                      <>
-                        {isLogin ? 'Inloggen' : 'Account Creëren'}
-                        <ArrowRight className="w-5 h-5" />
-                      </>
+              <form onSubmit={handleAuth} className="space-y-4 flex-1">
+                {role === 'candidate' && !isLogin && (
+                  <FormField icon={User} placeholder="VOLLEDIGE NAAM" value={formValues.fullName} onChange={(v) => setFormValues((p) => ({ ...p, fullName: v }))} error={formErrors.fullName} />
+                )}
+                {role === 'employer' && !isLogin && (
+                  <FormField icon={Building2} placeholder="BEDRIJFSNAAM" value={formValues.companyName} onChange={(v) => setFormValues((p) => ({ ...p, companyName: v }))} error={formErrors.companyName} />
+                )}
+                {role === 'employer' ? (
+                  <>
+                    <FormField icon={User} placeholder="GEBRUIKERSNAAM" value={formValues.username} onChange={(v) => setFormValues((p) => ({ ...p, username: v }))} error={formErrors.username} />
+                    {!isLogin && (
+                      <FormField icon={Mail} type="email" placeholder="CONTACT E-MAIL (OPTIONEEL)" value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
                     )}
-                  </button>
+                  </>
+                ) : (
+                  <FormField icon={Mail} type="email" placeholder="E-MAILADRES" value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
+                )}
+                <FormField icon={Lock} type="password" placeholder="WACHTWOORD" value={formValues.password} onChange={(v) => setFormValues((p) => ({ ...p, password: v }))} error={formErrors.password} />
 
-                  <div className="relative py-4 flex items-center justify-center">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100" /></div>
-                    <span className="relative z-10 bg-white px-4 text-[9px] font-black text-slate-300 uppercase tracking-widest">Of ga verder met</span>
-                  </div>
+                {formErrors.form && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.form}</p>}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <button type="button" disabled className="border-2 border-slate-100 p-4 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 opacity-50 cursor-not-allowed" title="Niet beschikbaar in deze demo">
-                      <Smartphone className="w-4 h-4" /> Google
-                    </button>
-                    <button type="button" disabled className="border-2 border-slate-100 p-4 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 opacity-50 cursor-not-allowed" title="Niet beschikbaar in deze demo">
-                      <Lock className="w-4 h-4" /> LinkedIn
-                    </button>
-                  </div>
-                </div>
+                <button
+                  disabled={isLoading}
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-5 mt-6 font-black uppercase tracking-[0.2em] text-sm hover:bg-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-3 disabled:opacity-50 active:translate-x-1 active:translate-y-1 active:shadow-none"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Verwerken...
+                    </>
+                  ) : (
+                    <>
+                      {isLogin ? 'Inloggen' : 'Account Creëren'}
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+
+                {role === 'employer' && !isLogin && (
+                  <p className="text-[10px] font-bold text-slate-400 italic mt-4 text-center">
+                    Als werkgever krijg je toegang tot een dashboard waar je vacatures kan plaatsen die direct zichtbaar worden voor kandidaten.
+                  </p>
+                )}
               </form>
             </div>
           )}
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function FormField({
+  icon: Icon, placeholder, value, onChange, error, type = 'text',
+}: {
+  icon: typeof User; placeholder: string; value: string; onChange: (v: string) => void;
+  error?: string; type?: string;
+}) {
+  return (
+    <div>
+      <div className="relative group">
+        <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={Boolean(error)}
+          className="w-full p-4 pl-12 border-2 border-slate-100 outline-none focus:border-black font-black uppercase tracking-widest text-[11px] bg-slate-50 focus:bg-white transition-all"
+        />
+      </div>
+      {error && <p className="text-[10px] font-black uppercase tracking-widest text-red-600 mt-1">{error}</p>}
     </div>
   );
 }
