@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
+import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
 
 export async function GET(req: NextRequest) {
     try {
@@ -25,15 +26,26 @@ export async function GET(req: NextRequest) {
         if (source) query.source = source;
 
         const total = await Vacancy.countDocuments(query);
+        // Company laden voor sanitization, daarna strippen uit response.
         const vacancies = await Vacancy.find(query)
             .select('-fileData -embedding -fullText')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
+        const sanitized = vacancies.map(v => {
+            const obj = v.toObject() as unknown as Record<string, unknown>;
+            obj.description = sanitizeJobText(v.description, v.company);
+            obj.requirements = sanitizeJobText(v.requirements, v.company);
+            delete obj.company;
+            delete obj.companyLogo;
+            delete obj.applyLink;
+            return obj;
+        });
+
         return NextResponse.json({
             success: true,
-            vacancies,
+            vacancies: sanitized,
             pagination: { page, limit, total, pages: Math.ceil(total / limit) },
         });
     } catch (err) {
