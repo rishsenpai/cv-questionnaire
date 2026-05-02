@@ -6,6 +6,29 @@ const CANDIDATE_TOKEN_KEY = 'suri_candidate_token';
 const EMPLOYER_TOKEN_KEY = 'suri_employer_token';
 const ADMIN_TOKEN_KEY = 'suri_admin_token';
 
+// Backwards-compat shim: oude pagina's (Navbar, dashboards) lezen
+// `suri_user` uit localStorage. Tot die migreren naar useAuth() houden
+// we deze key bij. Zodra alle pages over zijn — verwijderen.
+interface LegacyUserShim {
+    role: 'candidate' | 'employer';
+    name: string;
+    email?: string;
+    isLoggedIn: true;
+    onboarded: true;
+}
+
+function writeLegacyUser(user: LegacyUserShim) {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('suri_user', JSON.stringify(user));
+    window.dispatchEvent(new Event('storage'));
+}
+
+function clearLegacyUser() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('suri_user');
+    window.dispatchEvent(new Event('storage'));
+}
+
 export interface CandidateUser {
     email: string;
     fullName: string;
@@ -69,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (data.success && data.candidate) {
                     setCandidate({ email: data.candidate.email, fullName: data.candidate.fullName });
                     setCandidateToken(cToken);
+                    writeLegacyUser({ role: 'candidate', name: data.candidate.fullName, email: data.candidate.email, isLoggedIn: true, onboarded: true });
                 }
             }).catch(() => localStorage.removeItem(CANDIDATE_TOKEN_KEY)));
         }
@@ -86,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (data.success) {
                     setEmployer({ companyName: data.companyName, plan: data.plan });
                     setEmployerToken(eToken);
+                    writeLegacyUser({ role: 'employer', name: data.companyName, isLoggedIn: true, onboarded: true });
                 }
             }).catch(() => localStorage.removeItem(EMPLOYER_TOKEN_KEY)));
         }
@@ -119,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(CANDIDATE_TOKEN_KEY, data.token);
         setCandidateToken(data.token);
         setCandidate({ email: data.candidate.email, fullName: data.candidate.fullName });
+        writeLegacyUser({ role: 'candidate', name: data.candidate.fullName, email: data.candidate.email, isLoggedIn: true, onboarded: true });
         return { ok: true };
     }, []);
 
@@ -135,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(CANDIDATE_TOKEN_KEY, result.token);
         setCandidateToken(result.token);
         setCandidate({ email: result.candidate.email, fullName: result.candidate.fullName });
+        writeLegacyUser({ role: 'candidate', name: result.candidate.fullName, email: result.candidate.email, isLoggedIn: true, onboarded: true });
         return { ok: true };
     }, []);
 
@@ -142,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(CANDIDATE_TOKEN_KEY);
         setCandidateToken(null);
         setCandidate(null);
+        clearLegacyUser();
     }, []);
 
     const loginEmployer = useCallback<AuthContextValue['loginEmployer']>(async (username, password) => {
@@ -157,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(EMPLOYER_TOKEN_KEY, data.token);
         setEmployerToken(data.token);
         setEmployer({ companyName: data.employer.companyName, plan: data.employer.plan });
+        writeLegacyUser({ role: 'employer', name: data.employer.companyName, isLoggedIn: true, onboarded: true });
         return { ok: true };
     }, []);
 
@@ -164,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(EMPLOYER_TOKEN_KEY);
         setEmployerToken(null);
         setEmployer(null);
+        clearLegacyUser();
     }, []);
 
     const loginAdmin = useCallback<AuthContextValue['loginAdmin']>(async (password) => {
