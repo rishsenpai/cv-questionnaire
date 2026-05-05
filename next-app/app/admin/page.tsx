@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import JSZip from 'jszip';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Lock,
@@ -1100,6 +1101,43 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
+const ZIP_MIMES = new Set(['application/zip', 'application/x-zip-compressed', 'application/x-zip']);
+
+function isZipFile(f: File): boolean {
+  return f.name.toLowerCase().endsWith('.zip') || ZIP_MIMES.has(f.type);
+}
+
+function classifyCvFile(name: string): { mime: string } | null {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.pdf')) return { mime: 'application/pdf' };
+  if (lower.endsWith('.docx')) return { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+  return null;
+}
+
+// Skip OS-metadata die macOS/Windows in ZIPs stoppen
+function isJunkPath(path: string): boolean {
+  return path.startsWith('__MACOSX/') ||
+    path.endsWith('.DS_Store') ||
+    path.endsWith('Thumbs.db') ||
+    path.split('/').some(seg => seg.startsWith('.'));
+}
+
+async function extractZipEntries(zipFile: File): Promise<File[]> {
+  const zip = await JSZip.loadAsync(zipFile);
+  const out: File[] = [];
+  const entries = Object.entries(zip.files);
+  for (const [path, entry] of entries) {
+    if (entry.dir) continue;
+    if (isJunkPath(path)) continue;
+    const cls = classifyCvFile(path);
+    if (!cls) continue;
+    const blob = await entry.async('blob');
+    const fileName = path.split('/').pop() || path;
+    out.push(new File([blob], fileName, { type: cls.mime }));
+  }
+  return out;
+}
+
 function BulkUploadPanel({
   token, onClose, onComplete,
 }: {
@@ -1109,7 +1147,10 @@ function BulkUploadPanel({
 }) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [running, setRunning] = useState(false);
+  const [extracting, setExtracting] = useState<{ name: string; current: number; total: number } | null>(null);
+  const [zipError, setZipError] = useState<string | null>(null);
   const cancelledRef = React.useRef(false);
+  const abortersRef = React.useRef<Set<AbortController>>(new Set());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const stats = React.useMemo(() => {
@@ -1120,25 +1161,53 @@ function BulkUploadPanel({
     return byStatus;
   }, [items]);
 
-  const addFiles = (files: FileList | File[]) => {
-    const arr = Array.from(files);
-    const newItems: UploadItem[] = arr.map(f => ({
+  const toUploadItems = (files: File[]): UploadItem[] =>
+    files.map(f => ({
       id: `${f.name}-${f.size}-${f.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
       file: f,
       status: f.size > MAX_FILE_BYTES ? 'failed' : 'pending',
       message: f.size > MAX_FILE_BYTES ? 'Bestand te groot (>4.5 MB)' : undefined,
     }));
-    setItems(prev => [...prev, ...newItems]);
+
+  const addFiles = async (filesIn: FileList | File[]) => {
+    setZipError(null);
+    const arr = Array.from(filesIn);
+    const zips = arr.filter(isZipFile);
+    const loose = arr.filter(f => !isZipFile(f));
+
+    if (loose.length > 0) {
+      setItems(prev => [...prev, ...toUploadItems(loose)]);
+    }
+
+    if (zips.length === 0) return;
+
+    let processed = 0;
+    for (const zip of zips) {
+      setExtracting({ name: zip.name, current: processed, total: zips.length });
+      try {
+        const entries = await extractZipEntries(zip);
+        if (entries.length === 0) {
+          setZipError(`Geen PDF/Word bestanden gevonden in "${zip.name}"`);
+        } else {
+          setItems(prev => [...prev, ...toUploadItems(entries)]);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'ZIP uitpakken mislukt';
+        setZipError(`"${zip.name}": ${msg}`);
+      }
+      processed++;
+    }
+    setExtracting(null);
   };
 
-  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) addFiles(e.target.files);
+  const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) await addFiles(e.target.files);
     e.target.value = '';
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files) await addFiles(e.dataTransfer.files);
   };
 
   const removeItem = (id: string) => {
@@ -1157,8 +1226,15 @@ function BulkUploadPanel({
     if (cancelledRef.current) return;
     updateItem(item.id, { status: 'uploading', message: undefined });
 
+    const ctrl = new AbortController();
+    abortersRef.current.add(ctrl);
+
     try {
       const fileData = await readFileAsBase64(item.file);
+      if (cancelledRef.current) {
+        updateItem(item.id, { status: 'pending', message: undefined });
+        return;
+      }
       const res = await fetch('/api/cvs/auto-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
@@ -1169,6 +1245,7 @@ function BulkUploadPanel({
           fileData,
           lang: 'nl',
         }),
+        signal: ctrl.signal,
       });
 
       // Some Vercel error pages return HTML — wrap json parse defensively.
@@ -1209,8 +1286,15 @@ function BulkUploadPanel({
         updateItem(item.id, { status: 'failed', message: data.message || 'Onbekende fout' });
       }
     } catch (err) {
+      // Abort = gebruiker drukte Stoppen → terug naar pending zodat retry kan
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        updateItem(item.id, { status: 'pending', message: undefined });
+        return;
+      }
       const msg = err instanceof Error ? err.message : 'Verbinding mislukt';
       updateItem(item.id, { status: 'failed', message: msg });
+    } finally {
+      abortersRef.current.delete(ctrl);
     }
   };
 
@@ -1237,6 +1321,9 @@ function BulkUploadPanel({
 
   const cancel = () => {
     cancelledRef.current = true;
+    // Breek alle in-flight fetches direct af i.p.v. wachten tot OpenAI klaar is
+    abortersRef.current.forEach(c => c.abort());
+    abortersRef.current.clear();
   };
 
   const totalDone = stats.created + stats.duplicate + stats.failed;
@@ -1249,7 +1336,7 @@ function BulkUploadPanel({
         <div>
           <h3 className="text-xl font-black uppercase tracking-tighter italic">Bulk CV Upload</h3>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            PDF/Word · max 4.5 MB per bestand · concurrency {CONCURRENCY}
+            PDF/Word/ZIP · max 4.5 MB per bestand · concurrency {CONCURRENCY}
           </p>
         </div>
         <button onClick={onClose} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
@@ -1258,29 +1345,49 @@ function BulkUploadPanel({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.zip,application/zip,application/x-zip-compressed"
         multiple
         onChange={handleSelect}
         className="hidden"
       />
 
       <div
-        onClick={() => !running && fileInputRef.current?.click()}
+        onClick={() => !running && !extracting && fileInputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => !running && handleDrop(e)}
+        onDrop={(e) => !running && !extracting && handleDrop(e)}
         className={cn(
           'border-4 border-dashed p-8 text-center transition-all',
-          running ? 'border-slate-200 cursor-not-allowed opacity-60' : 'border-slate-200 hover:border-blue-600 hover:bg-blue-50/30 cursor-pointer',
+          (running || extracting) ? 'border-slate-200 cursor-not-allowed opacity-60' : 'border-slate-200 hover:border-blue-600 hover:bg-blue-50/30 cursor-pointer',
         )}
       >
-        <Upload className="w-10 h-10 text-blue-600 mx-auto mb-3" />
-        <p className="text-sm font-black uppercase tracking-widest mb-1">
-          Sleep CV-bestanden hierheen of klik
-        </p>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          Meerdere selecteren toegestaan
-        </p>
+        {extracting ? (
+          <>
+            <Loader2 className="w-10 h-10 text-blue-600 mx-auto mb-3 animate-spin" />
+            <p className="text-sm font-black uppercase tracking-widest mb-1">
+              ZIP uitpakken: {extracting.name}
+            </p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {extracting.current + 1} / {extracting.total}
+            </p>
+          </>
+        ) : (
+          <>
+            <Upload className="w-10 h-10 text-blue-600 mx-auto mb-3" />
+            <p className="text-sm font-black uppercase tracking-widest mb-1">
+              Sleep CV&apos;s of een ZIP-map hierheen
+            </p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              PDF · DOCX · ZIP — meerdere bestanden toegestaan
+            </p>
+          </>
+        )}
       </div>
+
+      {zipError && (
+        <p className="mt-3 text-[11px] font-black text-red-600 uppercase tracking-widest flex items-center gap-2">
+          <AlertCircle className="w-3 h-3" /> {zipError}
+        </p>
+      )}
 
       {items.length > 0 && (
         <>
