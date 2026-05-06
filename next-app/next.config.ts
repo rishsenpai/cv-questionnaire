@@ -1,9 +1,7 @@
 import type {NextConfig} from 'next';
-import path from 'node:path';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  outputFileTracingRoot: path.resolve(__dirname),
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -13,6 +11,10 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   turbopack: {},
+  // 'natural' heeft optionele native deps (webworker-threads, lapack via
+  // sylvester) die webpack niet kan bundlen. Door 'm extern te markeren
+  // wordt 'ie at-runtime geladen — optionele deps blijven dan gewoon optioneel.
+  serverExternalPackages: ['natural'],
   // Allow access to remote image placeholder.
   images: {
     remotePatterns: [
@@ -24,7 +26,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'standalone',
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // File watching can be disabled through DISABLE_HMR during automated edits.
