@@ -5,10 +5,12 @@ import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
 import { getTransporter } from '@/lib/server/mailer';
 import { ingestCvFromBuffer } from '@/lib/server/cvIngestion';
+import { fetchCvBlob } from '@/lib/server/blobStorage';
 
 export const maxDuration = 60;
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@jobparsing.com';
 
 interface VacancyEmail {
     title: string;
@@ -35,20 +37,30 @@ export async function POST(req: NextRequest) {
             fileData,
         } = body || {};
 
-        let resolvedCv: { _id: mongoose.Types.ObjectId; fullName: string; email?: string; phone?: string; location?: string; jobTitle?: string } | null = null;
+        let resolvedCv: { _id: mongoose.Types.ObjectId; fullName: string; email?: string; phone?: string; location?: string; jobTitle?: string; fileUrl?: string; fileData?: string; fileName?: string; fileType?: string } | null = null;
+        let attachmentBuffer: Buffer | null = null;
+        let attachmentFileName: string | null = null;
+        let attachmentFileType: string | null = null;
+
+        const loadCvDoc = async (id: string) => {
+            const cv = await CV.findById(id).select('_id fullName email phone location jobTitle fileUrl fileData fileName fileType');
+            if (!cv) return null;
+            return {
+                _id: cv._id as mongoose.Types.ObjectId,
+                fullName: cv.fullName,
+                email: cv.email,
+                phone: cv.phone,
+                location: cv.location,
+                jobTitle: cv.jobTitle,
+                fileUrl: cv.fileUrl,
+                fileData: cv.fileData,
+                fileName: cv.fileName,
+                fileType: cv.fileType,
+            };
+        };
 
         if (cvId && mongoose.Types.ObjectId.isValid(cvId)) {
-            const cv = await CV.findById(cvId).select('_id fullName email phone location jobTitle');
-            if (cv) {
-                resolvedCv = {
-                    _id: cv._id as mongoose.Types.ObjectId,
-                    fullName: cv.fullName,
-                    email: cv.email,
-                    phone: cv.phone,
-                    location: cv.location,
-                    jobTitle: cv.jobTitle,
-                };
-            }
+            resolvedCv = await loadCvDoc(cvId);
         }
 
         if (!resolvedCv && fileData && fileName) {
@@ -56,6 +68,10 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ success: false, message: 'CV is te groot (max 10MB)' }, { status: 400 });
             }
             const buffer = Buffer.from(fileData, 'base64');
+            attachmentBuffer = buffer;
+            attachmentFileName = fileName;
+            attachmentFileType = fileType || 'application/octet-stream';
+
             const result = await ingestCvFromBuffer({
                 buffer,
                 fileName,
@@ -65,34 +81,28 @@ export async function POST(req: NextRequest) {
                 lang: 'nl',
             });
             if (result.cvId) {
-                const cv = await CV.findById(result.cvId).select('_id fullName email phone location jobTitle');
-                if (cv) {
-                    resolvedCv = {
-                        _id: cv._id as mongoose.Types.ObjectId,
-                        fullName: cv.fullName,
-                        email: cv.email,
-                        phone: cv.phone,
-                        location: cv.location,
-                        jobTitle: cv.jobTitle,
-                    };
-                }
+                resolvedCv = await loadCvDoc(result.cvId);
             } else if (result.existingCvId) {
-                const cv = await CV.findById(result.existingCvId).select('_id fullName email phone location jobTitle');
-                if (cv) {
-                    resolvedCv = {
-                        _id: cv._id as mongoose.Types.ObjectId,
-                        fullName: cv.fullName,
-                        email: cv.email,
-                        phone: cv.phone,
-                        location: cv.location,
-                        jobTitle: cv.jobTitle,
-                    };
-                }
+                resolvedCv = await loadCvDoc(result.existingCvId);
             } else {
                 return NextResponse.json(
                     { success: false, message: `CV verwerken mislukt: ${result.reason || 'onbekend'}` },
                     { status: 400 },
                 );
+            }
+        }
+
+        if (!attachmentBuffer && resolvedCv) {
+            try {
+                if (resolvedCv.fileUrl) {
+                    attachmentBuffer = await fetchCvBlob(resolvedCv.fileUrl);
+                } else if (resolvedCv.fileData) {
+                    attachmentBuffer = Buffer.from(resolvedCv.fileData, 'base64');
+                }
+                attachmentFileName = resolvedCv.fileName || `CV_${resolvedCv.fullName.replace(/\s+/g, '_')}.bin`;
+                attachmentFileType = resolvedCv.fileType || 'application/octet-stream';
+            } catch (err) {
+                console.error('CV attachment fetch failed:', err instanceof Error ? err.message : err);
             }
         }
 
@@ -170,14 +180,30 @@ export async function POST(req: NextRequest) {
     </p>
 </div>`;
 
+        const recipients = Array.from(new Set([
+            APPLICATIONS_EMAIL,
+            ...(process.env.RECIPIENT_EMAIL ? [process.env.RECIPIENT_EMAIL] : []),
+        ].filter(Boolean)));
+
+        const attachments: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
+        if (attachmentBuffer && attachmentFileName) {
+            attachments.push({
+                filename: attachmentFileName,
+                content: attachmentBuffer,
+                contentType: attachmentFileType || 'application/octet-stream',
+            });
+        }
+
         try {
             await getTransporter().sendMail({
                 from: process.env.EMAIL_USER,
-                to: process.env.RECIPIENT_EMAIL,
+                to: recipients,
+                replyTo: candidateEmail || undefined,
                 subject: `Sollicitatie: ${candidateName || candidateEmail || 'Onbekend'} → ${vacancyForEmail.title}`,
                 html,
+                attachments,
             });
-            console.log(`Application email sent: ${candidateName} → ${vacancyForEmail.title}`);
+            console.log(`Application email sent to ${recipients.join(', ')}: ${candidateName} → ${vacancyForEmail.title}${attachments.length ? ' (with CV)' : ' (no CV)'}`);
         } catch (err) {
             console.error('Application email failed:', err instanceof Error ? err.message : err);
         }
