@@ -1626,7 +1626,17 @@ function MatchResultsList({ matches }: { matches: MatchCvResult[] }) {
   );
 }
 
-function VacancyMatchesList({ matches }: { matches: MatchVacancyResult[] }) {
+function VacancyMatchesList({
+  matches,
+  onPush,
+  pushingId,
+  pushedIds,
+}: {
+  matches: MatchVacancyResult[];
+  onPush?: (vacancy: MatchVacancyResult) => void;
+  pushingId?: string | null;
+  pushedIds?: Set<string>;
+}) {
   if (matches.length === 0) {
     return <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches gevonden.</p>;
   }
@@ -1640,18 +1650,44 @@ function VacancyMatchesList({ matches }: { matches: MatchVacancyResult[] }) {
             <th className="p-3 text-left">Locatie</th>
             <th className="p-3 text-left w-24">Score</th>
             <th className="p-3 text-left w-32">Type</th>
+            {onPush && <th className="p-3 text-right w-32">Push</th>}
           </tr>
         </thead>
         <tbody>
-          {matches.map((m, i) => (
-            <tr key={m._id || `${m.title}-${i}`} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
-              <td className="p-3 truncate max-w-[260px]">{m.title}</td>
-              <td className="p-3 truncate max-w-[180px] text-slate-500">{m.company || '—'}</td>
-              <td className="p-3 truncate max-w-[150px] text-slate-500">{m.location || '—'}</td>
-              <td className="p-3"><ScoreBadge score={m.matchScore} /></td>
-              <td className="p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">{m.matchType}</td>
-            </tr>
-          ))}
+          {matches.map((m, i) => {
+            const id = m._id || '';
+            const isPushed = id && pushedIds?.has(id);
+            const isPushing = id && pushingId === id;
+            return (
+              <tr key={id || `${m.title}-${i}`} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
+                <td className="p-3 truncate max-w-[260px]">{m.title}</td>
+                <td className="p-3 truncate max-w-[180px] text-slate-500">{m.company || '—'}</td>
+                <td className="p-3 truncate max-w-[150px] text-slate-500">{m.location || '—'}</td>
+                <td className="p-3"><ScoreBadge score={m.matchScore} /></td>
+                <td className="p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">{m.matchType}</td>
+                {onPush && (
+                  <td className="p-3 text-right">
+                    {isPushed ? (
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 inline-flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Gepusht
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onPush(m)}
+                        disabled={isPushing || !id}
+                        className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                        title="Push naar werkgever-portaal"
+                      >
+                        {isPushing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                        Push
+                      </button>
+                    )}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -1662,6 +1698,9 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
   const [matches, setMatches] = useState<MatchVacancyResult[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pushingId, setPushingId] = useState<string | null>(null);
+  const [pushedIds, setPushedIds] = useState<Set<string>>(new Set());
+  const [pushMessage, setPushMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1676,6 +1715,37 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [cv._id, token]);
+
+  const pushToVacancy = async (vacancy: MatchVacancyResult) => {
+    if (!vacancy._id) return;
+    setPushingId(vacancy._id);
+    setPushMessage(null);
+    try {
+      const res = await fetch('/api/admin/curated-matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({
+          vacancyId: vacancy._id,
+          cvId: cv._id,
+          matchScore: vacancy.matchScore,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPushedIds(prev => new Set([...prev, vacancy._id!]));
+        setPushMessage({ kind: 'ok', text: data.emailSent ? `Gepusht naar "${vacancy.title}" + email verstuurd` : `Gepusht naar "${vacancy.title}"` });
+      } else if (res.status === 409) {
+        setPushedIds(prev => new Set([...prev, vacancy._id!]));
+        setPushMessage({ kind: 'err', text: data.message || 'Al gekoppeld' });
+      } else {
+        setPushMessage({ kind: 'err', text: data.message || 'Push mislukt' });
+      }
+    } catch (err) {
+      setPushMessage({ kind: 'err', text: err instanceof Error ? err.message : 'Push mislukt' });
+    } finally {
+      setPushingId(null);
+    }
+  };
 
   return (
     <motion.div
@@ -1700,13 +1770,27 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-6">
+        <div className="p-6 space-y-4">
+          {pushMessage && (
+            <div className={cn(
+              'border-2 px-4 py-3 text-[11px] font-black uppercase tracking-widest flex items-center gap-2',
+              pushMessage.kind === 'ok' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-red-500 bg-red-50 text-red-700',
+            )}>
+              {pushMessage.kind === 'ok' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              {pushMessage.text}
+            </div>
+          )}
           {loading ? (
             <div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
           ) : error ? (
             <p className="text-center py-12 text-[11px] font-black text-red-600 uppercase tracking-widest">{error}</p>
           ) : matches && matches.length > 0 ? (
-            <VacancyMatchesList matches={matches} />
+            <VacancyMatchesList
+              matches={matches}
+              onPush={pushToVacancy}
+              pushingId={pushingId}
+              pushedIds={pushedIds}
+            />
           ) : (
             <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches.</p>
           )}
