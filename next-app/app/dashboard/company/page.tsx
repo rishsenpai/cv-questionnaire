@@ -72,7 +72,10 @@ export default function CompanyDashboard() {
   const [busy, setBusy] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [parsedFromFile, setParsedFromFile] = useState<string | null>(null);
+  const [quickUploading, setQuickUploading] = useState(false);
+  const [quickUploadStatus, setQuickUploadStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const quickUploadRef = React.useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
     if (!employerToken) return;
@@ -145,6 +148,67 @@ export default function CompanyDashboard() {
       setError(err instanceof Error ? err.message : 'Verbinding mislukt');
     } finally {
       setParsing(false);
+    }
+  };
+
+  const handleQuickUpload = async (file: File) => {
+    if (!employerToken) return;
+    setQuickUploadStatus(null);
+    if (file.size > 4.5 * 1024 * 1024) {
+      setQuickUploadStatus({ kind: 'err', text: 'Bestand is groter dan 4.5 MB' });
+      return;
+    }
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isDocx = file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
+    if (!isPdf && !isDocx) {
+      setQuickUploadStatus({ kind: 'err', text: 'Alleen PDF of Word (.docx) ondersteund' });
+      return;
+    }
+    setQuickUploading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(((reader.result as string).split(',')[1] || ''));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const parseRes = await fetch('/api/parse-vacancy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileData: base64, fileType: file.type, fileName: file.name }),
+      });
+      const parseData = await parseRes.json();
+      if (!parseRes.ok || !parseData.success) {
+        setQuickUploadStatus({ kind: 'err', text: parseData.message || 'AI-analyse mislukt' });
+        return;
+      }
+      const parsed = parseData.data || {};
+      const createRes = await fetch('/api/employer/vacancies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-employer-token': employerToken },
+        body: JSON.stringify({
+          title: parsed.title || file.name.replace(/\.[^/.]+$/, ''),
+          location: parsed.location || 'Paramaribo',
+          description: parsed.requirements || '',
+          requirements: '',
+          employmentType: 'Full-time',
+          isRemote: false,
+          company: employer?.companyName,
+          salaryCurrency: 'SRD',
+          salaryPeriod: 'month',
+        }),
+      });
+      const createData = await createRes.json();
+      if (!createData.success) {
+        setQuickUploadStatus({ kind: 'err', text: createData.message || 'Vacature opslaan mislukt' });
+        return;
+      }
+      setQuickUploadStatus({ kind: 'ok', text: `Vacature "${createData.data?.title || parsed.title}" aangemaakt vanuit ${file.name}` });
+      await reload();
+    } catch (err) {
+      setQuickUploadStatus({ kind: 'err', text: err instanceof Error ? err.message : 'Verbinding mislukt' });
+    } finally {
+      setQuickUploading(false);
     }
   };
 
@@ -236,13 +300,45 @@ export default function CompanyDashboard() {
               {vacancies.length} actieve vacature{vacancies.length === 1 ? '' : 's'}
             </p>
           </div>
-          <button
-            onClick={() => setShowCreate(s => !s)}
-            className="bg-blue-600 text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)]"
-          >
-            <Plus className="w-3 h-3" /> Nieuwe Vacature
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <input
+              ref={quickUploadRef}
+              type="file"
+              accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleQuickUpload(f);
+                e.target.value = '';
+              }}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => quickUploadRef.current?.click()}
+              disabled={quickUploading}
+              className="bg-black text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-[6px_6px_0px_0px_rgba(59,130,246,0.2)] disabled:opacity-50"
+            >
+              {quickUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <UploadCloud className="w-3 h-3" />}
+              {quickUploading ? 'Bezig...' : 'Upload Vacature'}
+            </button>
+            <button
+              onClick={() => setShowCreate(s => !s)}
+              className="bg-blue-600 text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)]"
+            >
+              <Plus className="w-3 h-3" /> Nieuwe Vacature
+            </button>
+          </div>
         </div>
+
+        {quickUploadStatus && (
+          <div className={cn(
+            'border-2 px-4 py-3 text-[11px] font-black uppercase tracking-widest flex items-center gap-2',
+            quickUploadStatus.kind === 'ok' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-red-500 bg-red-50 text-red-700',
+          )}>
+            {quickUploadStatus.kind === 'ok' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            {quickUploadStatus.text}
+          </div>
+        )}
 
         <AnimatePresence>
           {showCreate && (
