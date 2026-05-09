@@ -22,8 +22,10 @@ export async function GET(_req: NextRequest, { params }: Params) {
             return NextResponse.json({ success: false, message: 'Vacancy not found' }, { status: 404 });
         }
 
-        // Sanitize description + requirements: scrub bedrijfsnaam, e-mail,
-        // telefoon en URLs uit de vrije tekst.
+        Vacancy.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(err => {
+            console.error('viewCount inc failed:', err instanceof Error ? err.message : err);
+        });
+
         const sanitized = {
             ...vacancy.toObject(),
             description: sanitizeJobText(vacancy.description, vacancy.company),

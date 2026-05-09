@@ -126,6 +126,9 @@ export async function POST(req: NextRequest) {
                     employmentType: v.employmentType,
                     isRemote: v.isRemote,
                 };
+                Vacancy.findByIdAndUpdate(vacancyId, { $inc: { applicationCount: 1 } }).catch(err => {
+                    console.error('applicationCount inc failed:', err instanceof Error ? err.message : err);
+                });
             }
         }
         if (!vacancyForEmail && legacyVacancy && legacyVacancy.title) {

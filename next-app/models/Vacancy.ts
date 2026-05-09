@@ -29,6 +29,8 @@ export interface IVacancy extends Document {
     isActive?: boolean;
     embedding?: number[];
     embeddingModel?: string;
+    viewCount?: number;
+    applicationCount?: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -60,6 +62,8 @@ const vacancySchema = new Schema<IVacancy>({
     isActive: { type: Boolean, default: true },
     embedding: { type: [Number], select: false },
     embeddingModel: { type: String, default: 'text-embedding-3-small' },
+    viewCount: { type: Number, default: 0 },
+    applicationCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
 vacancySchema.index({ externalId: 1, source: 1 }, { unique: true, sparse: true });
