@@ -4,28 +4,29 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Image from 'next/image';
 import { Navbar } from '@/components/Navbar';
-import { 
-  Search, 
-  MapPin, 
-  Briefcase, 
-  Sparkles, 
-  Building2, 
-  Clock, 
-  DollarSign, 
-  CheckCircle2, 
+import {
+  Search,
+  MapPin,
+  Sparkles,
+  Building2,
+  DollarSign,
+  CheckCircle2,
   ArrowRight,
-  Filter,
+  ArrowUpRight,
   Users,
   Star,
   Zap,
-  Cpu,
-  Droplets,
   Sprout,
-  Smartphone,
   ChevronRight,
   MessageCircle,
   TrendingUp,
-  FileText,
+  Code2,
+  Truck,
+  BarChart3,
+  ShieldCheck,
+  ShoppingBag,
+  Target,
+  HardHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -59,6 +60,44 @@ function formatSalary(salary?: ApiVacancy['salary']): string {
   if (salary.min && salary.max) return `${cur} ${salary.min.toLocaleString()}-${salary.max.toLocaleString()}`;
   if (salary.min) return `${cur} ${salary.min.toLocaleString()}+`;
   return `${cur} tot ${salary.max!.toLocaleString()}`;
+}
+
+function SectorCard({
+  index, label, desc, icon: Icon, accent, onClick,
+}: {
+  index: number;
+  label: string;
+  desc: string;
+  icon: typeof Code2;
+  accent: 'orange' | 'emerald' | 'slate';
+  onClick: () => void;
+}) {
+  const accentClasses = {
+    orange: 'bg-orange-50 text-orange-600',
+    emerald: 'bg-emerald-50 text-emerald-600',
+    slate: 'bg-slate-100 text-slate-700',
+  }[accent];
+  const idx = String(index).padStart(2, '0');
+  return (
+    <motion.button
+      type="button"
+      whileHover={{ y: -4 }}
+      onClick={onClick}
+      className="bg-white rounded-2xl p-7 flex flex-col text-left min-h-[280px] hover:shadow-[8px_8px_0px_0px_rgba(15,23,42,0.06)] transition-all group border border-transparent hover:border-slate-200"
+    >
+      <div className="flex items-start justify-between mb-6">
+        <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', accentClasses)}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <span className="text-[10px] font-bold text-slate-300 tracking-widest">/{idx}</span>
+      </div>
+      <h4 className="text-xl md:text-2xl font-black uppercase tracking-tighter italic leading-tight mb-3">{label}</h4>
+      <p className="text-sm font-bold text-slate-500 leading-relaxed mb-auto">{desc}</p>
+      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors">
+        Talent aanvragen <ArrowRight className="w-3 h-3" />
+      </div>
+    </motion.button>
+  );
 }
 
 function vacancyToCard(v: ApiVacancy): VacancyCard {
@@ -168,40 +207,62 @@ export default function Home() {
       </section>
 
       {/* Trending Sectors */}
-      <section className="bg-white border-y border-slate-200 py-16">
+      <section className="bg-slate-50 border-y border-slate-200 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
             <div>
-              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-blue-600 mb-2">Groei-Sectoren</h2>
-              <h3 className="text-4xl font-black uppercase tracking-tighter italic">Ontdek de kansen in 2026</h3>
+              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-blue-600 mb-2">Onze Specialismen</h2>
+              <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">Sectoren waarin wij thuis zijn</h3>
             </div>
-            <button 
+            <button
               onClick={() => router.push('/vacatures')}
-              className="text-sm font-bold flex items-center gap-2 group italic"
+              className="text-sm font-bold flex items-center gap-2 group italic text-slate-600 hover:text-blue-600"
             >
               Alle sectoren <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
-          
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { label: 'Energie & Water', count: '124 Vacatures', icon: Droplets },
-              { label: 'Mijnbouw', count: '87 Vacatures', icon: Cpu },
-              { label: 'Financiën', count: '210 Vacatures', icon: DollarSign },
-              { label: 'Landbouw', count: '45 Vacatures', icon: Sprout },
-              { label: 'Technologie', count: '156 Vacatures', icon: Smartphone },
+              { label: 'IT, Data & Digital', desc: 'Expertise voor complexe digitale ecosystemen en transformaties.', icon: Code2, accent: 'orange' },
+              { label: 'Energy & Offshore', desc: 'Strategisch talent voor de offshore en hernieuwbare energie revolutie.', icon: Zap, accent: 'orange' },
+              { label: 'Finance & Legal', desc: 'Top-tier profielen voor de financiële architectuur van uw organisatie.', icon: DollarSign, accent: 'emerald' },
+              { label: 'Construction & Engineering', desc: 'Visionairs voor de infrastructuur en civiele projecten van de toekomst.', icon: HardHat, accent: 'orange' },
+              { label: 'Logistics & Maritime', desc: 'Specialisten voor supply chain optimalisatie en maritieme operaties.', icon: Truck, accent: 'slate' },
+              { label: 'Risk & Insurance', desc: 'Risico-strategen en experts voor continuïteit en zekerheid.', icon: BarChart3, accent: 'emerald' },
+              { label: 'Hospitality & Tourism', desc: 'Service excellence voor de toonaangevende spelers in toerisme.', icon: Star, accent: 'orange' },
+              { label: 'Security & Facility', desc: 'Professionals voor de integrale veiligheid van uw assets.', icon: ShieldCheck, accent: 'slate' },
+              { label: 'Agri & Bio-productie', desc: 'Innovatiekracht voor de modernisering van de agrarische sector.', icon: Sprout, accent: 'emerald' },
+              { label: 'HR & Executive Search', desc: 'Strategisch leiderschap en ontwikkeling van menselijk kapitaal.', icon: Target, accent: 'orange' },
+              { label: 'Retail & Distributie', desc: 'Management talent voor de dynamische wereld van retail en distributie.', icon: ShoppingBag, accent: 'slate' },
             ].map((sect, i) => (
-              <motion.div 
-                whileHover={{ y: -5 }}
+              <SectorCard
                 key={sect.label}
+                index={i + 1}
+                label={sect.label}
+                desc={sect.desc}
+                icon={sect.icon}
+                accent={sect.accent as 'orange' | 'emerald' | 'slate'}
                 onClick={() => router.push(`/vacatures?q=${encodeURIComponent(sect.label)}`)}
-                className="border-2 border-black p-6 hover:bg-black hover:text-white transition-all cursor-pointer group"
-              >
-                <sect.icon className="w-8 h-8 mb-4 group-hover:text-blue-400 transition-colors" />
-                <h4 className="font-black uppercase tracking-tight mb-1">{sect.label}</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">{sect.count}</p>
-              </motion.div>
+              />
             ))}
+
+            <Link
+              href="/voor-werkgevers"
+              className="bg-slate-900 text-white p-8 rounded-2xl flex flex-col justify-between min-h-[280px] hover:bg-black transition-all group"
+            >
+              <h4 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-tight">
+                Staat uw sector er <span className="text-orange-500">niet bij?</span>
+              </h4>
+              <div>
+                <p className="text-sm font-bold text-slate-400 mb-6">
+                  Onze headhunters zijn getraind in specialistische search over alle vitale industrieën in Suriname.
+                </p>
+                <span className="inline-flex items-center gap-2 bg-white text-black px-5 py-3 text-[10px] font-black uppercase tracking-widest group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  Custom Search <ArrowUpRight className="w-3 h-3" />
+                </span>
+              </div>
+            </Link>
           </div>
         </div>
       </section>
