@@ -324,19 +324,6 @@ export default function Home() {
           {/* Sidebar Filters */}
           <aside className="lg:w-80 flex-shrink-0 border-r border-slate-200 pr-12 pb-12">
             <div className="sticky top-24 space-y-12">
-              <Link
-                href="/cv-upload"
-                className="block bg-blue-600 text-white p-6 border-2 border-blue-600 hover:bg-black hover:border-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <Sparkles className="w-5 h-5" />
-                  <span className="font-black uppercase tracking-tighter">Upload je CV</span>
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">
-                  Krijg AI-matches op basis van je profiel
-                </p>
-              </Link>
-
               <div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Districten</h3>
                 <div className="space-y-6">
