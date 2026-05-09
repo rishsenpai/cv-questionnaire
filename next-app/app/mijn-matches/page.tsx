@@ -16,6 +16,7 @@ import {
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { writeJson } from '@/lib/storage';
 
 interface ApiCvSummary {
   _id: string;
@@ -59,7 +60,7 @@ function MatchesContent() {
   const router = useRouter();
   const cvIdFromUrl = params.get('cvId');
 
-  const [activeCvId, setActiveCvId] = useState<string | null>(cvIdFromUrl);
+  const [activeCvId] = useState<string | null>(cvIdFromUrl);
   const [cv, setCv] = useState<{ _id: string; fullName: string; jobTitle?: string } | null>(null);
   const [matches, setMatches] = useState<MatchVacancy[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,6 +83,9 @@ function MatchesContent() {
         }
         setCv(data.cv);
         setMatches(data.matches);
+        if (data.cv?._id) {
+          writeJson('jobparsing_last_cv', { _id: data.cv._id, fullName: data.cv.fullName });
+        }
       })
       .catch(() => {
         if (!cancelled) {
@@ -94,7 +98,6 @@ function MatchesContent() {
     return () => { cancelled = true; };
   }, [activeCvId]);
 
-  void setActiveCvId;
   void router;
 
   // No CV id in URL — prompt to upload
@@ -184,7 +187,7 @@ function MatchesContent() {
               <div className="grid gap-4">
                 <AnimatePresence>
                   {matches.map((match, i) => (
-                    <MatchCard key={match._id} match={match} index={i} />
+                    <MatchCard key={match._id} match={match} index={i} cvId={activeCvId} />
                   ))}
                 </AnimatePresence>
               </div>
@@ -220,7 +223,9 @@ function MatchesContent() {
   );
 }
 
-function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
+function MatchCard({ match, index, cvId }: { match: MatchVacancy; index: number; cvId: string | null }) {
+  const cvSuffix = cvId ? `?cvId=${cvId}` : '';
+  const applySuffix = cvId ? `?cvId=${cvId}&apply=1` : '?apply=1';
   return (
     <motion.div
       layout
@@ -228,7 +233,7 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className={cn(
-        'bg-white border-2 p-8 transition-all relative group shadow-[8px_8px_0px_0px_rgba(241,245,249,1)] hover:shadow-[12px_12px_0px_0px_rgba(59,130,246,0.2)] hover:border-blue-600',
+        'bg-white border-2 p-6 md:p-8 transition-all relative group shadow-[8px_8px_0px_0px_rgba(241,245,249,1)] hover:shadow-[12px_12px_0px_0px_rgba(59,130,246,0.2)] hover:border-blue-600',
         match.matchScore >= 80 ? 'border-blue-600/40' : 'border-slate-100',
       )}
     >
@@ -238,7 +243,7 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+      <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-3 text-[10px] font-black uppercase tracking-widest">
             <span className="flex items-center gap-2 text-slate-500">
@@ -247,7 +252,7 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
           </div>
 
           <Link
-            href={`/vacatures/${match._id}`}
+            href={`/vacatures/${match._id}${cvSuffix}`}
             className="block text-2xl md:text-3xl font-black uppercase tracking-tighter italic mb-3 group-hover:text-blue-600 transition-colors"
           >
             {match.title}
@@ -266,8 +271,8 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-6 self-stretch md:self-center">
-          <div className="text-right">
+        <div className="flex items-center gap-4 self-stretch lg:self-center w-full lg:w-auto">
+          <div className="text-right shrink-0">
             <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Match</div>
             <div className={cn(
               'text-4xl font-black leading-none italic',
@@ -277,9 +282,16 @@ function MatchCard({ match, index }: { match: MatchVacancy; index: number }) {
             </div>
           </div>
           <Link
-            href={`/vacatures/${match._id}`}
-            className="bg-black text-white p-4 hover:bg-blue-600 transition-colors"
+            href={`/vacatures/${match._id}${applySuffix}`}
+            className="flex-1 lg:flex-none bg-blue-600 text-white px-6 py-4 font-black uppercase tracking-widest text-[11px] hover:bg-black transition-colors flex items-center justify-center gap-2 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)]"
+          >
+            <Sparkles className="w-3 h-3" /> Solliciteer
+          </Link>
+          <Link
+            href={`/vacatures/${match._id}${cvSuffix}`}
+            className="bg-white border-2 border-black text-black p-4 hover:bg-black hover:text-white transition-colors"
             aria-label="Bekijk vacature"
+            title="Bekijk vacature"
           >
             <ArrowRight className="w-5 h-5" />
           </Link>

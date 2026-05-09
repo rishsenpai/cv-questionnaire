@@ -2,11 +2,11 @@
 
 import React, { startTransition, use, useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  MapPin, 
-  Briefcase, 
-  Building2, 
-  ChevronLeft, 
+import {
+  MapPin,
+  Briefcase,
+  Building2,
+  ChevronLeft,
   DollarSign,
   Calendar,
   ShieldCheck,
@@ -20,18 +20,29 @@ import {
   CheckCircle2,
   FileText,
   X,
+  Upload,
+  Sparkles,
   GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 import { useFocusTrap } from '@/hooks/use-focus-trap';
 import { dedupeBy, isNonEmpty, isValidEmail } from '@/lib/validation';
 import { readJson, writeJson } from '@/lib/storage';
 
-const DEFAULT_UPLOADED_CV_NAME = 'CV_Jurgen_Dijkstra_2026.pdf';
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(((reader.result as string).split(',')[1] || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+const APPLY_MAX_FILE_BYTES = 4.5 * 1024 * 1024;
 
 interface ApiVacancy {
   _id: string;
@@ -97,7 +108,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const resolvedParams = use(params);
   const jobId = resolvedParams.id;
   const router = useRouter();
-  
+  const searchParams = useSearchParams();
+  const cvIdFromUrl = searchParams.get('cvId');
+  const autoApply = searchParams.get('apply') === '1';
+
   const [job, setJob] = useState<JobDetail | null>(null);
   const [similarJobs, setSimilarJobs] = useState<JobDetail[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -108,8 +122,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [user, setUser] = useState<any>(null);
   const [applyErrors, setApplyErrors] = useState<Record<string, string>>({});
   const [shareFeedback, setShareFeedback] = useState('');
-  const [uploadedCvName, setUploadedCvName] = useState(DEFAULT_UPLOADED_CV_NAME);
+  const [uploadedCvName, setUploadedCvName] = useState<string | null>(null);
   const [applyData, setApplyData] = useState({ name: '', email: '' });
+  const [applyFile, setApplyFile] = useState<File | null>(null);
+  const [linkedCvName, setLinkedCvName] = useState<string | null>(null);
+  const [linkedCvEmail, setLinkedCvEmail] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,9 +135,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     setShowApplyModal(false);
     setIsSuccess(false);
     setApplyErrors({});
-    setUploadedCvName(DEFAULT_UPLOADED_CV_NAME);
-    setApplyData({ name: user?.name || '', email: user?.email || '' });
-  }, [isApplying, user]);
+    setUploadedCvName(null);
+    setApplyFile(null);
+    setApplyData({ name: user?.name || '', email: user?.email || linkedCvEmail || '' });
+  }, [isApplying, user, linkedCvEmail]);
 
   useDismissibleLayer(showApplyModal && !isApplying, modalRef, closeApplyModal);
   useFocusTrap(showApplyModal, modalRef);
@@ -154,6 +172,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         }
       });
 
+    if (cvIdFromUrl) {
+      const stored = readJson<{ _id?: string; fullName?: string; email?: string } | null>('jobparsing_last_cv', null);
+      if (stored && stored._id === cvIdFromUrl) {
+        setLinkedCvName(stored.fullName || null);
+        setLinkedCvEmail(stored.email || null);
+      } else {
+        setLinkedCvName('Je geüploade CV');
+      }
+    }
+
     fetch('/api/vacancies?limit=3')
       .then(r => r.json())
       .then(data => {
@@ -186,6 +214,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [closeApplyModal, isApplying, showApplyModal]);
+
+  useEffect(() => {
+    if (autoApply && hasLoaded && job && !showApplyModal && !isSuccess) {
+      setApplyData({
+        name: user?.name || linkedCvName || '',
+        email: user?.email || linkedCvEmail || '',
+      });
+      setShowApplyModal(true);
+    }
+  }, [autoApply, hasLoaded, job, showApplyModal, isSuccess, user, linkedCvName, linkedCvEmail]);
 
   const toggleSave = () => {
     if (!user) {
@@ -227,12 +265,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     window.setTimeout(() => setShareFeedback(''), 2400);
   };
 
-  const handleApply = (e: React.FormEvent) => {
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!job) return;
     const nextErrors: Record<string, string> = {};
     if (!isNonEmpty(applyData.name)) nextErrors.name = 'Naam is verplicht.';
     if (!isValidEmail(applyData.email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
+    if (!cvIdFromUrl && !applyFile) {
+      nextErrors.file = 'Upload je CV om te kunnen solliciteren.';
+    }
+    if (applyFile && applyFile.size > APPLY_MAX_FILE_BYTES) {
+      nextErrors.file = 'CV is te groot (max 4.5 MB).';
+    }
     const existingApplications = readJson<any[]>('suri_applications', []);
     const normalizedEmail = applyData.email.trim().toLowerCase();
     if (existingApplications.some((application) => application.jobId === job.id && String(application.email || '').trim().toLowerCase() === normalizedEmail)) {
@@ -244,11 +288,40 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     }
     setApplyErrors({});
     setIsApplying(true);
-    
-    setTimeout(() => {
-      setIsApplying(false);
-      setIsSuccess(true);
-      
+
+    try {
+      const payload: Record<string, unknown> = {
+        vacancyId: job.id,
+        applicantName: applyData.name.trim(),
+        applicantEmail: normalizedEmail,
+      };
+      if (cvIdFromUrl) {
+        payload.cvId = cvIdFromUrl;
+      } else if (applyFile) {
+        payload.fileName = applyFile.name;
+        payload.fileType = applyFile.type || 'application/octet-stream';
+        payload.fileSize = applyFile.size;
+        payload.fileData = await readFileAsBase64(applyFile);
+      }
+      const res = await fetch('/api/apply-vacancy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      let data: { success?: boolean; message?: string; cvId?: string | null } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setApplyErrors({ form: `Onverwachte response (HTTP ${res.status})` });
+        setIsApplying(false);
+        return;
+      }
+      if (!data.success) {
+        setApplyErrors({ form: data.message || 'Sollicitatie mislukt.' });
+        setIsApplying(false);
+        return;
+      }
+
       const newApp = {
         id: getNextLocalApplicationId(existingApplications),
         jobId: job.id,
@@ -258,14 +331,20 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         email: normalizedEmail,
         status: 'In Review',
         appliedAt: new Date().toISOString(),
-        date: new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })
+        date: new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
       };
       writeJson('suri_applications', dedupeBy([newApp, ...existingApplications], (item) => `${item.jobId}-${item.email}`));
 
-      setTimeout(() => {
-        closeApplyModal();
-      }, 2000);
-    }, 1500);
+      if (data.cvId) {
+        writeJson('jobparsing_last_cv', { _id: data.cvId, fullName: applyData.name.trim(), email: normalizedEmail });
+      }
+
+      setIsApplying(false);
+      setIsSuccess(true);
+    } catch (err) {
+      setApplyErrors({ form: err instanceof Error ? err.message : 'Sollicitatie mislukt.' });
+      setIsApplying(false);
+    }
   };
 
   if (!hasLoaded) return (
@@ -338,24 +417,21 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   >
                      <Bookmark className={cn("w-6 h-6", isSaved && "fill-current")} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
-                      if (!user) {
-                        router.push('/auth');
-                        return;
-                      }
                       setApplyErrors({});
-                      setUploadedCvName(DEFAULT_UPLOADED_CV_NAME);
-                      setApplyData({ name: user.name || '', email: user.email || '' });
+                      setUploadedCvName(null);
+                      setApplyFile(null);
+                      setApplyData({
+                        name: user?.name || linkedCvName || '',
+                        email: user?.email || linkedCvEmail || '',
+                      });
                       setShowApplyModal(true);
                     }}
-                    className={cn(
-                      "flex-1 px-12 py-5 font-black uppercase tracking-widest text-sm transition-all shadow-[12px_12px_0px_0px_rgba(59,130,246,0.3)] flex items-center justify-center gap-3",
-                      !user ? "bg-slate-200 text-slate-500 border-2 border-slate-300 hover:bg-black hover:text-white" : "bg-blue-600 text-white hover:bg-white hover:text-black border-2 border-transparent"
-                    )}
+                    className="flex-1 px-12 py-5 font-black uppercase tracking-widest text-sm transition-all shadow-[12px_12px_0px_0px_rgba(59,130,246,0.5)] flex items-center justify-center gap-3 bg-blue-600 text-white hover:bg-black border-2 border-transparent"
                   >
-                    {!user && <Building2 className="w-4 h-4" />}
-                    {user ? "Direct Solliciteren" : "Inloggen om te Solliciteren"}
+                    <Sparkles className="w-4 h-4" />
+                    Direct Solliciteren
                   </button>
                </div>
             </div>
@@ -495,15 +571,39 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               </button>
 
               {isSuccess ? (
-                <div className="text-center py-10">
-                  <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-10 border-4 border-emerald-500 shadow-[12px_12px_0px_0px_rgba(16,185,129,0.1)]">
-                    <CheckCircle2 className="w-12 h-12" />
+                <div className="text-center py-6">
+                  <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-emerald-500 shadow-[8px_8px_0px_0px_rgba(16,185,129,0.1)]">
+                    <CheckCircle2 className="w-10 h-10" />
                   </div>
-                  <h3 className="text-5xl font-black uppercase tracking-tighter italic mb-4">SOLLICITATIE VERZONDEN!</h3>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-10 max-w-sm mx-auto">
-                    Je profiel en documenten zijn succesvol gedeeld met de werkgever via Jobparsing+.
+                  <h3 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic mb-3">Sollicitatie verzonden!</h3>
+                  <p className="text-sm font-bold text-slate-500 mb-8 max-w-md mx-auto">
+                    Je sollicitatie voor <strong>{job.title}</strong> is doorgestuurd naar de werkgever.
                   </p>
-                  <button onClick={closeApplyModal} className="bg-black text-white px-12 py-5 font-black uppercase tracking-widest text-sm shadow-[8px_8px_0px_0px_rgba(59,130,246,1)]">
+
+                  {!user && (
+                    <div className="bg-blue-50 border-4 border-blue-600 p-6 mb-6 text-left">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="w-10 h-10 bg-blue-600 text-white flex items-center justify-center shrink-0">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">Tip</p>
+                          <p className="text-base font-black uppercase tracking-tight italic mb-1">Maak een account aan</p>
+                          <p className="text-[11px] font-bold text-slate-600">
+                            Dan kun je je matches blijven bekijken, je sollicitaties volgen en sneller solliciteren op andere vacatures.
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/auth?signup=1&role=candidate&email=${encodeURIComponent(applyData.email)}&name=${encodeURIComponent(applyData.name)}`}
+                        className="block w-full bg-blue-600 text-white text-center py-4 font-black uppercase tracking-widest text-[11px] hover:bg-black transition-all"
+                      >
+                        Account aanmaken
+                      </Link>
+                    </div>
+                  )}
+
+                  <button onClick={closeApplyModal} className="border-2 border-black text-black px-10 py-4 font-black uppercase tracking-widest text-[11px] hover:bg-black hover:text-white transition-all">
                     Sluiten
                   </button>
                 </div>
@@ -544,34 +644,68 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     </div>
                     {applyErrors.form && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{applyErrors.form}</p>}
 
-                   <div className="bg-slate-50 p-8 border-2 border-dashed border-slate-200">
+                   <div className={cn(
+                      'bg-slate-50 p-6 border-2',
+                      applyErrors.file ? 'border-red-500' : 'border-dashed border-slate-200',
+                   )}>
                       <input
                         ref={cvInputRef}
                         type="file"
-                        accept=".pdf,.doc,.docx"
+                        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         className="sr-only"
                         onChange={(event) => {
                           const file = event.target.files?.[0];
                           if (!file) return;
+                          setApplyFile(file);
                           setUploadedCvName(file.name);
+                          setApplyErrors(prev => ({ ...prev, file: '' }));
                         }}
                       />
-                      <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 bg-white border-2 border-slate-100 flex items-center justify-center text-blue-600">
-                          <FileText className="w-8 h-8" />
+                      {cvIdFromUrl ? (
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-emerald-50 border-2 border-emerald-500 flex items-center justify-center text-emerald-600">
+                            <CheckCircle2 className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[11px] font-black uppercase tracking-widest">{linkedCvName || 'Je geüploade CV'}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Wordt automatisch meegestuurd</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                           <p className="text-[11px] font-black uppercase tracking-widest">{uploadedCvName}</p>
-                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Geverifieerd door Jobparsing+ AI</p>
+                      ) : applyFile ? (
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white border-2 border-slate-100 flex items-center justify-center text-blue-600">
+                            <FileText className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                             <p className="text-[11px] font-black uppercase tracking-widest truncate">{uploadedCvName}</p>
+                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{(applyFile.size / 1024).toFixed(0)} KB</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => cvInputRef.current?.click()}
+                            className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:underline"
+                          >
+                            Wijzig
+                          </button>
                         </div>
+                      ) : (
                         <button
                           type="button"
                           onClick={() => cvInputRef.current?.click()}
-                          className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:underline"
+                          className="w-full flex items-center gap-4 text-left hover:bg-slate-100 -m-2 p-2 transition-colors"
                         >
-                          Wijzig
+                          <div className="w-12 h-12 bg-white border-2 border-slate-200 flex items-center justify-center text-slate-400">
+                            <Upload className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[11px] font-black uppercase tracking-widest">CV uploaden</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">PDF of DOCX, max 4.5 MB</p>
+                          </div>
                         </button>
-                      </div>
+                      )}
+                      {applyErrors.file && (
+                        <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-red-600">{applyErrors.file}</p>
+                      )}
                    </div>
 
                    <button 

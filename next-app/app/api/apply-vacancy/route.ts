@@ -1,72 +1,197 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
+import Vacancy from '@/models/Vacancy';
 import { getTransporter } from '@/lib/server/mailer';
+import { ingestCvFromBuffer } from '@/lib/server/cvIngestion';
+
+export const maxDuration = 60;
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+interface VacancyEmail {
+    title: string;
+    location?: string;
+    employmentType?: string;
+    isRemote?: boolean;
+    matchScore?: number;
+    count?: number;
+}
 
 export async function POST(req: NextRequest) {
     try {
+        await connectDB();
         const body = await req.json();
-        const { cvId, vacancy } = body || {};
+        const {
+            cvId,
+            vacancyId,
+            vacancy: legacyVacancy,
+            applicantName,
+            applicantEmail,
+            fileName,
+            fileType,
+            fileSize,
+            fileData,
+        } = body || {};
 
-        if (!cvId || !vacancy) {
+        let resolvedCv: { _id: mongoose.Types.ObjectId; fullName: string; email?: string; phone?: string; location?: string; jobTitle?: string } | null = null;
+
+        if (cvId && mongoose.Types.ObjectId.isValid(cvId)) {
+            const cv = await CV.findById(cvId).select('_id fullName email phone location jobTitle');
+            if (cv) {
+                resolvedCv = {
+                    _id: cv._id as mongoose.Types.ObjectId,
+                    fullName: cv.fullName,
+                    email: cv.email,
+                    phone: cv.phone,
+                    location: cv.location,
+                    jobTitle: cv.jobTitle,
+                };
+            }
+        }
+
+        if (!resolvedCv && fileData && fileName) {
+            if (fileSize && fileSize > MAX_FILE_BYTES) {
+                return NextResponse.json({ success: false, message: 'CV is te groot (max 10MB)' }, { status: 400 });
+            }
+            const buffer = Buffer.from(fileData, 'base64');
+            const result = await ingestCvFromBuffer({
+                buffer,
+                fileName,
+                fileType: fileType || 'application/octet-stream',
+                fileSize,
+                isInternal: false,
+                lang: 'nl',
+            });
+            if (result.cvId) {
+                const cv = await CV.findById(result.cvId).select('_id fullName email phone location jobTitle');
+                if (cv) {
+                    resolvedCv = {
+                        _id: cv._id as mongoose.Types.ObjectId,
+                        fullName: cv.fullName,
+                        email: cv.email,
+                        phone: cv.phone,
+                        location: cv.location,
+                        jobTitle: cv.jobTitle,
+                    };
+                }
+            } else if (result.existingCvId) {
+                const cv = await CV.findById(result.existingCvId).select('_id fullName email phone location jobTitle');
+                if (cv) {
+                    resolvedCv = {
+                        _id: cv._id as mongoose.Types.ObjectId,
+                        fullName: cv.fullName,
+                        email: cv.email,
+                        phone: cv.phone,
+                        location: cv.location,
+                        jobTitle: cv.jobTitle,
+                    };
+                }
+            } else {
+                return NextResponse.json(
+                    { success: false, message: `CV verwerken mislukt: ${result.reason || 'onbekend'}` },
+                    { status: 400 },
+                );
+            }
+        }
+
+        const fallbackName = (applicantName || '').trim();
+        const fallbackEmail = (applicantEmail || '').trim().toLowerCase();
+
+        if (!resolvedCv && !(fallbackName && fallbackEmail)) {
             return NextResponse.json(
-                { success: false, message: 'Missing cvId or vacancy' },
+                { success: false, message: 'Geef een CV mee of vul naam en e-mail in' },
                 { status: 400 },
             );
         }
 
-        await connectDB();
-        const cv = await CV.findById(cvId);
-        if (!cv) {
-            return NextResponse.json({ success: false, message: 'CV not found' }, { status: 404 });
+        let vacancyForEmail: VacancyEmail | null = null;
+        if (vacancyId && mongoose.Types.ObjectId.isValid(vacancyId)) {
+            const v = await Vacancy.findById(vacancyId).select('title location employmentType isRemote');
+            if (v) {
+                vacancyForEmail = {
+                    title: v.title,
+                    location: v.location,
+                    employmentType: v.employmentType,
+                    isRemote: v.isRemote,
+                };
+            }
         }
+        if (!vacancyForEmail && legacyVacancy && legacyVacancy.title) {
+            vacancyForEmail = {
+                title: legacyVacancy.title,
+                location: legacyVacancy.location,
+                employmentType: legacyVacancy.employmentType,
+                isRemote: legacyVacancy.isRemote,
+                matchScore: legacyVacancy.matchScore,
+                count: legacyVacancy.count,
+            };
+        }
+        if (!vacancyForEmail) {
+            return NextResponse.json({ success: false, message: 'Vacature niet gevonden' }, { status: 400 });
+        }
+
+        const candidateName = resolvedCv?.fullName || fallbackName;
+        const candidateEmail = resolvedCv?.email || fallbackEmail;
+        const candidatePhone = resolvedCv?.phone || '';
+        const candidateLocation = resolvedCv?.location || '';
+        const candidateRole = resolvedCv?.jobTitle || '';
 
         const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
         const html = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <h2 style="color: #667eea;">✉️ Nieuwe Sollicitatie</h2>
+    <h2 style="color: #2563eb;">Nieuwe Sollicitatie</h2>
     <p>Een kandidaat wil solliciteren op een vacature.</p>
     <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Kandidaat Gegevens</h3>
-        <p><strong>Naam:</strong> ${cv.fullName}</p>
-        <p><strong>Email:</strong> ${cv.email || 'Niet opgegeven'}</p>
-        <p><strong>Telefoon:</strong> ${cv.phone || 'Niet opgegeven'}</p>
-        <p><strong>Locatie:</strong> ${cv.location || 'Niet opgegeven'}</p>
-        <p><strong>Huidige/Gewenste functie:</strong> ${cv.jobTitle || 'Niet opgegeven'}</p>
+        <h3 style="margin-top: 0;">Kandidaat</h3>
+        <p><strong>Naam:</strong> ${candidateName || '—'}</p>
+        <p><strong>Email:</strong> ${candidateEmail || '—'}</p>
+        ${candidatePhone ? `<p><strong>Telefoon:</strong> ${candidatePhone}</p>` : ''}
+        ${candidateLocation ? `<p><strong>Locatie:</strong> ${candidateLocation}</p>` : ''}
+        ${candidateRole ? `<p><strong>Huidige/Gewenste functie:</strong> ${candidateRole}</p>` : ''}
     </div>
     <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; border: 1px solid #90cdf4; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2b6cb0;">Vacature Details</h3>
-        <p><strong>Functie:</strong> ${vacancy.title}</p>
-        <p><strong>Locatie:</strong> ${vacancy.location}</p>
-        <p><strong>Aantal vacatures:</strong> ${vacancy.count}</p>
-        <p><strong>Match score:</strong> ${vacancy.matchScore}%</p>
-        ${vacancy.employmentType ? `<p><strong>Dienstverband:</strong> ${vacancy.employmentType}</p>` : ''}
-        ${vacancy.isRemote ? '<p><strong>Remote:</strong> Ja</p>' : ''}
+        <h3 style="margin-top: 0; color: #2b6cb0;">Vacature</h3>
+        <p><strong>Functie:</strong> ${vacancyForEmail.title}</p>
+        ${vacancyForEmail.location ? `<p><strong>Locatie:</strong> ${vacancyForEmail.location}</p>` : ''}
+        ${vacancyForEmail.employmentType ? `<p><strong>Dienstverband:</strong> ${vacancyForEmail.employmentType}</p>` : ''}
+        ${vacancyForEmail.isRemote ? '<p><strong>Remote:</strong> Ja</p>' : ''}
+        ${vacancyForEmail.matchScore ? `<p><strong>Match score:</strong> ${vacancyForEmail.matchScore}%</p>` : ''}
     </div>
     <p style="margin-top: 20px; color: #718096; font-size: 14px;">
-        CV ID: ${cvId}<br>
+        ${resolvedCv ? `CV ID: ${resolvedCv._id}<br>` : ''}
         Gesolliciteerd: ${new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' })}
     </p>
     <p style="margin-top: 20px;">
-        <a href="${baseUrl}/admin" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+        <a href="${baseUrl}/admin" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
             Bekijk in Admin Panel
         </a>
     </p>
 </div>`;
 
-        await getTransporter().sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.RECIPIENT_EMAIL,
-            subject: `✉️ Sollicitatie: ${cv.fullName} → ${vacancy.title}`,
-            html,
-        });
-        console.log(`Application email sent: ${cv.fullName} → ${vacancy.title}`);
+        try {
+            await getTransporter().sendMail({
+                from: process.env.EMAIL_USER,
+                to: process.env.RECIPIENT_EMAIL,
+                subject: `Sollicitatie: ${candidateName || candidateEmail || 'Onbekend'} → ${vacancyForEmail.title}`,
+                html,
+            });
+            console.log(`Application email sent: ${candidateName} → ${vacancyForEmail.title}`);
+        } catch (err) {
+            console.error('Application email failed:', err instanceof Error ? err.message : err);
+        }
 
-        return NextResponse.json({ success: true, message: 'Application sent successfully' });
+        return NextResponse.json({
+            success: true,
+            message: 'Sollicitatie verzonden',
+            cvId: resolvedCv ? String(resolvedCv._id) : null,
+            candidateEmail,
+        });
     } catch (err) {
         console.error('Error applying to vacancy:', err);
         return NextResponse.json(
-            { success: false, message: 'Failed to send application' },
+            { success: false, message: 'Sollicitatie versturen mislukt' },
             { status: 500 },
         );
     }

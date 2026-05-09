@@ -130,9 +130,13 @@ export default function CvUploadPage() {
         setErrorMsg(data.message || 'Opslaan mislukt.');
         return;
       }
-      // Skip the file-only fields path: also kick off upload-with-file endpoint?
-      // For now /submit-cv saves text only — we're losing the original file.
-      // TODO: switch to /api/cvs/upload to persist original file for download.
+      try {
+        localStorage.setItem('jobparsing_last_cv', JSON.stringify({
+          _id: data.cvId,
+          fullName: parsed.fullName || '',
+          email: parsed.email || '',
+        }));
+      } catch { /* ignore quota errors */ }
       router.push(`/mijn-matches?cvId=${encodeURIComponent(data.cvId)}`);
     } catch (err) {
       console.error(err);

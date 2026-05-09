@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
@@ -15,20 +15,32 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { isValidEmail } from '@/lib/validation';
 import { useAuth } from '@/lib/auth-context';
 
 type Role = 'candidate' | 'employer';
 
-export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [role, setRole] = useState<Role>('candidate');
+function AuthInner() {
+  const searchParams = useSearchParams();
+  const signupParam = searchParams.get('signup') === '1';
+  const roleParam = searchParams.get('role');
+  const emailParam = searchParams.get('email') || '';
+  const nameParam = searchParams.get('name') || '';
+
+  const [isLogin, setIsLogin] = useState(!signupParam);
+  const [role, setRole] = useState<Role>(roleParam === 'employer' ? 'employer' : 'candidate');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formValues, setFormValues] = useState({
-    email: '', password: '', fullName: '', username: '', companyName: '',
+    email: emailParam, password: '', fullName: nameParam, username: '', companyName: '',
   });
+
+  useEffect(() => {
+    if (emailParam || nameParam) {
+      setFormValues(v => ({ ...v, email: emailParam || v.email, fullName: nameParam || v.fullName }));
+    }
+  }, [emailParam, nameParam]);
   const [formErrors, setFormErrors] = useState<{
     email?: string; password?: string; fullName?: string;
     username?: string; companyName?: string; form?: string;
@@ -264,6 +276,14 @@ export default function AuthPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthInner />
+    </Suspense>
   );
 }
 
