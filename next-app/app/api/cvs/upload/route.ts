@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import { requireAdmin } from '@/lib/server/auth';
 import { extractFirstExperience } from '@/lib/server/cvDocument';
+import { uploadCvBlob } from '@/lib/server/blobStorage';
 import {
     generateEmbedding,
     generateTextHash,
@@ -75,6 +76,18 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        let fileUrl: string | undefined;
+        try {
+            const buffer = Buffer.from(fileData, 'base64');
+            fileUrl = await uploadCvBlob(buffer, fileName, fileType);
+        } catch (err) {
+            console.error('uploadCvBlob (upload route) failed:', err instanceof Error ? err.message : err);
+            return NextResponse.json(
+                { success: false, message: 'File storage upload failed' },
+                { status: 500 },
+            );
+        }
+
         const cv = await CV.create({
             fullName: cvName,
             email: email || '',
@@ -87,7 +100,7 @@ export async function POST(req: NextRequest) {
             skills: skills || '',
             fullText: fullText || '',
             fileName,
-            fileData,
+            fileUrl,
             fileType,
             fileSize,
             emailSent: true,

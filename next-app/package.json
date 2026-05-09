@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
+    "@vercel/blob": "^2.3.3",
     "adm-zip": "^0.5.16",
     "autoprefixer": "^10.5.0",
     "bcrypt": "^6.0.0",

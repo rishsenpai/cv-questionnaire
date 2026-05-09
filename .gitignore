@@ -2,6 +2,9 @@ node_modules/
 **/node_modules/
 .env
 .env*.local
+.env.diag
+.env.vercel-*
+cvs-backup.jsonl
 *.log
 .DS_Store
 

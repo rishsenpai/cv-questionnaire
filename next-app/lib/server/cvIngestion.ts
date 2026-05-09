@@ -1,5 +1,6 @@
 import CV from '@/models/CV';
 import { extractText } from './cvTextExtract';
+import { uploadCvBlob } from './blobStorage';
 import {
     parseCVWithAI,
     generateEmbedding,
@@ -127,6 +128,13 @@ export async function ingestCvFromBuffer({
         };
     }
 
+    let fileUrl: string | undefined;
+    try {
+        fileUrl = await uploadCvBlob(buffer, fileName, fileType);
+    } catch (err) {
+        console.error('uploadCvBlob failed:', err instanceof Error ? err.message : err);
+    }
+
     const cvData: Record<string, unknown> = {
         fullName: cvName,
         email: parsed.email || '',
@@ -142,12 +150,12 @@ export async function ingestCvFromBuffer({
         achievements: parsed.achievements || '',
         fullText: text,
         fileName,
-        fileData: buffer.toString('base64'),
         fileType,
         fileSize: size,
         isInternal,
         emailSent: true,
     };
+    if (fileUrl) cvData.fileUrl = fileUrl;
     if (driveFileId) cvData.driveFileId = driveFileId;
     const cv = new CV(cvData);
     const saved = await cv.save();

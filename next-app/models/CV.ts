@@ -17,6 +17,7 @@ export interface ICV extends Document {
     fullText?: string;
     fileName?: string;
     fileData?: string;
+    fileUrl?: string;
     fileType?: string;
     fileSize?: number;
     embedding?: number[];
@@ -48,6 +49,7 @@ const cvSchema = new Schema<ICV>({
     fullText: { type: String },
     fileName: { type: String, trim: true },
     fileData: { type: String },
+    fileUrl: { type: String, trim: true },
     fileType: { type: String, trim: true },
     fileSize: { type: Number },
     embedding: { type: [Number], select: false },

@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import { requireAdmin } from '@/lib/server/auth';
 import { generateWordCVBuffer } from '@/lib/server/cvDocument';
+import { fetchCvBlob } from '@/lib/server/blobStorage';
 
 interface Params {
     params: Promise<{ id: string }>;
@@ -25,6 +26,21 @@ export async function GET(req: NextRequest, { params }: Params) {
             return NextResponse.json({ success: false, message: 'CV not found' }, { status: 404 });
         }
 
+        if (cv.fileUrl) {
+            try {
+                const buf = await fetchCvBlob(cv.fileUrl);
+                return NextResponse.json({
+                    success: true,
+                    data: {
+                        fileName: cv.fileName,
+                        fileType: cv.fileType,
+                        fileData: buf.toString('base64'),
+                    },
+                });
+            } catch (err) {
+                console.error('fetchCvBlob failed, falling back:', err instanceof Error ? err.message : err);
+            }
+        }
         if (cv.fileData) {
             return NextResponse.json({
                 success: true,
