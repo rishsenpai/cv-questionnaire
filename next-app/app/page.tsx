@@ -24,11 +24,8 @@ import {
   Smartphone,
   ChevronRight,
   MessageCircle,
-  UploadCloud,
   TrendingUp,
   FileText,
-  Terminal,
-  Code2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -97,262 +94,71 @@ export default function Home() {
     return () => { cancelled = true; };
   }, []);
 
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanStep, setScanStep] = useState(0);
-  const [scanResult, setScanResult] = useState<null | any>(null);
-
-  const scanSteps = [
-    'Initialiseren Parser Engine...',
-    'OCR Extractie: Tekstlagen scannen...',
-    'Detecteren van Entiteiten (Bedrijven, Data, Titels)...',
-    'Normaliseren van Skills via taxonomische mapping...',
-    'Berekenen van Marktwaarde Rapport...'
-  ];
-
-  const startScan = () => {
-    setIsScanning(true);
-    setScanResult(null);
-    setScanStep(0);
-
-    // Simulate multi-step parsing like jobparsing.com
-    const interval = setInterval(() => {
-      setScanStep(prev => {
-        if (prev >= scanSteps.length - 1) {
-          clearInterval(interval);
-          setScanResult({
-            candidate: {
-              name: 'Jurgen Dijkstra',
-              contact: { email: 'j.dijkstra@example.sr', phone: '+597 888-1234' },
-              location: 'Paramaribo, Suriname'
-            },
-            experience: [
-              { title: 'Senior Developer', company: 'TechSur', duration: '4 jaar' },
-              { title: 'Frontend Lead', company: 'Global Solutions', duration: '2 jaar' }
-            ],
-            skills: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS', 'Node.js', 'AI Integration'],
-            score: 94,
-            raw: {
-              parsing_engine: "Jobparsing-v4-Parser",
-              confidence: 0.982,
-              processing_time: "1.4s"
-            }
-          });
-          setIsScanning(false);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 800);
-  };
-
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 overflow-x-hidden selection:bg-blue-600 selection:text-white">
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-16 sm:pt-28 sm:pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="max-w-3xl">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 px-3 py-1 text-[10px] font-black tracking-[0.2em] uppercase mb-6"
-              >
-                <Sparkles className="w-3 h-3" />
-                AI-Powered Vacaturebank
-              </motion.div>
-              
-              <motion.h1 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-5xl xs:text-6xl sm:text-8xl font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-12"
-              >
-                Vind je <br className="hidden xs:block" /> nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Uitdaging</span>
-              </motion.h1>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex flex-col md:flex-row gap-4 items-end mb-12"
-              >
-                <div className="flex-1 w-full border-b-4 border-black py-2 group focus-within:border-blue-600 transition-colors">
-                  <input 
-                    type="text" 
-                    placeholder="Functie, trefwoord of bedrijf..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-transparent text-2xl font-bold placeholder:text-slate-300 outline-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        router.push(`/vacatures?q=${encodeURIComponent(searchTerm)}`);
-                      }
-                    }}
-                  />
-                </div>
-                <Link 
-                  href={`/vacatures?q=${encodeURIComponent(searchTerm)}`}
-                  className="bg-black text-white px-10 py-5 font-black uppercase tracking-tighter hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap text-center"
-                >
-                  Zoeken
-                </Link>
-              </motion.div>
-
-              <div className="flex flex-wrap gap-4 items-center text-xs font-bold text-slate-400">
-                <span className="uppercase tracking-widest italic">Populaire zoekopdrachten:</span>
-                {['Mijnbouw', 'Energie & Water', 'Cybersecurity', 'Transport'].map(tag => (
-                  <Link 
-                    key={tag} 
-                    href={`/vacatures?q=${encodeURIComponent(tag)}`}
-                    className="px-3 py-1 border border-slate-200 hover:border-black transition-colors cursor-pointer text-slate-600"
-                  >
-                    {tag}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* Professional Job Parser Widget (Inspired by jobparsing.com) */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="bg-white border-2 border-black p-8 relative shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+          <div className="w-full">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 px-3 py-1 text-[10px] font-black tracking-[0.2em] uppercase mb-6"
             >
-              <div className="flex items-center justify-between mb-8 border-b-2 border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-black flex items-center justify-center">
-                    <Terminal className="text-blue-400 w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-black uppercase tracking-tight text-2xl">Parsing Engine</h3>
-                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Interactive Parsing Preview</p>
-                  </div>
-                </div>
-                {scanResult && (
-                  <button 
-                    onClick={() => setScanResult(null)}
-                    className="text-[10px] font-black uppercase tracking-widest bg-slate-100 px-3 py-1 hover:bg-black hover:text-white transition-colors"
-                  >
-                    Herstart Demo
-                  </button>
-                )}
-              </div>
-
-              {!scanResult ? (
-                <div 
-                  onClick={startScan}
-                  className={cn(
-                    "border-4 border-dashed border-slate-200 p-12 text-center cursor-pointer transition-all hover:border-blue-600 hover:bg-blue-50/30 group relative",
-                    isScanning && "pointer-events-none border-blue-600"
-                  )}
-                >
-                  <AnimatePresence mode="wait">
-                    {isScanning ? (
-                      <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="space-y-6"
-                      >
-                        <div className="flex justify-center gap-2">
-                          {[0, 1, 2].map(i => (
-                            <motion.div 
-                              key={i}
-                              animate={{ 
-                                height: [20, 40, 20],
-                                opacity: [0.3, 1, 0.3]
-                              }}
-                              transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
-                              className="w-2 bg-blue-600"
-                            />
-                          ))}
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-600 italic">
-                            {scanSteps[scanStep]}
-                          </p>
-                          <div className="max-w-[200px] mx-auto h-1 bg-slate-100 overflow-hidden">
-                            <motion.div 
-                              animate={{ width: `${((scanStep + 1) / scanSteps.length) * 100}%` }}
-                              className="h-full bg-blue-600"
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <div className="space-y-4">
-                        <UploadCloud className="w-12 h-12 text-blue-600 mx-auto group-hover:scale-110 transition-transform" />
-                        <div>
-                          <p className="text-xl font-black uppercase tracking-tight text-slate-900">Bekijk Parsing Demo</p>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Klik om te zien hoe cv-data wordt omgezet naar structuur</p>
-                        </div>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="grid md:grid-cols-2 gap-8"
-                >
-                  <div className="space-y-6">
-                    <div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-l-2 border-blue-600 pl-2">Kandidaat Analyse</div>
-                      <div className="space-y-2 font-bold text-sm">
-                        <p className="text-xl font-black uppercase italic tracking-tighter text-blue-600">{scanResult.candidate.name}</p>
-                        <p className="flex items-center gap-2 text-slate-500 underline">{scanResult.candidate.contact.email}</p>
-                        <p className="flex items-center gap-2 text-slate-900">{scanResult.candidate.location}</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-l-2 border-blue-600 pl-2">Ervarings-Graphen</div>
-                      <div className="space-y-3">
-                        {scanResult.experience.map((exp: any, i: number) => (
-                          <div key={i} className="bg-slate-50 p-3 border border-slate-200">
-                            <div className="font-black text-xs uppercase tracking-tight">{exp.title}</div>
-                            <div className="flex justify-between text-[10px] font-bold text-slate-500 italic mt-1 uppercase">
-                              <span>{exp.company}</span>
-                              <span className="text-blue-600">{exp.duration}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="bg-slate-900 p-4 rounded-none font-mono text-[10px] text-emerald-400 overflow-hidden relative group">
-                      <div className="flex items-center gap-2 mb-2 text-white/40 border-b border-white/10 pb-2">
-                        <Code2 className="w-3 h-3" />
-                        <span className="font-bold tracking-widest uppercase">Structured Output (JSON)</span>
-                      </div>
-                      <pre className="max-h-[160px] overflow-y-auto scrollbar-hide">
-                        {JSON.stringify(scanResult, null, 2)}
-                      </pre>
-                      <div className="absolute top-2 right-4 text-[8px] font-black text-emerald-500 bg-emerald-500/10 px-1">PARSED</div>
-                    </div>
-
-                    <div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-l-2 border-blue-600 pl-2">Genormaliseerde Skills</div>
-                      <div className="flex flex-wrap gap-2">
-                        {scanResult.skills.map((s: string) => (
-                          <span key={s} className="bg-blue-600 text-white text-[9px] font-black px-2 py-1 uppercase tracking-widest italic">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              <div className="absolute -top-3 -right-3 bg-yellow-400 px-4 py-1 font-black text-[12px] uppercase tracking-widest rotate-6 border-2 border-black shadow-lg">
-                Demo Preview
-              </div>
+              <Sparkles className="w-3 h-3" />
+              AI-Powered Vacaturebank
             </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-6xl xs:text-7xl sm:text-9xl lg:text-[10rem] font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-12"
+            >
+              Vind je nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Uitdaging</span>
+            </motion.h1>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="flex flex-col md:flex-row gap-4 items-end mb-12"
+            >
+              <div className="flex-1 w-full border-b-4 border-black py-2 group focus-within:border-blue-600 transition-colors">
+                <input
+                  type="text"
+                  placeholder="Functie, trefwoord of bedrijf..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-transparent text-2xl font-bold placeholder:text-slate-300 outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      router.push(`/vacatures?q=${encodeURIComponent(searchTerm)}`);
+                    }
+                  }}
+                />
+              </div>
+              <Link
+                href={`/vacatures?q=${encodeURIComponent(searchTerm)}`}
+                className="bg-black text-white px-10 py-5 font-black uppercase tracking-tighter hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap text-center"
+              >
+                Zoeken
+              </Link>
+            </motion.div>
+
+            <div className="flex flex-wrap gap-4 items-center text-xs font-bold text-slate-400">
+              <span className="uppercase tracking-widest italic">Populaire zoekopdrachten:</span>
+              {['Mijnbouw', 'Energie & Water', 'Cybersecurity', 'Transport'].map(tag => (
+                <Link
+                  key={tag}
+                  href={`/vacatures?q=${encodeURIComponent(tag)}`}
+                  className="px-3 py-1 border border-slate-200 hover:border-black transition-colors cursor-pointer text-slate-600"
+                >
+                  {tag}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
