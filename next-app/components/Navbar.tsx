@@ -46,9 +46,11 @@ export function Navbar() {
   const links = isEmployer ? [
     { name: 'Mijn Vacatures', href: '/dashboard/company' },
     { name: 'Vacatures', href: '/vacatures' },
+    { name: 'Sectoren', href: '/sectoren' },
     { name: 'Over Ons', href: '/over-ons' },
   ] : [
     { name: 'Vacatures', href: '/vacatures' },
+    { name: 'Sectoren', href: '/sectoren' },
     { name: 'CV Upload', href: '/cv-upload' },
     { name: 'Mijn Matches', href: '/mijn-matches' },
     { name: 'Werkgevers', href: '/voor-werkgevers' },
