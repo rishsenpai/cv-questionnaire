@@ -540,7 +540,7 @@ function VacaturesContent() {
       <footer className="bg-black text-white px-10 py-12 border-t-8 border-blue-600">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           <div className="col-span-1 md:col-span-1">
-            <h2 className="text-2xl font-black uppercase tracking-tighter mb-6">SuriJobs<span className="text-blue-600">+</span></h2>
+            <h2 className="text-2xl font-black uppercase tracking-tighter mb-6">Jobparsing<span className="text-blue-600">+</span></h2>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-loose">
               De meest geavanceerde talent hub <br/>van Suriname. Powered by <br/>AI-driven insights.
             </p>
@@ -565,7 +565,7 @@ function VacaturesContent() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto pt-12 border-t border-white/10 text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">
-          © 2026 SuriJobs. Alle rechten voorbehouden.
+          © 2026 Jobparsing. Alle rechten voorbehouden.
         </div>
       </footer>
     </div>

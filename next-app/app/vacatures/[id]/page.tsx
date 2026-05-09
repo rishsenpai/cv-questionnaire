@@ -206,7 +206,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const shareUrl = typeof window !== 'undefined' ? window.location.href : `/vacatures/${jobId}`;
     const sharePayload = {
       title: job.title,
-      text: `Bekijk deze vacature op SuriJobs+: ${job.title}`,
+      text: `Bekijk deze vacature op Jobparsing+: ${job.title}`,
       url: shareUrl,
     };
 
@@ -413,7 +413,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     <h3 className="text-xs font-black uppercase tracking-[0.3em] text-blue-400 mb-4 italic">Over de Werkgever</h3>
                     <h4 className="text-4xl font-black uppercase tracking-tighter italic mb-4">Geverifieerde Werkgever</h4>
                     <p className="text-slate-400 font-bold text-sm max-w-sm">
-                       De identiteit van de werkgever wordt na een succesvolle match via SuriJobs+ gedeeld.
+                       De identiteit van de werkgever wordt na een succesvolle match via Jobparsing+ gedeeld.
                        Solliciteer hier om in contact te komen.
                     </p>
                  </div>
@@ -501,7 +501,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   </div>
                   <h3 className="text-5xl font-black uppercase tracking-tighter italic mb-4">SOLLICITATIE VERZONDEN!</h3>
                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-10 max-w-sm mx-auto">
-                    Je profiel en documenten zijn succesvol gedeeld met de werkgever via SuriJobs+.
+                    Je profiel en documenten zijn succesvol gedeeld met de werkgever via Jobparsing+.
                   </p>
                   <button onClick={closeApplyModal} className="bg-black text-white px-12 py-5 font-black uppercase tracking-widest text-sm shadow-[8px_8px_0px_0px_rgba(59,130,246,1)]">
                     Sluiten
@@ -510,7 +510,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               ) : (
                 <form onSubmit={handleApply} className="space-y-8">
                    <h2 className="text-4xl font-black uppercase tracking-tighter italic leading-none border-b-4 border-slate-100 pb-6 mb-8">
-                     Solliciteren via <span className="text-blue-600">SuriJobs+</span>
+                     Solliciteren via <span className="text-blue-600">Jobparsing+</span>
                    </h2>
 
                    <div className="bg-slate-50 p-8 border-l-8 border-blue-600">
@@ -562,7 +562,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         </div>
                         <div className="flex-1">
                            <p className="text-[11px] font-black uppercase tracking-widest">{uploadedCvName}</p>
-                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Geverifieerd door SuriJobs+ AI</p>
+                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Geverifieerd door Jobparsing+ AI</p>
                         </div>
                         <button
                           type="button"

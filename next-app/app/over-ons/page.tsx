@@ -34,7 +34,7 @@ export default function OverOnsPage() {
               Onze Missie: <br/><span className="text-blue-600 italic underline decoration-blue-100 decoration-8 underline-offset-8">Transparantie</span>
             </h1>
             <p className="text-2xl md:text-3xl font-bold uppercase tracking-tight italic text-slate-500 leading-tight max-w-3xl">
-              SuriJobs+ is niet zomaar een vacaturebank. Wij zijn het antwoord op de chaos en onzekerheid van de huidige Surinaamse arbeidsmarkt.
+              Jobparsing+ is niet zomaar een vacaturebank. Wij zijn het antwoord op de chaos en onzekerheid van de huidige Surinaamse arbeidsmarkt.
             </p>
           </motion.div>
         </div>
@@ -47,14 +47,14 @@ export default function OverOnsPage() {
           <div className="grid lg:grid-cols-2 gap-24 items-center">
             <div className="space-y-12">
               <h2 className="text-5xl font-black uppercase tracking-tighter italic leading-none underline decoration-blue-600 decoration-8 underline-offset-8">
-                Waarom SuriJobs+?
+                Waarom Jobparsing+?
               </h2>
               <div className="space-y-8 text-lg font-bold text-slate-600 leading-relaxed italic">
                 <p>
                   In 2026 was de Surinaamse arbeidsmarkt gefragmenteerd. Vacatures stonden op Facebook, WhatsApp-groepen en verouderde websites zonder enige controle of transparantie over salarissen.
                 </p>
                 <p>
-                  Wij zagen hoe goed talent verloren ging door gebrekkige matching en hoe bedrijven maandenlang zochten naar de juiste mensen. SuriJobs+ is gebouwd om deze barrières te doorbreken met behulp van AI en een compromisloze focus op data-integriteit.
+                  Wij zagen hoe goed talent verloren ging door gebrekkige matching en hoe bedrijven maandenlang zochten naar de juiste mensen. Jobparsing+ is gebouwd om deze barrières te doorbreken met behulp van AI en een compromisloze focus op data-integriteit.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-8">
@@ -77,7 +77,7 @@ export default function OverOnsPage() {
                   <div className="w-12 h-12 bg-blue-600 rounded-none border-2 border-white" />
                   <div>
                     <div className="text-xs font-black uppercase tracking-widest text-white">Founder Team</div>
-                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">SuriJobs Intelligence Unit</div>
+                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Jobparsing Intelligence Unit</div>
                   </div>
                 </div>
               </div>
@@ -171,7 +171,7 @@ export default function OverOnsPage() {
       {/* Footer Minimal */}
       <footer className="bg-white py-12 border-t-2 border-slate-100 text-center">
         <div className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300">
-          SuriJobs+ — Building The Future of Suriname
+          Jobparsing+ — Building The Future of Suriname
         </div>
       </footer>
     </div>

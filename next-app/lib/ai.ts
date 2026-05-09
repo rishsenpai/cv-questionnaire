@@ -313,7 +313,7 @@ ${companyName} zoekt een sterke **${role}** die past bij ${companyContext}.
 ### Aanbod
 - ${traits.sellingPoints.join('\n- ')}
 
-Interesse? Verstuur direct je sollicitatie via SuriJobs+ of mail naar ${contactInfo}.`;
+Interesse? Verstuur direct je sollicitatie via Jobparsing+ of mail naar ${contactInfo}.`;
 
   return {
     markdown,

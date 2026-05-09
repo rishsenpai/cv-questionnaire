@@ -1,6 +1,6 @@
-# SuriJobs+
+# Jobparsing+
 
-SuriJobs+ is een moderne vacature- en talentplatform prototype voor Suriname, gebouwd met Next.js, React en Tailwind CSS. De app bevat kandidaat- en bedrijfsflows, vacatureoverzichten, dashboards en lokale interactieve tools zonder externe AI-API keys.
+Jobparsing+ is een moderne vacature- en talentplatform prototype voor Suriname, gebouwd met Next.js, React en Tailwind CSS. De app bevat kandidaat- en bedrijfsflows, vacatureoverzichten, dashboards en lokale interactieve tools zonder externe AI-API keys.
 
 ## Stack
 

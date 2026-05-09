@@ -132,7 +132,7 @@ export default function Home() {
             skills: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS', 'Node.js', 'AI Integration'],
             score: 94,
             raw: {
-              parsing_engine: "SuriJobs-v4-Parser",
+              parsing_engine: "Jobparsing-v4-Parser",
               confidence: 0.982,
               processing_time: "1.4s"
             }
@@ -529,7 +529,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Why SuriJobs? */}
+      {/* Why Jobparsing? */}
       <section className="bg-slate-900 py-24 text-white overflow-hidden relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -542,7 +542,7 @@ export default function Home() {
                   { 
                     icon: Users, 
                     title: "Geen 'Schaduw' Bedrijven", 
-                    desc: "Elk bedrijf op SuriJobs+ ondergaat een identiteitscheck. Geen valse beloftes meer." 
+                    desc: "Elk bedrijf op Jobparsing+ ondergaat een identiteitscheck. Geen valse beloftes meer." 
                   },
                   { 
                     icon: DollarSign, 
@@ -633,7 +633,7 @@ export default function Home() {
       <footer className="bg-black text-white px-10 py-12 border-t-8 border-blue-600">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           <div className="col-span-1 md:col-span-1">
-            <Link href="/" className="text-2xl font-black uppercase tracking-tighter mb-6 block">SuriJobs<span className="text-blue-600">+</span></Link>
+            <Link href="/" className="text-2xl font-black uppercase tracking-tighter mb-6 block">Jobparsing<span className="text-blue-600">+</span></Link>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-loose">
               De meest geavanceerde talent hub <br/>van Suriname. Powered by <br/>AI-driven insights.
             </p>
@@ -659,7 +659,7 @@ export default function Home() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto pt-12 border-t border-white/10 text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 flex justify-between">
-          <span>© 2026 SuriJobs. Alle rechten voorbehouden.</span>
+          <span>© 2026 Jobparsing. Alle rechten voorbehouden.</span>
           <div className="flex gap-6">
             <span className="text-blue-400 cursor-pointer">Systeem Status</span>
             <span>LinkedIn</span>

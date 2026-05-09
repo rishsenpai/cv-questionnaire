@@ -119,7 +119,7 @@ export default function AuthPage() {
             </Link>
 
             <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-8">
-              SuriJobs<span className="text-blue-600 italic">+</span>
+              Jobparsing<span className="text-blue-600 italic">+</span>
             </h1>
             <p className="text-xl font-bold text-slate-400 uppercase tracking-tight italic max-w-sm mb-12">
               Toegang tot de meest geavanceerde talent hub van Suriname.
@@ -142,7 +142,7 @@ export default function AuthPage() {
           </div>
 
           <div className="relative z-10 mt-20 pt-10 border-t border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-            <span>© 2026 SURIJOBS+</span>
+            <span>© 2026 JOBPARSING+</span>
             <div className="flex gap-4">
               <span>PRIVACY</span>
               <span>TERMS</span>
@@ -175,7 +175,7 @@ export default function AuthPage() {
                     {isLogin ? 'Inloggen' : 'Registreren'}
                   </h2>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    {isLogin ? 'Welkom terug bij SuriJobs+' : 'Creëer je account in minder dan 2 minuten'}
+                    {isLogin ? 'Welkom terug bij Jobparsing+' : 'Creëer je account in minder dan 2 minuten'}
                   </p>
                 </div>
                 <button

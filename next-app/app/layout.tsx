@@ -13,7 +13,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'SuriJobs+ | Modern Vacaturebank Suriname',
+  title: 'Jobparsing+ | Modern Vacaturebank Suriname',
   description: 'De slimste vacaturebank van Suriname met AI-matching en moderne filtering.',
 };
 

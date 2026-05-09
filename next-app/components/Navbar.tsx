@@ -61,7 +61,7 @@ export function Navbar() {
           <div className="flex items-center gap-12">
             <Link href="/" className="flex items-center gap-2">
               <span className="text-xl font-black tracking-tighter uppercase whitespace-nowrap">
-                SuriJobs<span className="text-blue-600">+</span>
+                Jobparsing<span className="text-blue-600">+</span>
               </span>
             </Link>
 
