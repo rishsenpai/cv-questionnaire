@@ -107,7 +107,7 @@ export default function Home() {
               className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 px-3 py-1 text-[10px] font-black tracking-[0.2em] uppercase mb-6"
             >
               <Sparkles className="w-3 h-3" />
-              AI-Powered Vacaturebank
+              AI-Powered Talent Search
             </motion.div>
 
             <motion.h1
@@ -116,7 +116,7 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-5xl xs:text-6xl sm:text-7xl md:text-8xl font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-12 max-w-5xl"
             >
-              Vind je nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Uitdaging</span>
+              Vind je nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Talent</span>
             </motion.h1>
 
             <motion.div
@@ -128,37 +128,41 @@ export default function Home() {
               <div className="flex-1 w-full border-b-4 border-black py-2 group focus-within:border-blue-600 transition-colors">
                 <input
                   type="text"
-                  placeholder="Functie, trefwoord of bedrijf..."
+                  placeholder="Functie, vaardigheid of branche..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-transparent text-2xl font-bold placeholder:text-slate-300 outline-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      router.push(`/vacatures?q=${encodeURIComponent(searchTerm)}`);
+                      router.push(`/voor-werkgevers?q=${encodeURIComponent(searchTerm)}`);
                     }
                   }}
                 />
               </div>
               <Link
-                href={`/vacatures?q=${encodeURIComponent(searchTerm)}`}
+                href={`/voor-werkgevers?q=${encodeURIComponent(searchTerm)}`}
                 className="bg-black text-white px-10 py-5 font-black uppercase tracking-tighter hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap text-center"
               >
-                Zoeken
+                Zoek kandidaten
               </Link>
             </motion.div>
 
             <div className="flex flex-wrap gap-4 items-center text-xs font-bold text-slate-400">
               <span className="uppercase tracking-widest italic">Populaire zoekopdrachten:</span>
-              {['Mijnbouw', 'Energie & Water', 'Cybersecurity', 'Transport'].map(tag => (
+              {['Developer', 'Manager', 'Engineer', 'Sales', 'Accountant'].map(tag => (
                 <Link
                   key={tag}
-                  href={`/vacatures?q=${encodeURIComponent(tag)}`}
+                  href={`/voor-werkgevers?q=${encodeURIComponent(tag)}`}
                   className="px-3 py-1 border border-slate-200 hover:border-black transition-colors cursor-pointer text-slate-600"
                 >
                   {tag}
                 </Link>
               ))}
             </div>
+
+            <p className="mt-6 text-[11px] font-bold text-slate-400 italic">
+              Op zoek naar een baan? <Link href="/cv-upload" className="underline hover:text-blue-600">Upload je CV</Link> en zie matches met openstaande vacatures.
+            </p>
           </div>
         </div>
       </section>

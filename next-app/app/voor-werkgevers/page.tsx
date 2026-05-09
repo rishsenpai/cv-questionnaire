@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Building2,
@@ -16,8 +16,10 @@ import {
   Target,
   FileText,
   ArrowRight,
+  Search,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const APPLICATIONS_EMAIL = 'info@jobparsing.com';
@@ -44,6 +46,21 @@ interface MatchResponse {
   terms?: string[];
 }
 
+interface QuickSearchResponse {
+  success: boolean;
+  message?: string;
+  query?: string;
+  totalCvs?: number;
+  matches?: Array<{
+    id: string;
+    jobTitle: string;
+    location: string;
+    summary: string;
+    topSkills: string[];
+    matchScore: number;
+  }>;
+}
+
 function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -53,7 +70,15 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-export default function VoorWerkgeversPage() {
+function VoorWerkgeversInner() {
+  const params = useSearchParams();
+  const initialQuery = params.get('q') || '';
+
+  const [quickQuery, setQuickQuery] = useState(initialQuery);
+  const [quickLoading, setQuickLoading] = useState(false);
+  const [quickResults, setQuickResults] = useState<QuickSearchResponse | null>(null);
+  const [quickError, setQuickError] = useState<string | null>(null);
+
   const [vacancyText, setVacancyText] = useState('');
   const [vacancyTitle, setVacancyTitle] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -66,6 +91,35 @@ export default function VoorWerkgeversPage() {
   const [results, setResults] = useState<MatchResponse | null>(null);
   const [contactMatch, setContactMatch] = useState<AnonymousMatch | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const runQuickSearch = async (q: string) => {
+    if (!q.trim()) {
+      setQuickError('Geef een zoekterm op');
+      return;
+    }
+    setQuickLoading(true);
+    setQuickError(null);
+    try {
+      const res = await fetch(`/api/employer-public/search-cvs?q=${encodeURIComponent(q.trim())}`);
+      const data: QuickSearchResponse = await res.json();
+      if (!data.success) {
+        setQuickError(data.message || 'Zoeken mislukt');
+      } else {
+        setQuickResults(data);
+      }
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : 'Verbinding mislukt');
+    } finally {
+      setQuickLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (initialQuery.trim()) {
+      runQuickSearch(initialQuery);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +202,85 @@ export default function VoorWerkgeversPage() {
       </section>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        {/* Quick keyword search */}
+        <section className="bg-white border-4 border-black p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center gap-3 mb-2">
+            <Search className="w-5 h-5 text-blue-600" />
+            <h2 className="text-2xl font-black uppercase tracking-tighter italic">Snel zoeken op functie / vaardigheid</h2>
+          </div>
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6">Geanonimiseerde profielen — geen account nodig</p>
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              value={quickQuery}
+              onChange={e => setQuickQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') runQuickSearch(quickQuery); }}
+              placeholder="Bv. 'software developer', 'accountant', 'electrician'..."
+              className="flex-1 border-2 border-slate-100 p-4 font-bold text-base outline-none focus:border-black"
+            />
+            <button
+              type="button"
+              onClick={() => runQuickSearch(quickQuery)}
+              disabled={quickLoading}
+              className="bg-black text-white px-8 py-4 font-black uppercase tracking-widest text-sm hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {quickLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              Zoeken
+            </button>
+          </div>
+          {quickError && (
+            <p className="mt-3 text-[11px] font-black text-red-600 uppercase tracking-widest flex items-center gap-2">
+              <AlertCircle className="w-3 h-3" /> {quickError}
+            </p>
+          )}
+
+          {quickResults && quickResults.matches && (
+            <div className="mt-6">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                {quickResults.matches.length} kandidaten gevonden voor &quot;{quickResults.query}&quot;
+              </p>
+              {quickResults.matches.length === 0 ? (
+                <p className="text-[11px] font-bold text-slate-400 italic">Geen profielen gevonden voor deze zoekterm. Probeer een andere term of plak hieronder de volledige vacaturetekst.</p>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-3">
+                  {quickResults.matches.slice(0, 8).map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setContactMatch({ ...m, matchedTerms: [] })}
+                      className="text-left bg-slate-50 border-2 border-slate-100 hover:border-blue-600 p-4 transition-colors group"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] font-black uppercase tracking-widest bg-slate-900 text-white px-2 py-0.5">CV #{m.id.slice(-6)}</span>
+                        <span className={cn(
+                          'text-[10px] font-black uppercase tracking-widest px-2 py-0.5 text-white',
+                          m.matchScore >= 70 ? 'bg-blue-600' : m.matchScore >= 40 ? 'bg-emerald-600' : 'bg-slate-400',
+                        )}>
+                          {m.matchScore}%
+                        </span>
+                      </div>
+                      <p className="text-sm font-black uppercase tracking-tight italic mb-1 group-hover:text-blue-600 transition-colors">
+                        {m.jobTitle}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-500 mb-2">{m.location}</p>
+                      {m.topSkills.length > 0 && (
+                        <p className="text-[10px] font-bold text-slate-400 truncate">
+                          {m.topSkills.slice(0, 4).join(' · ')}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {quickResults.matches.length > 0 && (
+                <p className="mt-4 text-[10px] font-bold text-slate-400 italic">
+                  Klik op een kandidaat om contactgegevens te zien. Voor diepere matching: vul hieronder je volledige vacaturetekst in.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+
         {/* Form */}
         <form onSubmit={submit} className="bg-white border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(59,130,246,1)] space-y-8">
           <div>
@@ -481,5 +614,13 @@ export default function VoorWerkgeversPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function VoorWerkgeversPage() {
+  return (
+    <Suspense fallback={null}>
+      <VoorWerkgeversInner />
+    </Suspense>
   );
 }
