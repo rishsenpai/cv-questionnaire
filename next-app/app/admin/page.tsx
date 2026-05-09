@@ -24,16 +24,19 @@ import {
   Globe,
   Cpu,
   Eye,
+  Target,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 
-type Tab = 'overview' | 'cvs' | 'vacancies' | 'employers' | 'system';
+type Tab = 'overview' | 'cvs' | 'vacancies' | 'matching' | 'employers' | 'system';
 
 const TABS: Array<{ id: Tab; label: string; icon: typeof Users }> = [
   { id: 'overview', label: 'Overview', icon: Database },
   { id: 'cvs', label: 'CVs', icon: FileText },
   { id: 'vacancies', label: 'Vacatures', icon: Briefcase },
+  { id: 'matching', label: 'Matching', icon: Target },
   { id: 'employers', label: 'Werkgevers', icon: Users },
   { id: 'system', label: 'Systeem', icon: Settings },
 ];
@@ -80,6 +83,7 @@ export default function AdminPage() {
         {tab === 'overview' && <OverviewTab token={adminToken} />}
         {tab === 'cvs' && <CvsTab token={adminToken} />}
         {tab === 'vacancies' && <VacanciesTab token={adminToken} />}
+        {tab === 'matching' && <MatchingTab token={adminToken} />}
         {tab === 'employers' && <EmployersTab token={adminToken} />}
         {tab === 'system' && <SystemTab token={adminToken} />}
       </main>
@@ -282,6 +286,7 @@ function CvsTab({ token }: { token: string }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [matchCv, setMatchCv] = useState<CvRow | null>(null);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -446,14 +451,24 @@ function CvsTab({ token }: { token: string }) {
                     )}
                   </td>
                   <td className="p-3 text-right">
-                    <button
-                      onClick={() => deleteOne(cv._id)}
-                      disabled={busy}
-                      className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                      aria-label="Verwijderen"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setMatchCv(cv)}
+                        className="text-blue-600 hover:text-blue-800"
+                        aria-label="Match"
+                        title="Match met vacatures"
+                      >
+                        <Target className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteOne(cv._id)}
+                        disabled={busy}
+                        className="text-red-600 hover:text-red-800 disabled:opacity-50"
+                        aria-label="Verwijderen"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -461,6 +476,12 @@ function CvsTab({ token }: { token: string }) {
           </table>
         </div>
       )}
+
+      <AnimatePresence>
+        {matchCv && (
+          <CvMatchModal token={token} cv={matchCv} onClose={() => setMatchCv(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1071,6 +1092,627 @@ function SystemTab({ token }: { token: string }) {
         {message && <p className="mt-4 text-[11px] font-bold">{message}</p>}
       </div>
     </div>
+  );
+}
+
+// ============================ MATCHING ============================
+
+interface MatchEventRow {
+  _id: string;
+  cvId?: string;
+  cvFullName?: string;
+  vacancyId?: string;
+  vacancyTitle?: string;
+  score: number;
+  matchType: 'AI Semantic' | 'TF-IDF';
+  source: 'jobseeker' | 'admin-cv' | 'admin-vacancy';
+  createdAt: string;
+}
+
+interface MatchVacancyResult {
+  _id?: string;
+  title: string;
+  company?: string;
+  location?: string;
+  source?: string;
+  matchScore: number;
+  matchType: string;
+}
+
+interface MatchCvResult {
+  _id: string;
+  fullName: string;
+  jobTitle?: string;
+  skills?: string;
+  location?: string;
+  matchScore: number;
+  matchedTerms?: string[];
+}
+
+type MatchingSubTab = 'history' | 'vacancy-to-cvs' | 'cv-to-vacancies';
+
+function MatchingTab({ token }: { token: string }) {
+  const [sub, setSub] = useState<MatchingSubTab>('history');
+  const subTabs: Array<{ id: MatchingSubTab; label: string }> = [
+    { id: 'history', label: 'Geschiedenis' },
+    { id: 'vacancy-to-cvs', label: 'Vacature → CVs' },
+    { id: 'cv-to-vacancies', label: 'CV → Vacatures' },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <SectionHeader title="Matching" subtitle="Match-geschiedenis en handmatige matching" />
+      <div className="bg-white border-2 border-black flex flex-wrap">
+        {subTabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSub(t.id)}
+            className={cn(
+              'px-5 py-3 text-[10px] font-black uppercase tracking-widest border-r-2 border-slate-100 last:border-r-0 transition-colors',
+              sub === t.id ? 'bg-black text-white' : 'hover:bg-slate-50',
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {sub === 'history' && <MatchHistoryPanel token={token} />}
+      {sub === 'vacancy-to-cvs' && <VacancyToCvsPanel token={token} />}
+      {sub === 'cv-to-vacancies' && <CvToVacanciesPanel token={token} />}
+    </div>
+  );
+}
+
+function MatchHistoryPanel({ token }: { token: string }) {
+  const [events, setEvents] = useState<MatchEventRow[]>([]);
+  const [topCvs, setTopCvs] = useState<Array<{ _id: string; cvFullName: string; count: number; avgScore: number }>>([]);
+  const [bySource, setBySource] = useState<Array<{ _id: string; count: number }>>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [source, setSource] = useState<string>('');
+  const [minScore, setMinScore] = useState<string>('');
+  const [days, setDays] = useState<string>('');
+
+  const reload = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (source) params.set('source', source);
+      if (minScore) params.set('minScore', minScore);
+      if (days) {
+        const d = new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000);
+        params.set('since', d.toISOString());
+      }
+      params.set('limit', '200');
+      const res = await fetch(`/api/admin/match-events?${params.toString()}`, {
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEvents(data.events || []);
+        setTopCvs(data.topCvs || []);
+        setBySource(data.bySource || []);
+        setTotal(data.total || 0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token, source, minScore, days]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const sourceLabel: Record<string, string> = {
+    jobseeker: 'Werkzoekende',
+    'admin-cv': 'Admin (CV)',
+    'admin-vacancy': 'Admin (Vacature)',
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white border-2 border-black p-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Totaal events</p>
+          <p className="text-3xl font-black tracking-tighter italic">{total}</p>
+        </div>
+        <div className="bg-white border-2 border-black p-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Per bron</p>
+          <div className="space-y-1">
+            {bySource.length === 0 && <p className="text-[11px] font-bold text-slate-300">Geen data</p>}
+            {bySource.map(s => (
+              <div key={s._id} className="flex justify-between text-[11px] font-bold">
+                <span>{sourceLabel[s._id] || s._id}</span>
+                <span className="text-blue-600">{s.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white border-2 border-black p-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Top CVs</p>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {topCvs.length === 0 && <p className="text-[11px] font-bold text-slate-300">Geen data</p>}
+            {topCvs.slice(0, 5).map(c => (
+              <div key={c._id || c.cvFullName} className="flex justify-between text-[11px] font-bold">
+                <span className="truncate">{c.cvFullName || 'Onbekend'}</span>
+                <span className="text-blue-600 shrink-0 ml-2">{c.count} · {Math.round(c.avgScore)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border-2 border-black p-4 flex flex-wrap gap-3 items-center">
+        <select
+          value={source}
+          onChange={e => setSource(e.target.value)}
+          className="border-2 border-slate-100 px-3 py-2 text-[11px] font-bold"
+        >
+          <option value="">Alle bronnen</option>
+          <option value="jobseeker">Werkzoekende</option>
+          <option value="admin-cv">Admin (CV)</option>
+          <option value="admin-vacancy">Admin (Vacature)</option>
+        </select>
+        <select
+          value={minScore}
+          onChange={e => setMinScore(e.target.value)}
+          className="border-2 border-slate-100 px-3 py-2 text-[11px] font-bold"
+        >
+          <option value="">Alle scores</option>
+          <option value="40">≥ 40%</option>
+          <option value="60">≥ 60%</option>
+          <option value="80">≥ 80%</option>
+        </select>
+        <select
+          value={days}
+          onChange={e => setDays(e.target.value)}
+          className="border-2 border-slate-100 px-3 py-2 text-[11px] font-bold"
+        >
+          <option value="">Alle tijd</option>
+          <option value="1">Laatste 24u</option>
+          <option value="7">Laatste 7 dagen</option>
+          <option value="30">Laatste 30 dagen</option>
+        </select>
+        <button
+          onClick={reload}
+          className="border-2 border-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" /></div>
+      ) : (
+        <div className="bg-white border-2 border-black overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-black text-white">
+              <tr className="text-[10px] font-black uppercase tracking-widest">
+                <th className="p-3 text-left">CV</th>
+                <th className="p-3 text-left">Vacature</th>
+                <th className="p-3 text-left w-24">Score</th>
+                <th className="p-3 text-left w-32">Type</th>
+                <th className="p-3 text-left w-32">Bron</th>
+                <th className="p-3 text-left w-40">Wanneer</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.length === 0 && (
+                <tr><td colSpan={6} className="p-12 text-center text-[11px] font-black uppercase tracking-widest text-slate-300">Geen match events.</td></tr>
+              )}
+              {events.map(ev => (
+                <tr key={ev._id} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
+                  <td className="p-3 truncate max-w-[200px]">{ev.cvFullName || '—'}</td>
+                  <td className="p-3 truncate max-w-[260px]">{ev.vacancyTitle || '—'}</td>
+                  <td className="p-3"><ScoreBadge score={ev.score} /></td>
+                  <td className="p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">{ev.matchType}</td>
+                  <td className="p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">{sourceLabel[ev.source] || ev.source}</td>
+                  <td className="p-3 text-[10px] font-bold text-slate-400">{new Date(ev.createdAt).toLocaleString('nl-NL')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  const color = score >= 70 ? 'bg-emerald-600' : score >= 50 ? 'bg-blue-600' : score >= 30 ? 'bg-amber-500' : 'bg-slate-400';
+  return (
+    <span className={cn('inline-block text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5', color)}>
+      {score}%
+    </span>
+  );
+}
+
+function VacancyToCvsPanel({ token }: { token: string }) {
+  const [text, setText] = useState('');
+  const [matches, setMatches] = useState<MatchCvResult[] | null>(null);
+  const [terms, setTerms] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async () => {
+    if (text.trim().length < 3) {
+      setError('Vacaturetekst moet minimaal 3 karakters bevatten');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/test-matching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ vacancyText: text }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMatches(data.matches || []);
+        setTerms(data.vacancyTerms || []);
+      } else {
+        setError(data.message || 'Match mislukt');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Match mislukt');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white border-2 border-black p-6">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
+          Plak een vacaturetekst (TF-IDF matching tegen alle interne CVs)
+        </p>
+        <textarea
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder="Plak hier de volledige vacaturetekst..."
+          rows={8}
+          className="w-full border-2 border-slate-100 p-3 font-bold text-sm outline-none focus:border-black"
+        />
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            onClick={run}
+            disabled={loading || text.trim().length < 3}
+            className="bg-blue-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2 disabled:opacity-50"
+          >
+            {loading ? <><Loader2 className="w-3 h-3 animate-spin" /> Matching...</> : <><Target className="w-3 h-3" /> Match CVs</>}
+          </button>
+          {error && (
+            <p className="text-[11px] font-black text-red-600 uppercase tracking-widest flex items-center gap-2">
+              <AlertCircle className="w-3 h-3" /> {error}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {terms.length > 0 && (
+        <div className="bg-white border-2 border-slate-100 p-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Top termen uit vacature</p>
+          <div className="flex flex-wrap gap-1">
+            {terms.map(t => (
+              <span key={t} className="text-[10px] font-bold bg-slate-50 px-2 py-0.5">{t}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {matches !== null && <MatchResultsList matches={matches} />}
+    </div>
+  );
+}
+
+function CvToVacanciesPanel({ token }: { token: string }) {
+  const [mode, setMode] = useState<'existing' | 'upload'>('existing');
+  const [cvs, setCvs] = useState<CvRow[]>([]);
+  const [selectedCvId, setSelectedCvId] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const [matches, setMatches] = useState<MatchVacancyResult[] | null>(null);
+  const [matchedFor, setMatchedFor] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    fetch('/api/cvs', { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setCvs(d.data || []); })
+      .catch(() => {});
+  }, [token]);
+
+  const filteredCvs = cvs.filter(cv => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return cv.fullName.toLowerCase().includes(q) ||
+      (cv.email || '').toLowerCase().includes(q) ||
+      (cv.jobTitle || '').toLowerCase().includes(q);
+  }).slice(0, 100);
+
+  const runExisting = async () => {
+    if (!selectedCvId) {
+      setError('Kies eerst een CV');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/cvs/${selectedCvId}/matches`, {
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMatches(data.matches || []);
+        setMatchedFor(data.cv?.fullName || '');
+      } else {
+        setError(data.message || 'Match mislukt');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Match mislukt');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runUpload = async () => {
+    if (!file) {
+      setError('Kies een bestand');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Bestand te groot (max 10MB)');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(((reader.result as string).split(',')[1] || ''));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/admin/match-cv-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type || 'application/octet-stream',
+          fileSize: file.size,
+          fileData,
+          lang: 'nl',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMatches(data.matches || []);
+        setMatchedFor(data.cv?.fullName || file.name);
+      } else {
+        setError(data.message || 'Match mislukt');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Match mislukt');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white border-2 border-black p-6 space-y-4">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setMode('existing')}
+            className={cn(
+              'px-4 py-2 text-[10px] font-black uppercase tracking-widest border-2',
+              mode === 'existing' ? 'bg-black text-white border-black' : 'border-slate-200 hover:border-black',
+            )}
+          >
+            Bestaand CV
+          </button>
+          <button
+            onClick={() => setMode('upload')}
+            className={cn(
+              'px-4 py-2 text-[10px] font-black uppercase tracking-widest border-2',
+              mode === 'upload' ? 'bg-black text-white border-black' : 'border-slate-200 hover:border-black',
+            )}
+          >
+            Upload nieuw CV
+          </button>
+        </div>
+
+        {mode === 'existing' ? (
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Zoek CV op naam, email, functie..."
+              className="w-full border-2 border-slate-100 p-3 font-bold text-sm outline-none focus:border-black"
+            />
+            <select
+              value={selectedCvId}
+              onChange={e => setSelectedCvId(e.target.value)}
+              className="w-full border-2 border-slate-100 p-3 font-bold text-sm"
+            >
+              <option value="">— Kies een CV —</option>
+              {filteredCvs.map(cv => (
+                <option key={cv._id} value={cv._id}>
+                  {cv.fullName}{cv.jobTitle ? ` · ${cv.jobTitle}` : ''}{cv.location ? ` · ${cv.location}` : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={runExisting}
+              disabled={loading || !selectedCvId}
+              className="bg-blue-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2 disabled:opacity-50"
+            >
+              {loading ? <><Loader2 className="w-3 h-3 animate-spin" /> Matching...</> : <><Target className="w-3 h-3" /> Match Vacatures (AI Semantic)</>}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <input
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={e => setFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm font-bold file:mr-4 file:py-2 file:px-4 file:border-2 file:border-black file:bg-white file:text-black file:font-black file:uppercase file:tracking-widest file:text-[10px] file:cursor-pointer"
+            />
+            {file && (
+              <p className="text-[11px] font-bold text-slate-500">{file.name} · {(file.size / 1024).toFixed(0)} KB</p>
+            )}
+            <button
+              onClick={runUpload}
+              disabled={loading || !file}
+              className="bg-blue-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2 disabled:opacity-50"
+            >
+              {loading ? <><Loader2 className="w-3 h-3 animate-spin" /> Parsen + matchen...</> : <><Upload className="w-3 h-3" /> Match Vacatures</>}
+            </button>
+            <p className="text-[10px] font-bold text-slate-400">CV wordt geparsed en geëmbed maar niet opgeslagen.</p>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-[11px] font-black text-red-600 uppercase tracking-widest flex items-center gap-2">
+            <AlertCircle className="w-3 h-3" /> {error}
+          </p>
+        )}
+      </div>
+
+      {matches !== null && (
+        <>
+          {matchedFor && (
+            <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+              <Activity className="w-3 h-3 inline mr-1" /> Matches voor: <span className="text-black">{matchedFor}</span>
+            </p>
+          )}
+          <VacancyMatchesList matches={matches} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function MatchResultsList({ matches }: { matches: MatchCvResult[] }) {
+  if (matches.length === 0) {
+    return <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches gevonden.</p>;
+  }
+  return (
+    <div className="bg-white border-2 border-black overflow-hidden">
+      <table className="w-full">
+        <thead className="bg-black text-white">
+          <tr className="text-[10px] font-black uppercase tracking-widest">
+            <th className="p-3 text-left">CV</th>
+            <th className="p-3 text-left">Functie</th>
+            <th className="p-3 text-left">Locatie</th>
+            <th className="p-3 text-left w-24">Score</th>
+            <th className="p-3 text-left">Termen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {matches.map(m => (
+            <tr key={m._id} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
+              <td className="p-3 truncate max-w-[200px]">{m.fullName}</td>
+              <td className="p-3 truncate max-w-[200px] text-slate-500">{m.jobTitle || '—'}</td>
+              <td className="p-3 truncate max-w-[150px] text-slate-500">{m.location || '—'}</td>
+              <td className="p-3"><ScoreBadge score={m.matchScore} /></td>
+              <td className="p-3 text-[10px] font-bold text-slate-500">{(m.matchedTerms || []).join(', ')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function VacancyMatchesList({ matches }: { matches: MatchVacancyResult[] }) {
+  if (matches.length === 0) {
+    return <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches gevonden.</p>;
+  }
+  return (
+    <div className="bg-white border-2 border-black overflow-hidden">
+      <table className="w-full">
+        <thead className="bg-black text-white">
+          <tr className="text-[10px] font-black uppercase tracking-widest">
+            <th className="p-3 text-left">Vacature</th>
+            <th className="p-3 text-left">Bedrijf</th>
+            <th className="p-3 text-left">Locatie</th>
+            <th className="p-3 text-left w-24">Score</th>
+            <th className="p-3 text-left w-32">Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {matches.map((m, i) => (
+            <tr key={m._id || `${m.title}-${i}`} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
+              <td className="p-3 truncate max-w-[260px]">{m.title}</td>
+              <td className="p-3 truncate max-w-[180px] text-slate-500">{m.company || '—'}</td>
+              <td className="p-3 truncate max-w-[150px] text-slate-500">{m.location || '—'}</td>
+              <td className="p-3"><ScoreBadge score={m.matchScore} /></td>
+              <td className="p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">{m.matchType}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClose: () => void }) {
+  const [matches, setMatches] = useState<MatchVacancyResult[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/cvs/${cv._id}/matches`, { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.success) setMatches(data.matches || []);
+        else setError(data.message || 'Match mislukt');
+      })
+      .catch(err => !cancelled && setError(err instanceof Error ? err.message : 'Match mislukt'))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [cv._id, token]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white border-4 border-black w-full max-w-5xl max-h-[85vh] overflow-y-auto shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+      >
+        <div className="bg-black text-white p-6 flex justify-between items-center sticky top-0 z-10">
+          <div>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Matches voor</p>
+            <h3 className="text-2xl font-black tracking-tighter italic">{cv.fullName}</h3>
+            {cv.jobTitle && <p className="text-[11px] font-bold text-slate-300">{cv.jobTitle}</p>}
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6">
+          {loading ? (
+            <div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
+          ) : error ? (
+            <p className="text-center py-12 text-[11px] font-black text-red-600 uppercase tracking-widest">{error}</p>
+          ) : matches && matches.length > 0 ? (
+            <VacancyMatchesList matches={matches} />
+          ) : (
+            <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches.</p>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

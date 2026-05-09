@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import natural from 'natural';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
+import MatchEvent from '@/models/MatchEvent';
 import { requireAdmin } from '@/lib/server/auth';
 import { tokenize } from '@/lib/server/synonyms';
 
@@ -72,6 +73,26 @@ export async function POST(req: NextRequest) {
         })
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, 20);
+
+        try {
+            const top = matched.slice(0, 5);
+            if (top.length > 0) {
+                const vacancyTitle = String(vacancyText).split('\n')[0].slice(0, 200);
+                await MatchEvent.insertMany(
+                    top.map(t => ({
+                        cvId: t._id,
+                        cvFullName: t.fullName,
+                        vacancyTitle,
+                        score: t.matchScore,
+                        matchType: 'TF-IDF' as const,
+                        source: 'admin-vacancy' as const,
+                    })),
+                    { ordered: false },
+                );
+            }
+        } catch (err) {
+            console.error('MatchEvent log (admin-vacancy) failed:', err instanceof Error ? err.message : err);
+        }
 
         return NextResponse.json({
             success: true,

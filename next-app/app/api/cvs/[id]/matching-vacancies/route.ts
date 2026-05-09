@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
+import MatchEvent from '@/models/MatchEvent';
 import {
     cosineSimilarity,
     generateEmbedding,
@@ -69,28 +70,56 @@ export async function GET(req: NextRequest, { params }: Params) {
             });
         }
 
-        const matched = vacancies
-            .map(vacancy => {
-                const score = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
-                const obj = vacancy.toObject() as unknown as Record<string, unknown>;
-                delete obj.embedding;
-                // Sanitize description + requirements vóór company-strip
-                obj.description = sanitizeJobText(vacancy.description, vacancy.company);
-                obj.requirements = sanitizeJobText(vacancy.requirements, vacancy.company);
-                // GDPR-mask voor kandidaten — bedrijfsnaam/logo/apply-link niet tonen
-                delete obj.company;
-                delete obj.companyLogo;
-                delete obj.applyLink;
-                delete obj.fullText;
-                return {
-                    ...obj,
-                    matchScore: Math.round(score * 100),
-                    matchType: 'AI Semantic',
-                };
-            })
-            .filter(v => v.matchScore >= 40)
-            .sort((a, b) => b.matchScore - a.matchScore)
-            .slice(0, 20);
+        const scored = vacancies.map(vacancy => {
+            const score = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
+            const obj = vacancy.toObject() as unknown as Record<string, unknown>;
+            delete obj.embedding;
+            obj.description = sanitizeJobText(vacancy.description, vacancy.company);
+            obj.requirements = sanitizeJobText(vacancy.requirements, vacancy.company);
+            delete obj.company;
+            delete obj.companyLogo;
+            delete obj.applyLink;
+            delete obj.fullText;
+            return {
+                _vacancyId: vacancy._id,
+                _vacancyTitle: vacancy.title,
+                ...obj,
+                matchScore: Math.round(score * 100),
+                matchType: 'AI Semantic' as const,
+            };
+        })
+        .filter(v => v.matchScore >= 40)
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 20);
+
+        const matched = scored.map(({ _vacancyId: _v, _vacancyTitle: _t, ...rest }) => rest);
+
+        try {
+            const top = scored.slice(0, 5);
+            if (top.length > 0) {
+                const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                const existing = await MatchEvent.find({
+                    cvId: cv._id,
+                    vacancyId: { $in: top.map(t => t._vacancyId) },
+                    createdAt: { $gte: since },
+                }).select('vacancyId').lean();
+                const seen = new Set(existing.map(e => String(e.vacancyId)));
+                const docs = top
+                    .filter(t => !seen.has(String(t._vacancyId)))
+                    .map(t => ({
+                        cvId: cv._id,
+                        cvFullName: cv.fullName,
+                        vacancyId: t._vacancyId,
+                        vacancyTitle: t._vacancyTitle,
+                        score: t.matchScore,
+                        matchType: t.matchType,
+                        source: 'jobseeker' as const,
+                    }));
+                if (docs.length > 0) await MatchEvent.insertMany(docs, { ordered: false });
+            }
+        } catch (err) {
+            console.error('MatchEvent log (jobseeker) failed:', err instanceof Error ? err.message : err);
+        }
 
         console.log(`CV Matching - Found ${matched.length} vacancies for "${cv.fullName}"`);
 
