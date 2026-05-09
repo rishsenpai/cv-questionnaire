@@ -114,7 +114,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-6xl xs:text-7xl sm:text-9xl lg:text-[10rem] font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-12"
+              className="text-5xl xs:text-6xl sm:text-7xl md:text-8xl font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-12 max-w-5xl"
             >
               Vind je nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Uitdaging</span>
             </motion.h1>

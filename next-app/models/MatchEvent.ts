@@ -1,6 +1,6 @@
 import mongoose, { Schema, Model, Document, Types } from 'mongoose';
 
-export type MatchSource = 'jobseeker' | 'admin-cv' | 'admin-vacancy';
+export type MatchSource = 'jobseeker' | 'admin-cv' | 'admin-vacancy' | 'employer-public';
 export type MatchType = 'AI Semantic' | 'TF-IDF';
 
 export interface IMatchEvent extends Document {
@@ -11,6 +11,7 @@ export interface IMatchEvent extends Document {
     score: number;
     matchType: MatchType;
     source: MatchSource;
+    employerLeadId?: Types.ObjectId;
     createdAt: Date;
 }
 
@@ -21,7 +22,8 @@ const matchEventSchema = new Schema<IMatchEvent>({
     vacancyTitle: { type: String, trim: true },
     score: { type: Number, required: true },
     matchType: { type: String, enum: ['AI Semantic', 'TF-IDF'], required: true },
-    source: { type: String, enum: ['jobseeker', 'admin-cv', 'admin-vacancy'], required: true, index: true },
+    source: { type: String, enum: ['jobseeker', 'admin-cv', 'admin-vacancy', 'employer-public'], required: true, index: true },
+    employerLeadId: { type: Schema.Types.ObjectId, ref: 'EmployerLead', index: true },
     createdAt: { type: Date, default: Date.now, index: true, expires: 60 * 60 * 24 * 90 },
 });
 

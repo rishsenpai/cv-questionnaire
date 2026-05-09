@@ -51,6 +51,7 @@ export function Navbar() {
     { name: 'Vacatures', href: '/vacatures' },
     { name: 'CV Upload', href: '/cv-upload' },
     { name: 'Mijn Matches', href: '/mijn-matches' },
+    { name: 'Werkgevers', href: '/voor-werkgevers' },
     { name: 'Over Ons', href: '/over-ons' },
   ];
 
