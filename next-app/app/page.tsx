@@ -17,7 +17,6 @@ import {
   Star,
   Zap,
   Sprout,
-  ChevronRight,
   MessageCircle,
   TrendingUp,
   Code2,
@@ -27,6 +26,8 @@ import {
   ShoppingBag,
   Target,
   HardHat,
+  UploadCloud,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -93,9 +94,6 @@ function SectorCard({
       </div>
       <h4 className="text-xl md:text-2xl font-black uppercase tracking-tighter italic leading-tight mb-3">{label}</h4>
       <p className="text-sm font-bold text-slate-500 leading-relaxed mb-auto">{desc}</p>
-      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors">
-        Talent aanvragen <ArrowRight className="w-3 h-3" />
-      </div>
     </motion.button>
   );
 }
@@ -138,70 +136,130 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-16 sm:pt-28 sm:pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 px-3 py-1 text-[10px] font-black tracking-[0.2em] uppercase mb-6"
-            >
-              <Sparkles className="w-3 h-3" />
-              AI-Powered Vacaturebank
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-5xl xs:text-6xl sm:text-7xl md:text-8xl font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-12 max-w-5xl"
-            >
-              Vind je nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Uitdaging</span>
-            </motion.h1>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col md:flex-row gap-4 items-end mb-12"
-            >
-              <div className="flex-1 w-full border-b-4 border-black py-2 group focus-within:border-blue-600 transition-colors">
-                <input
-                  type="text"
-                  placeholder="Functie, trefwoord of bedrijf..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent text-2xl font-bold placeholder:text-slate-300 outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      router.push(`/vacatures?q=${encodeURIComponent(searchTerm)}`);
-                    }
-                  }}
-                />
-              </div>
-              <Link
-                href={`/vacatures?q=${encodeURIComponent(searchTerm)}`}
-                className="bg-black text-white px-10 py-5 font-black uppercase tracking-tighter hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap text-center"
+          <div className="grid lg:grid-cols-3 gap-10 lg:gap-12 items-start">
+            <div className="lg:col-span-2">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 px-3 py-1 text-[10px] font-black tracking-[0.2em] uppercase mb-6"
               >
-                Zoeken
-              </Link>
-            </motion.div>
+                <Sparkles className="w-3 h-3" />
+                AI-Powered Vacaturebank
+              </motion.div>
 
-            <div className="flex flex-wrap gap-4 items-center text-xs font-bold text-slate-400">
-              <span className="uppercase tracking-widest italic">Populaire zoekopdrachten:</span>
-              {['Mijnbouw', 'Energie & Water', 'Cybersecurity', 'Transport'].map(tag => (
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="text-5xl xs:text-6xl sm:text-7xl lg:text-7xl xl:text-8xl font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-10"
+              >
+                Vind je nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Uitdaging</span>
+              </motion.h1>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="flex flex-col md:flex-row gap-4 items-end mb-10"
+              >
+                <div className="flex-1 w-full border-b-4 border-black py-2 group focus-within:border-blue-600 transition-colors">
+                  <input
+                    type="text"
+                    placeholder="Functie, trefwoord of bedrijf..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-transparent text-2xl font-bold placeholder:text-slate-300 outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        router.push(`/vacatures?q=${encodeURIComponent(searchTerm)}`);
+                      }
+                    }}
+                  />
+                </div>
                 <Link
-                  key={tag}
-                  href={`/vacatures?q=${encodeURIComponent(tag)}`}
-                  className="px-3 py-1 border border-slate-200 hover:border-black transition-colors cursor-pointer text-slate-600"
+                  href={`/vacatures?q=${encodeURIComponent(searchTerm)}`}
+                  className="bg-black text-white px-10 py-5 font-black uppercase tracking-tighter hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap text-center"
                 >
-                  {tag}
+                  Zoeken
                 </Link>
-              ))}
+              </motion.div>
+
+              <div className="flex flex-wrap gap-3 items-center text-xs font-bold text-slate-400">
+                <span className="uppercase tracking-widest italic">Populaire zoekopdrachten:</span>
+                {['Mijnbouw', 'Energie & Water', 'Cybersecurity', 'Transport'].map(tag => (
+                  <Link
+                    key={tag}
+                    href={`/vacatures?q=${encodeURIComponent(tag)}`}
+                    className="px-3 py-1 border border-slate-200 hover:border-black transition-colors cursor-pointer text-slate-600"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+
+              <p className="mt-6 text-[11px] font-bold text-slate-400 italic">
+                Werkgever? <Link href="/voor-werkgevers" className="underline hover:text-blue-600">Vind direct talent</Link> via onze geanonimiseerde kandidaat-database.
+              </p>
             </div>
 
-            <p className="mt-6 text-[11px] font-bold text-slate-400 italic">
-              Werkgever? <Link href="/voor-werkgevers" className="underline hover:text-blue-600">Vind direct talent</Link> via onze geanonimiseerde kandidaat-database.
-            </p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.4 }}
+              className="lg:col-span-1 lg:sticky lg:top-24"
+            >
+              <div className="relative bg-white border-4 border-black p-7 shadow-[12px_12px_0px_0px_rgba(59,130,246,1)]">
+                <div className="absolute -top-3 -left-3 bg-blue-600 text-white px-3 py-1 text-[9px] font-black tracking-[0.2em] uppercase border-2 border-black -rotate-3">
+                  Voor werkzoekenden
+                </div>
+
+                <div className="flex items-center gap-3 mb-5 pt-2">
+                  <div className="w-12 h-12 bg-black flex items-center justify-center text-blue-400">
+                    <UploadCloud className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black uppercase tracking-tighter italic leading-none">Upload je CV</h3>
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">AI-Matches in seconden</p>
+                  </div>
+                </div>
+
+                <p className="text-sm font-bold text-slate-600 mb-6 leading-snug">
+                  Drop je CV en zie direct welke openstaande vacatures bij jouw profiel passen. Geen registratie vooraf.
+                </p>
+
+                <ul className="space-y-2 mb-6 text-[11px] font-bold text-slate-700">
+                  {[
+                    'AI vergelijkt je profiel met alle vacatures',
+                    'Top-matches per score, met sollicitatieknop',
+                    'Optioneel een account voor follow-up',
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  href="/cv-upload"
+                  className="block w-full bg-blue-600 text-white text-center py-4 font-black uppercase tracking-widest text-[11px] hover:bg-black transition-all flex items-center justify-center gap-2"
+                >
+                  Upload je CV <ArrowRight className="w-3 h-3" />
+                </Link>
+
+                <Link
+                  href="/cv-builder"
+                  className="mt-3 block w-full text-center py-3 font-black uppercase tracking-widest text-[10px] border-2 border-black hover:bg-black hover:text-white transition-all flex items-center justify-center gap-2"
+                >
+                  <FileText className="w-3 h-3" /> Of bouw een nieuw CV
+                </Link>
+
+                <p className="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center italic">
+                  PDF · DOCX · max 4.5 MB
+                </p>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -209,17 +267,9 @@ export default function Home() {
       {/* Trending Sectors */}
       <section className="bg-slate-50 border-y border-slate-200 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-            <div>
-              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-blue-600 mb-2">Onze Specialismen</h2>
-              <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">Sectoren waarin wij thuis zijn</h3>
-            </div>
-            <button
-              onClick={() => router.push('/vacatures')}
-              className="text-sm font-bold flex items-center gap-2 group italic text-slate-600 hover:text-blue-600"
-            >
-              Alle sectoren <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+          <div className="mb-12">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-blue-600 mb-2">Onze Specialismen</h2>
+            <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">Sectoren waarin wij thuis zijn</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
