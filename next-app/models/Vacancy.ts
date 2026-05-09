@@ -66,7 +66,13 @@ const vacancySchema = new Schema<IVacancy>({
     applicationCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
-vacancySchema.index({ externalId: 1, source: 1 }, { unique: true, sparse: true });
+vacancySchema.index(
+    { externalId: 1, source: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { externalId: { $type: 'string' } },
+    },
+);
 
 const Vacancy: Model<IVacancy> = (mongoose.models.Vacancy as Model<IVacancy>) || mongoose.model<IVacancy>('Vacancy', vacancySchema);
 export default Vacancy;
