@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
+import Employer from '@/models/Employer';
 import CuratedMatch from '@/models/CuratedMatch';
 import { requireAdmin } from '@/lib/server/auth';
 import { generateVacancyEmbedding } from '@/lib/server/vacancyEmbedding';
+import { runAutoMatchForVacancy } from '@/lib/server/autoMatch';
 
 export async function GET(req: NextRequest) {
     const unauth = await requireAdmin(req);
@@ -69,13 +72,30 @@ export async function POST(req: NextRequest) {
         const {
             title, company, location, description, requirements,
             employmentType, isRemote, salaryMin, salaryMax, salaryCurrency, salaryPeriod,
+            employerId,
         } = body || {};
 
         if (!title || !String(title).trim()) {
             return NextResponse.json({ success: false, message: 'Titel is verplicht' }, { status: 400 });
         }
 
-        const fullText = [title, company, description, requirements, location].filter(Boolean).join(' ');
+        // Optioneel: koppel aan een werkgever (admin upload-namens flow)
+        let resolvedEmployerId: mongoose.Types.ObjectId | undefined;
+        let employerCompany: string | undefined;
+        if (employerId) {
+            if (!mongoose.Types.ObjectId.isValid(employerId)) {
+                return NextResponse.json({ success: false, message: 'Ongeldig employerId' }, { status: 400 });
+            }
+            const employer = await Employer.findById(employerId).select('companyName');
+            if (!employer) {
+                return NextResponse.json({ success: false, message: 'Werkgever niet gevonden' }, { status: 404 });
+            }
+            resolvedEmployerId = employer._id as mongoose.Types.ObjectId;
+            employerCompany = employer.companyName;
+        }
+
+        const finalCompany = (company ? String(company).trim() : undefined) || employerCompany;
+        const fullText = [title, finalCompany, description, requirements, location].filter(Boolean).join(' ');
         const salary = (salaryMin || salaryMax) ? {
             min: salaryMin ? Number(salaryMin) : undefined,
             max: salaryMax ? Number(salaryMax) : undefined,
@@ -84,28 +104,41 @@ export async function POST(req: NextRequest) {
         } : undefined;
 
         const vacancy = await Vacancy.create({
+            employerId: resolvedEmployerId,
             title: String(title).trim(),
-            company: company ? String(company).trim() : undefined,
+            company: finalCompany,
             location: location ? String(location).trim() : undefined,
             description: description ? String(description).trim() : undefined,
             requirements: requirements ? String(requirements).trim() : undefined,
             employmentType: employmentType ? String(employmentType).trim() : undefined,
             isRemote: Boolean(isRemote),
             salary,
-            source: 'internal',
+            // Als admin namens een werkgever plaatst → markeer als 'employer' zodat
+            // het in de admin-lijst dezelfde badge krijgt en auto-match draait.
+            source: resolvedEmployerId ? 'employer' : 'internal',
             isActive: true,
             fullText,
             postedAt: new Date(),
         });
 
+        const vacancyId = String(vacancy._id);
+
         if (process.env.OPENAI_API_KEY || process.env.NODE_ENV === 'test') {
-            generateVacancyEmbedding(String(vacancy._id)).catch(err => console.error('embed error:', err.message));
+            const chain = generateVacancyEmbedding(vacancyId);
+            if (resolvedEmployerId) {
+                // Auto-match alleen zinvol als er een werkgever-eigenaar is
+                chain.then(() => runAutoMatchForVacancy(vacancyId)).catch(err => {
+                    console.error('embedding/autoMatch faalde:', err instanceof Error ? err.message : err);
+                });
+            } else {
+                chain.catch(err => console.error('embed error:', err.message));
+            }
         }
 
         return NextResponse.json({
             success: true,
             message: 'Vacature aangemaakt',
-            data: { _id: String(vacancy._id), title: vacancy.title },
+            data: { _id: vacancyId, title: vacancy.title },
         });
     } catch (err) {
         console.error('Admin vacancy create error:', err);

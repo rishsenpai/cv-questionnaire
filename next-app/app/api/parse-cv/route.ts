@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractText } from '@/lib/server/cvTextExtract';
 import { parseCVWithAI } from '@/lib/server/embeddings';
 import { parseMessages, type Language } from '@/lib/server/i18n';
+import {
+    extractEmail,
+    extractPhone,
+    isValidEmail,
+    isValidNLOrSRPhone,
+    formatPhone,
+} from '@/lib/contactExtract';
 
 export const maxDuration = 60;
 
@@ -37,6 +44,20 @@ export async function POST(req: NextRequest) {
 
         console.log(`Parsing CV with AI: ${extractedText.length} characters extracted`);
         const parsedData = await parseCVWithAI(extractedText, lang);
+
+        // Backfill: AI mist soms email/telefoon of geeft een onbruikbaar nummer.
+        // Regex de ruwe tekst als de AI-waarde leeg of ongeldig is.
+        if (!parsedData.email || !isValidEmail(parsedData.email)) {
+            const found = extractEmail(extractedText);
+            if (found) parsedData.email = found;
+        }
+        if (!parsedData.phone || !isValidNLOrSRPhone(parsedData.phone)) {
+            const found = extractPhone(extractedText);
+            if (found) parsedData.phone = found;
+            else if (parsedData.phone) parsedData.phone = formatPhone(parsedData.phone);
+        } else {
+            parsedData.phone = formatPhone(parsedData.phone);
+        }
 
         return NextResponse.json({
             success: true,

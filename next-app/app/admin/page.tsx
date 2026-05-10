@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -559,10 +559,68 @@ function VacanciesTab({ token }: { token: string }) {
     title: '', company: '', location: 'Paramaribo', description: '', requirements: '',
     employmentType: 'Full-time', isRemote: false,
     salaryMin: '', salaryMax: '', salaryCurrency: 'SRD', salaryPeriod: 'month',
+    employerId: '',
   });
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [createParsing, setCreateParsing] = useState(false);
+  const [createParsedFrom, setCreateParsedFrom] = useState<string | null>(null);
+  const [createDragOver, setCreateDragOver] = useState(false);
+  const [employerOptions, setEmployerOptions] = useState<Array<{ _id: string; companyName: string; username: string }>>([]);
+  const createFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!showCreate) return;
+    fetch('/api/admin/employers', { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(data => { if (data.success) setEmployerOptions(data.data); })
+      .catch(() => { /* ignore */ });
+  }, [showCreate, token]);
+
+  const handleCreateFile = async (file: File) => {
+    if (file.size > 4.5 * 1024 * 1024) {
+      setCreateError('Bestand is groter dan 4.5 MB');
+      return;
+    }
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isDocx = file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
+    if (!isPdf && !isDocx) {
+      setCreateError('Alleen PDF of Word (.docx)');
+      return;
+    }
+    setCreateError(null);
+    setCreateParsing(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(((r.result as string).split(',')[1] || ''));
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      const res = await fetch('/api/parse-vacancy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileData: base64, fileType: file.type, fileName: file.name }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setCreateError(data.message || 'AI-analyse mislukt');
+        return;
+      }
+      setCreateForm(f => ({
+        ...f,
+        title: data.data.title || f.title,
+        location: data.data.location || f.location,
+        description: data.data.requirements || f.description,
+      }));
+      setCreateParsedFrom(file.name);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Verbinding mislukt');
+    } finally {
+      setCreateParsing(false);
+    }
+  };
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -638,7 +696,9 @@ function VacanciesTab({ token }: { token: string }) {
         title: '', company: '', location: 'Paramaribo', description: '', requirements: '',
         employmentType: 'Full-time', isRemote: false,
         salaryMin: '', salaryMax: '', salaryCurrency: 'SRD', salaryPeriod: 'month',
+        employerId: '',
       });
+      setCreateParsedFrom(null);
       await reload();
     } finally { setCreateBusy(false); }
   };
@@ -696,9 +756,87 @@ function VacanciesTab({ token }: { token: string }) {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-xl font-black uppercase tracking-tighter italic">Nieuwe Vacature</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Handmatig toevoegen — geen API-limiet</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Handmatig of namens werkgever — drag PDF/Word voor AI auto-fill</p>
                 </div>
                 <button type="button" onClick={() => setShowCreate(false)} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              </div>
+
+              {/* Werkgever-koppeling */}
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">
+                  Plaats namens werkgever (optioneel)
+                </label>
+                <select
+                  value={createForm.employerId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    const emp = employerOptions.find(o => o._id === id);
+                    setCreateForm(f => ({
+                      ...f,
+                      employerId: id,
+                      company: emp?.companyName || f.company,
+                    }));
+                  }}
+                  className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm"
+                >
+                  <option value="">— Geen koppeling (admin-vacature) —</option>
+                  {employerOptions.map(o => (
+                    <option key={o._id} value={o._id}>{o.companyName} ({o.username})</option>
+                  ))}
+                </select>
+                {createForm.employerId && (
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-2 flex items-center gap-2">
+                    <Sparkles className="w-3 h-3" /> Auto-match draait na opslaan · suggesties verschijnen direct in deze tab
+                  </p>
+                )}
+              </div>
+
+              {/* AI auto-fill drop zone */}
+              <input
+                ref={createFileRef}
+                type="file"
+                accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleCreateFile(f);
+                  e.target.value = '';
+                }}
+                className="hidden"
+              />
+              <div
+                onDragEnter={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setCreateDragOver(true); } }}
+                onDragOver={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setCreateDragOver(true); } }}
+                onDragLeave={(e) => { if (!(e.currentTarget as Node).contains(e.relatedTarget as Node | null)) setCreateDragOver(false); }}
+                onDrop={(e) => { e.preventDefault(); setCreateDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleCreateFile(f); }}
+                className={cn(
+                  'border-2 border-dashed p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-colors',
+                  createDragOver ? 'bg-blue-50 border-blue-600' : 'bg-slate-50 border-slate-200',
+                )}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">
+                    <Sparkles className="w-3 h-3" /> AI Auto-Fill
+                  </div>
+                  <p className="text-sm font-bold text-slate-700">
+                    {createDragOver ? 'Laat los om te uploaden' : 'Heb je een vacature in een Word- of PDF-bestand?'}
+                  </p>
+                  <p className="text-[11px] font-bold text-slate-400 italic">
+                    Sleep het hierheen of klik op &quot;Upload Bestand&quot;. Velden worden auto-ingevuld.
+                  </p>
+                  {createParsedFrom && (
+                    <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mt-2 flex items-center gap-2">
+                      <CheckCircle2 className="w-3 h-3" /> Ingevuld vanuit: {createParsedFrom}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => createFileRef.current?.click()}
+                  disabled={createParsing}
+                  className="bg-black text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0"
+                >
+                  {createParsing ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyseren...</> : <><Upload className="w-3 h-3" /> Upload Bestand</>}
+                </button>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">

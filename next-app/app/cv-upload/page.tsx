@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { isValidEmail, isValidNLOrSRPhone } from '@/lib/contactExtract';
 
 interface ParsedCV {
   fullName: string;
@@ -293,7 +294,19 @@ export default function CvUploadPage() {
             </motion.div>
           )}
 
-          {stage === 'review' && parsed && (
+          {stage === 'review' && parsed && (() => {
+            const errors = {
+              fullName: parsed.fullName.trim().length < 2 ? 'Naam is verplicht (min. 2 tekens).' : null,
+              email: !parsed.email.trim()
+                ? 'E-mailadres is verplicht.'
+                : !isValidEmail(parsed.email) ? 'Ongeldig e-mailadres (bv. naam@domein.com).' : null,
+              phone: !parsed.phone.trim()
+                ? 'Telefoonnummer is verplicht.'
+                : !isValidNLOrSRPhone(parsed.phone) ? 'Geen geldig NL of SR nummer (bv. 06-12345678 of +597 8123456).' : null,
+              jobTitle: parsed.jobTitle.trim().length < 2 ? 'Functie is verplicht.' : null,
+            };
+            const hasErrors = Object.values(errors).some(Boolean);
+            return (
             <motion.div
               key="review"
               initial={{ opacity: 0, y: 20 }}
@@ -320,10 +333,10 @@ export default function CvUploadPage() {
               </div>
 
               <div className="grid md:grid-cols-2 gap-6 mb-8">
-                <Field icon={User} label="Naam" value={parsed.fullName} onChange={(v) => setParsed(p => p ? { ...p, fullName: v } : p)} />
-                <Field icon={Briefcase} label="Functie" value={parsed.jobTitle} onChange={(v) => setParsed(p => p ? { ...p, jobTitle: v } : p)} />
-                <Field icon={Mail} label="E-mail" value={parsed.email} type="email" onChange={(v) => setParsed(p => p ? { ...p, email: v } : p)} />
-                <Field icon={Phone} label="Telefoon" value={parsed.phone} onChange={(v) => setParsed(p => p ? { ...p, phone: v } : p)} />
+                <Field icon={User} label="Naam *" value={parsed.fullName} onChange={(v) => setParsed(p => p ? { ...p, fullName: v } : p)} error={errors.fullName} />
+                <Field icon={Briefcase} label="Functie *" value={parsed.jobTitle} onChange={(v) => setParsed(p => p ? { ...p, jobTitle: v } : p)} error={errors.jobTitle} />
+                <Field icon={Mail} label="E-mail *" value={parsed.email} type="email" onChange={(v) => setParsed(p => p ? { ...p, email: v } : p)} error={errors.email} />
+                <Field icon={Phone} label="Telefoon *" value={parsed.phone} type="tel" onChange={(v) => setParsed(p => p ? { ...p, phone: v } : p)} error={errors.phone} />
                 <Field icon={MapPin} label="Locatie" value={parsed.location} onChange={(v) => setParsed(p => p ? { ...p, location: v } : p)} />
                 <Field icon={Sparkles} label="Talen" value={parsed.languages} onChange={(v) => setParsed(p => p ? { ...p, languages: v } : p)} />
               </div>
@@ -371,15 +384,30 @@ export default function CvUploadPage() {
                 </div>
               )}
 
+              {hasErrors && (
+                <div className="mb-6 flex items-start gap-3 bg-amber-50 border-2 border-amber-300 p-4 text-amber-800">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div className="text-xs font-bold space-y-1">
+                    <p className="uppercase tracking-widest text-[10px] mb-2 font-black text-amber-900">
+                      Vul of corrigeer onderstaande velden:
+                    </p>
+                    {Object.values(errors).filter(Boolean).map((e, i) => (
+                      <p key={i}>· {e}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleSubmit}
-                disabled={!parsed.fullName || !parsed.email}
+                disabled={hasErrors}
                 className="w-full bg-blue-600 text-white py-5 font-black uppercase tracking-[0.2em] text-sm hover:bg-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed active:translate-x-1 active:translate-y-1 active:shadow-none"
               >
                 Bevestig & toon matches <ArrowRight className="w-5 h-5" />
               </button>
             </motion.div>
-          )}
+            );
+          })()}
 
           {stage === 'submitting' && (
             <motion.div
@@ -436,13 +464,17 @@ function Field({
   value,
   onChange,
   type = 'text',
+  error,
 }: {
   icon: typeof User;
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  error?: string | null;
 }) {
+  const [touched, setTouched] = useState(false);
+  const showError = !!error && (touched || !!value);
   return (
     <div>
       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
@@ -453,10 +485,23 @@ function Field({
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full p-4 pr-10 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm bg-slate-50 focus:bg-white transition-all"
+          onBlur={() => setTouched(true)}
+          aria-invalid={showError || undefined}
+          className={`w-full p-4 pr-10 border-2 outline-none font-bold text-sm bg-slate-50 focus:bg-white transition-all ${
+            showError
+              ? 'border-red-400 focus:border-red-600 bg-red-50/50'
+              : 'border-slate-100 focus:border-black'
+          }`}
         />
-        <Edit2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-300 group-focus-within:text-blue-600" />
+        <Edit2 className={`absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 ${
+          showError ? 'text-red-400' : 'text-slate-300 group-focus-within:text-blue-600'
+        }`} />
       </div>
+      {showError && (
+        <p className="text-[11px] font-bold text-red-600 mt-2 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" /> {error}
+        </p>
+      )}
     </div>
   );
 }
