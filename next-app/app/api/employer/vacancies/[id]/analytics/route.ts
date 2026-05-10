@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
         const [byStatus, jobseekerMatchCount, recentMatchEvents] = await Promise.all([
             CuratedMatch.aggregate([
-                { $match: { vacancyId: vacancy._id } },
+                { $match: { vacancyId: vacancy._id, status: { $ne: 'suggested' } } },
                 { $group: { _id: '$status', count: { $sum: 1 } } },
             ]),
             MatchEvent.countDocuments({ vacancyId: vacancy._id, source: 'jobseeker' }),

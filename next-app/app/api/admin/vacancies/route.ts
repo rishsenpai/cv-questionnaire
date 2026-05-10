@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
+import CuratedMatch from '@/models/CuratedMatch';
 import { requireAdmin } from '@/lib/server/auth';
 import { generateVacancyEmbedding } from '@/lib/server/vacancyEmbedding';
 
@@ -31,11 +32,26 @@ export async function GET(req: NextRequest) {
             .select('-fileData -embedding -fullText')
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit);
+            .limit(limit)
+            .lean();
+
+        // Tel open suggesties per vacature in één aggregate
+        const vacancyIds = vacancies.map(v => v._id);
+        const suggestionCounts = vacancyIds.length > 0
+            ? await CuratedMatch.aggregate([
+                { $match: { vacancyId: { $in: vacancyIds }, status: 'suggested' } },
+                { $group: { _id: '$vacancyId', count: { $sum: 1 } } },
+            ])
+            : [];
+        const countMap = new Map(suggestionCounts.map(s => [String(s._id), s.count]));
+        const enriched = vacancies.map(v => ({
+            ...v,
+            suggestionCount: countMap.get(String(v._id)) || 0,
+        }));
 
         return NextResponse.json({
             success: true,
-            vacancies,
+            vacancies: enriched,
             pagination: { page, limit, total, pages: Math.ceil(total / limit) },
         });
     } catch (err) {

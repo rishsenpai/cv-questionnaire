@@ -32,6 +32,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         const matches = await CuratedMatch.find({
             vacancyId: id,
             employerId: auth.employerId,
+            status: { $ne: 'suggested' }, // suggesties zijn admin-only tot promote
         }).sort({ addedAt: -1 });
 
         const cvIds = matches.map(m => m.cvId).filter(Boolean);

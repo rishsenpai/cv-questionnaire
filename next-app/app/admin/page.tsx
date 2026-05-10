@@ -173,8 +173,12 @@ interface OverviewStats {
   cvEmbeddingPct: number;
   totalVacancies: number;
   adzunaVacancies: number;
+  jsearchVacancies: number;
+  employerVacancies: number;
   internalVacancies: number;
   vacWithEmbedding: number;
+  employerLast7d: number;
+  openSuggestions: number;
 }
 
 function OverviewTab({ token }: { token: string }) {
@@ -194,8 +198,12 @@ function OverviewTab({ token }: { token: string }) {
         cvEmbeddingPct: embStatus.percentage || 0,
         totalVacancies: vacStats.stats?.total || 0,
         adzunaVacancies: vacStats.stats?.adzuna || 0,
+        jsearchVacancies: vacStats.stats?.jsearch || 0,
+        employerVacancies: vacStats.stats?.employer || 0,
         internalVacancies: vacStats.stats?.internal || 0,
         vacWithEmbedding: vacStats.stats?.withEmbeddings || 0,
+        employerLast7d: vacStats.stats?.employerLast7d || 0,
+        openSuggestions: vacStats.stats?.openSuggestions || 0,
       });
     }).finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
@@ -210,9 +218,25 @@ function OverviewTab({ token }: { token: string }) {
       <SectionHeader title="Overzicht" subtitle="Realtime statistieken van platform-data" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard icon={FileText} label="Totaal CVs" value={stats.totalCvs} accent="blue" />
-        <StatCard icon={Sparkles} label="Met Embedding" value={`${stats.cvEmbeddingPct}%`} sublabel={`${stats.cvWithEmbedding}/${stats.totalCvs}`} accent="emerald" />
-        <StatCard icon={Briefcase} label="Vacatures" value={stats.totalVacancies} sublabel={`${stats.internalVacancies} intern · ${stats.adzunaVacancies} Adzuna`} accent="black" />
+        <StatCard icon={Sparkles} label="CV's met Embedding" value={`${stats.cvEmbeddingPct}%`} sublabel={`${stats.cvWithEmbedding}/${stats.totalCvs}`} accent="emerald" />
+        <StatCard icon={Briefcase} label="Vacatures" value={stats.totalVacancies} sublabel={`${stats.employerVacancies} werkgever · ${stats.internalVacancies} intern · ${stats.adzunaVacancies} Adzuna · ${stats.jsearchVacancies} JSearch`} accent="black" />
         <StatCard icon={Cpu} label="Vacatures met embedding" value={stats.vacWithEmbedding} accent="blue" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <StatCard
+          icon={Briefcase}
+          label="Werkgever-uploads (7d)"
+          value={stats.employerLast7d}
+          sublabel="Nieuwe vacatures geplaatst door werkgevers, laatste 7 dagen"
+          accent="emerald"
+        />
+        <StatCard
+          icon={Target}
+          label="Open AI-suggesties"
+          value={stats.openSuggestions}
+          sublabel="Wachtend op admin-review (Matching tab → push)"
+          accent={stats.openSuggestions > 0 ? 'blue' : 'black'}
+        />
       </div>
     </div>
   );
@@ -495,12 +519,29 @@ interface VacancyRow {
   location?: string;
   source?: string;
   createdAt: string;
+  suggestionCount?: number;
 }
+
+const SOURCE_BADGE: Record<string, string> = {
+  employer: 'bg-blue-50 text-blue-700 border border-blue-200',
+  adzuna: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  jsearch: 'bg-purple-50 text-purple-700 border border-purple-200',
+  internal: 'bg-slate-100 text-slate-700 border border-slate-200',
+};
+
+const SOURCE_LABEL: Record<string, string> = {
+  employer: 'Werkgever',
+  adzuna: 'Adzuna',
+  jsearch: 'JSearch',
+  internal: 'Admin',
+};
 
 const JSEARCH_PRESETS_SR = 'manager, engineer, officer, consultant, sales, developer, accountant, supervisor, coordinator, analyst';
 
 function VacanciesTab({ token }: { token: string }) {
   const [vacancies, setVacancies] = useState<VacancyRow[]>([]);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'employer' | 'adzuna' | 'jsearch' | 'internal'>('all');
+  const [suggestionsFor, setSuggestionsFor] = useState<VacancyRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -817,6 +858,24 @@ function VacanciesTab({ token }: { token: string }) {
         )}
       </AnimatePresence>
 
+      <div className="flex flex-wrap gap-2">
+        {(['all', 'employer', 'adzuna', 'jsearch', 'internal'] as const).map(f => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setSourceFilter(f)}
+            className={cn(
+              'px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border-2 transition-colors',
+              sourceFilter === f
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-black',
+            )}
+          >
+            {f === 'all' ? 'Alle' : SOURCE_LABEL[f] || f}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
       ) : (
@@ -828,38 +887,202 @@ function VacanciesTab({ token }: { token: string }) {
                 <th className="p-3 text-left">Bedrijf</th>
                 <th className="p-3 text-left">Locatie</th>
                 <th className="p-3 text-left">Bron</th>
+                <th className="p-3 text-left">AI-suggesties</th>
                 <th className="p-3 text-right w-24">Acties</th>
               </tr>
             </thead>
             <tbody>
-              {vacancies.length === 0 && (
-                <tr><td colSpan={5} className="p-12 text-center text-[11px] font-black uppercase tracking-widest text-slate-300">Geen vacatures.</td></tr>
-              )}
-              {vacancies.map(v => (
-                <tr key={v._id} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
-                  <td className="p-3 truncate max-w-[300px]">{v.title}</td>
-                  <td className="p-3 truncate max-w-[200px] text-slate-500">{v.company || '—'}</td>
-                  <td className="p-3 truncate max-w-[150px] text-slate-500">{v.location || '—'}</td>
-                  <td className="p-3">
-                    <span className={cn(
-                      'text-[9px] font-black uppercase tracking-widest px-2 py-0.5',
-                      v.source === 'adzuna' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-600',
-                    )}>
-                      {v.source || 'internal'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <button onClick={() => deleteVacancy(v._id)} disabled={busy} className="text-red-600 hover:text-red-800 disabled:opacity-50">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {(() => {
+                const filtered = sourceFilter === 'all'
+                  ? vacancies
+                  : sourceFilter === 'internal'
+                    ? vacancies.filter(v => !v.source || v.source === 'internal')
+                    : vacancies.filter(v => v.source === sourceFilter);
+                if (filtered.length === 0) {
+                  return <tr><td colSpan={6} className="p-12 text-center text-[11px] font-black uppercase tracking-widest text-slate-300">Geen vacatures.</td></tr>;
+                }
+                return filtered.map(v => {
+                  const src = v.source || 'internal';
+                  return (
+                    <tr key={v._id} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
+                      <td className="p-3 truncate max-w-[300px]">{v.title}</td>
+                      <td className="p-3 truncate max-w-[200px] text-slate-500">{v.company || '—'}</td>
+                      <td className="p-3 truncate max-w-[150px] text-slate-500">{v.location || '—'}</td>
+                      <td className="p-3">
+                        <span className={cn(
+                          'text-[9px] font-black uppercase tracking-widest px-2 py-0.5',
+                          SOURCE_BADGE[src] || SOURCE_BADGE.internal,
+                        )}>
+                          {SOURCE_LABEL[src] || src}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        {v.suggestionCount && v.suggestionCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setSuggestionsFor(v)}
+                            className="bg-blue-600 text-white px-3 py-1 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2"
+                          >
+                            <Sparkles className="w-3 h-3" /> {v.suggestionCount} suggestie{v.suggestionCount === 1 ? '' : 's'}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest">—</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right">
+                        <button onClick={() => deleteVacancy(v._id)} disabled={busy} className="text-red-600 hover:text-red-800 disabled:opacity-50">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>
       )}
+
+      <AnimatePresence>
+        {suggestionsFor && (
+          <SuggestionsModal
+            vacancy={suggestionsFor}
+            token={token}
+            onClose={() => setSuggestionsFor(null)}
+            onChange={reload}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+interface SuggestionRow {
+  _id: string;
+  cvId: string;
+  matchScore?: number;
+  source: string;
+  addedAt: string;
+  cv: { _id: string; fullName?: string; jobTitle?: string; location?: string } | null;
+}
+
+function SuggestionsModal({
+  vacancy, token, onClose, onChange,
+}: {
+  vacancy: VacancyRow; token: string; onClose: () => void; onChange: () => void;
+}) {
+  const [items, setItems] = useState<SuggestionRow[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    const res = await fetch(`/api/admin/vacancies/${vacancy._id}/curated-matches?status=suggested`, {
+      headers: { 'x-admin-token': token },
+    });
+    const data = await res.json();
+    if (data.success) setItems(data.matches);
+  }, [vacancy._id, token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const promote = async (id: string) => {
+    setBusy(id);
+    try {
+      await fetch(`/api/admin/curated-matches/${id}/promote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({}),
+      });
+      await load();
+      onChange();
+    } finally { setBusy(null); }
+  };
+
+  const reject = async (id: string) => {
+    if (!confirm('Suggestie verwijderen?')) return;
+    setBusy(id);
+    try {
+      await fetch(`/api/admin/curated-matches/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': token },
+      });
+      await load();
+      onChange();
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white border-4 border-black w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+      >
+        <div className="bg-black text-white p-6 flex items-center justify-between sticky top-0 z-10">
+          <div>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">AI-suggesties (OpenAI embeddings)</p>
+            <h3 className="text-xl font-black uppercase tracking-tighter italic">{vacancy.title}</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-3">
+          {!items ? (
+            <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" /></div>
+          ) : items.length === 0 ? (
+            <p className="text-center py-8 text-[11px] font-black uppercase tracking-widest text-slate-400">
+              Geen open suggesties meer voor deze vacature.
+            </p>
+          ) : (
+            items.map(s => (
+              <div key={s._id} className="border-2 border-slate-200 p-4 flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-sm truncate">{s.cv?.fullName || '—'}</p>
+                  <p className="text-xs font-bold text-slate-500 truncate">{s.cv?.jobTitle || '—'} · {s.cv?.location || '—'}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                    Bron: {s.source === 'auto-embedding' ? 'OpenAI semantic' : s.source}
+                  </p>
+                </div>
+                {s.matchScore !== undefined && (
+                  <div className="text-right">
+                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Match</div>
+                    <div className={cn(
+                      'text-2xl font-black italic leading-none',
+                      s.matchScore >= 70 ? 'text-blue-600' : s.matchScore >= 60 ? 'text-emerald-600' : 'text-slate-700',
+                    )}>{s.matchScore}%</div>
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    disabled={busy === s._id}
+                    onClick={() => promote(s._id)}
+                    className="bg-blue-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                    Push
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy === s._id}
+                    onClick={() => reject(s._id)}
+                    className="border-2 border-red-300 text-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-50"
+                  >
+                    Negeer
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

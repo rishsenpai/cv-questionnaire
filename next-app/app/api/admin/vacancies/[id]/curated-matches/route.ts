@@ -19,7 +19,11 @@ export async function GET(req: NextRequest, { params }: Params) {
             return NextResponse.json({ success: false, message: 'Ongeldige id' }, { status: 400 });
         }
         await connectDB();
-        const matches = await CuratedMatch.find({ vacancyId: id }).sort({ addedAt: -1 }).lean();
+        const url = new URL(req.url);
+        const statusFilter = url.searchParams.get('status'); // optioneel: 'suggested' | 'presented' | etc.
+        const query: Record<string, unknown> = { vacancyId: id };
+        if (statusFilter) query.status = statusFilter;
+        const matches = await CuratedMatch.find(query).sort({ addedAt: -1 }).lean();
 
         const cvIds = matches.map(m => m.cvId).filter(Boolean);
         const cvs = await CV.find({ _id: { $in: cvIds } }).select('_id fullName jobTitle location').lean();

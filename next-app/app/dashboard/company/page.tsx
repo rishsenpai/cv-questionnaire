@@ -74,8 +74,28 @@ export default function CompanyDashboard() {
   const [parsedFromFile, setParsedFromFile] = useState<string | null>(null);
   const [quickUploading, setQuickUploading] = useState(false);
   const [quickUploadStatus, setQuickUploadStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [dragOverQuick, setDragOverQuick] = useState(false);
+  const [dragOverAi, setDragOverAi] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const quickUploadRef = React.useRef<HTMLInputElement>(null);
+
+  const dragHandlers = (setOver: (b: boolean) => void) => ({
+    onDragEnter: (e: React.DragEvent) => {
+      if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+      e.preventDefault();
+      setOver(true);
+    },
+    onDragOver: (e: React.DragEvent) => {
+      if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setOver(true);
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if ((e.currentTarget as Node).contains(e.relatedTarget as Node | null)) return;
+      setOver(false);
+    },
+  });
 
   const reload = useCallback(async () => {
     if (!employerToken) return;
@@ -316,10 +336,22 @@ export default function CompanyDashboard() {
               type="button"
               onClick={() => quickUploadRef.current?.click()}
               disabled={quickUploading}
-              className="bg-black text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-[6px_6px_0px_0px_rgba(59,130,246,0.2)] disabled:opacity-50"
+              {...dragHandlers(setDragOverQuick)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverQuick(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) handleQuickUpload(f);
+              }}
+              className={cn(
+                'px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2 shadow-[6px_6px_0px_0px_rgba(59,130,246,0.2)] disabled:opacity-50 border-2',
+                dragOverQuick
+                  ? 'bg-blue-600 text-white border-blue-700 scale-105'
+                  : 'bg-black text-white border-black hover:bg-blue-600',
+              )}
             >
               {quickUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <UploadCloud className="w-3 h-3" />}
-              {quickUploading ? 'Bezig...' : 'Upload Vacature'}
+              {quickUploading ? 'Bezig...' : dragOverQuick ? 'Laat los om te uploaden' : 'Upload of sleep vacature'}
             </button>
             <button
               onClick={() => setShowCreate(s => !s)}
@@ -373,16 +405,28 @@ export default function CompanyDashboard() {
                   }}
                   className="hidden"
                 />
-                <div className="bg-slate-50 border-2 border-dashed border-slate-200 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div
+                  {...dragHandlers(setDragOverAi)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverAi(false);
+                    const f = e.dataTransfer.files?.[0];
+                    if (f) handleFileUpload(f);
+                  }}
+                  className={cn(
+                    'border-2 border-dashed p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-colors',
+                    dragOverAi ? 'bg-blue-50 border-blue-600' : 'bg-slate-50 border-slate-200',
+                  )}
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">
                       <Sparkles className="w-3 h-3" /> AI Auto-Fill
                     </div>
                     <p className="text-sm font-bold text-slate-700">
-                      Heb je al een vacature in een Word- of PDF-bestand?
+                      {dragOverAi ? 'Laat los om te uploaden' : 'Heb je al een vacature in een Word- of PDF-bestand?'}
                     </p>
                     <p className="text-[11px] font-bold text-slate-400 italic">
-                      Upload het bestand → AI vult de velden automatisch in. Je kan daarna nog alles bewerken.
+                      Sleep het bestand hierheen of klik op "Upload Bestand". AI vult de velden automatisch in — je kan daarna nog alles bewerken.
                     </p>
                     {parsedFromFile && (
                       <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mt-2 flex items-center gap-2">
