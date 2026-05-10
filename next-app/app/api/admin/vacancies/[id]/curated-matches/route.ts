@@ -23,7 +23,11 @@ export async function GET(req: NextRequest, { params }: Params) {
         const statusFilter = url.searchParams.get('status'); // optioneel: 'suggested' | 'presented' | etc.
         const query: Record<string, unknown> = { vacancyId: id };
         if (statusFilter) query.status = statusFilter;
-        const matches = await CuratedMatch.find(query).sort({ addedAt: -1 }).lean();
+        // Voor suggesties: hoogste score eerst. Anders: meest recent eerst.
+        const sort: Record<string, 1 | -1> = statusFilter === 'suggested'
+            ? { matchScore: -1, addedAt: -1 }
+            : { addedAt: -1 };
+        const matches = await CuratedMatch.find(query).sort(sort).lean();
 
         const cvIds = matches.map(m => m.cvId).filter(Boolean);
         const cvs = await CV.find({ _id: { $in: cvIds } }).select('_id fullName jobTitle location').lean();

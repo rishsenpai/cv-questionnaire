@@ -518,6 +518,7 @@ interface VacancyRow {
   company?: string;
   location?: string;
   source?: string;
+  employerId?: string;
   createdAt: string;
   suggestionCount?: number;
 }
@@ -665,6 +666,27 @@ function VacanciesTab({ token }: { token: string }) {
       await fetch(`/api/admin/vacancies/${id}`, { method: 'DELETE', headers: { 'x-admin-token': token } });
       await reload();
     } finally { setBusy(false); }
+  };
+
+  const [matchingId, setMatchingId] = useState<string | null>(null);
+  const runMatch = async (v: VacancyRow) => {
+    setMatchingId(v._id);
+    try {
+      const res = await fetch(`/api/admin/vacancies/${v._id}/run-match`, {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Run-match mislukt');
+        return;
+      }
+      const r = data.result || {};
+      alert(`Klaar: ${r.suggestionsCreated || 0} suggesties opgeslagen (${r.candidatesScanned || 0} CVs gescand, methode: ${r.method}).`);
+      await reload();
+    } finally {
+      setMatchingId(null);
+    }
   };
 
   const deleteAllAdzuna = async () => {
@@ -1068,9 +1090,22 @@ function VacanciesTab({ token }: { token: string }) {
                         )}
                       </td>
                       <td className="p-3 text-right">
-                        <button onClick={() => deleteVacancy(v._id)} disabled={busy} className="text-red-600 hover:text-red-800 disabled:opacity-50">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {v.employerId && (
+                            <button
+                              type="button"
+                              onClick={() => runMatch(v)}
+                              disabled={matchingId === v._id || busy}
+                              title="AI auto-match opnieuw draaien"
+                              className="text-blue-600 hover:text-black disabled:opacity-50"
+                            >
+                              {matchingId === v._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                            </button>
+                          )}
+                          <button onClick={() => deleteVacancy(v._id)} disabled={busy} className="text-red-600 hover:text-red-800 disabled:opacity-50">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

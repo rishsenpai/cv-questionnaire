@@ -10,8 +10,11 @@ import Vacancy from '@/models/Vacancy';
 import CuratedMatch from '@/models/CuratedMatch';
 import { cosineSimilarity, generateEmbedding } from './embeddings';
 
-const TOP_N = 10;
-const EMBEDDING_THRESHOLD = 0.55; // 55% cosine similarity ondergrens
+// Lage drempel (20%) filtert pure ruis maar laat alle plausibele matches door.
+// TOP_N cap voorkomt dat we duizenden suggesties opslaan; admin ziet de
+// hoogste 25 op score gesorteerd.
+const TOP_N = 25;
+const EMBEDDING_THRESHOLD = 0.20;
 
 export interface AutoMatchResult {
     method: 'embedding' | 'skipped';
