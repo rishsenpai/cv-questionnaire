@@ -20,8 +20,9 @@ CLAUDE.md
 docs/
 .claude/settings.local.json
 
-# Test files (local only)
+# Test files (local only) — uitzondering voor next-app/ specs
 tests/
+!next-app/tests/
 test-results/
 playwright.config.js
 playwright-report/
