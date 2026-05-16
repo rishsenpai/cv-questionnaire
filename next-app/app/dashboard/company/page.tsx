@@ -76,8 +76,14 @@ export default function CompanyDashboard() {
   const [quickUploadStatus, setQuickUploadStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [dragOverQuick, setDragOverQuick] = useState(false);
   const [dragOverAi, setDragOverAi] = useState(false);
+  const [newCounts, setNewCounts] = useState<Record<string, number>>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const quickUploadRef = React.useRef<HTMLInputElement>(null);
+
+  const totalNew = Object.values(newCounts).reduce((a, b) => a + b, 0);
+  const updateNewCount = useCallback((vId: string, count: number) => {
+    setNewCounts(prev => (prev[vId] === count ? prev : { ...prev, [vId]: count }));
+  }, []);
 
   const dragHandlers = (setOver: (b: boolean) => void) => ({
     onDragEnter: (e: React.DragEvent) => {
@@ -315,7 +321,25 @@ export default function CompanyDashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
         <div className="flex items-end justify-between gap-4 pb-4 border-b-2 border-slate-100 flex-wrap">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none">Mijn Vacatures</h2>
+            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none flex items-center gap-3 flex-wrap">
+              Mijn Vacatures
+              {totalNew > 0 && (
+                <Link
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const first = vacancies.find(v => (newCounts[v._id] || 0) > 0);
+                    if (first) {
+                      const el = document.getElementById(`vacancy-${first._id}`);
+                      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black transition-colors animate-pulse"
+                >
+                  <Sparkles className="w-3 h-3" /> {totalNew} nieuw{totalNew === 1 ? '' : 'e'} match{totalNew === 1 ? '' : 'es'}
+                </Link>
+              )}
+            </h2>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">
               {vacancies.length} actieve vacature{vacancies.length === 1 ? '' : 's'}
             </p>
@@ -547,6 +571,7 @@ export default function CompanyDashboard() {
                 token={employerToken!}
                 onDelete={() => deleteVacancy(v._id)}
                 busy={busy}
+                onNewCountChange={updateNewCount}
               />
             ))}
           </div>
@@ -595,9 +620,10 @@ interface VacancyAnalytics {
 }
 
 function VacancyRow({
-  v, onDelete, busy, token,
+  v, onDelete, busy, token, onNewCountChange,
 }: {
   v: Vacancy; onDelete: () => void; busy: boolean; token: string;
+  onNewCountChange: (vId: string, count: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [matches, setMatches] = useState<AnonMatch[] | null>(null);
@@ -605,7 +631,16 @@ function VacancyRow({
   const [loadingExpand, setLoadingExpand] = useState(false);
   const [contactMatch, setContactMatch] = useState<AnonMatch | null>(null);
 
-  const newCount = matches ? matches.filter(m => m.status === 'presented').length : 0;
+  // Eager: gebruik analytics.presented (geladen op mount). Live: zodra de
+  // werkgever uitklapt en op een match klikt schakelt deze over op de
+  // matches-state zodat de teller direct daalt na "view".
+  const newCount = matches
+    ? matches.filter(m => m.status === 'presented').length
+    : (analytics?.presented ?? 0);
+
+  useEffect(() => {
+    onNewCountChange(v._id, newCount);
+  }, [v._id, newCount, onNewCountChange]);
 
   const loadExpand = useCallback(async () => {
     setLoadingExpand(true);
@@ -684,7 +719,15 @@ function VacancyRowInner({
   const created = new Date(v.createdAt).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
-    <div className="bg-white border-2 border-slate-100 hover:border-blue-600 transition-all">
+    <div
+      id={`vacancy-${v._id}`}
+      className={cn(
+        'bg-white border-2 transition-all',
+        newCount > 0
+          ? 'border-blue-600 shadow-[6px_6px_0px_0px_rgba(59,130,246,0.18)]'
+          : 'border-slate-100 hover:border-blue-600',
+      )}
+    >
       <div className="p-6 flex items-start justify-between gap-4 group">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex-wrap">
@@ -692,8 +735,9 @@ function VacancyRowInner({
             <span className="text-slate-300">·</span>
             <Calendar className="w-3 h-3" /> {created}
             {newCount > 0 && (
-              <span className="bg-blue-600 text-white px-2 py-0.5 ml-2 text-[9px] tracking-widest">
-                {newCount} nieuwe match{newCount === 1 ? '' : 'es'}
+              <span className="inline-flex items-center gap-1 bg-blue-600 text-white px-2 py-0.5 ml-2 text-[10px] tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <Sparkles className="w-2.5 h-2.5" />
+                {newCount} nieuw{newCount === 1 ? '' : 'e'} match{newCount === 1 ? '' : 'es'}
               </span>
             )}
           </div>
