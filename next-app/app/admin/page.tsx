@@ -1105,17 +1105,15 @@ function VacanciesTab({ token }: { token: string }) {
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {v.employerId && (
-                            <button
-                              type="button"
-                              onClick={() => runMatch(v)}
-                              disabled={matchingId === v._id || busy}
-                              title="AI auto-match opnieuw draaien"
-                              className="text-blue-600 hover:text-black disabled:opacity-50"
-                            >
-                              {matchingId === v._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => runMatch(v)}
+                            disabled={matchingId === v._id || busy}
+                            title="AI auto-match opnieuw draaien"
+                            className="text-blue-600 hover:text-black disabled:opacity-50"
+                          >
+                            {matchingId === v._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          </button>
                           <button onClick={() => deleteVacancy(v._id)} disabled={busy} className="text-red-600 hover:text-red-800 disabled:opacity-50">
                             <Trash2 className="w-4 h-4" />
                           </button>

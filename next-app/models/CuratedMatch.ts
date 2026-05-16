@@ -8,7 +8,9 @@ export type CuratedMatchSource = 'admin' | 'auto-embedding' | 'auto-tfidf';
 export interface ICuratedMatch extends Document {
     vacancyId: Types.ObjectId;
     cvId: Types.ObjectId;
-    employerId: Types.ObjectId;
+    // Optioneel: admin/internal vacatures hebben geen werkgever-eigenaar.
+    // Voor die matches is de admin de "ontvanger" (email naar APPLICATIONS_EMAIL).
+    employerId?: Types.ObjectId;
     status: CuratedMatchStatus;
     source: CuratedMatchSource;
     adminNote?: string;
@@ -26,7 +28,7 @@ export interface ICuratedMatch extends Document {
 const curatedMatchSchema = new Schema<ICuratedMatch>({
     vacancyId: { type: Schema.Types.ObjectId, ref: 'Vacancy', required: true, index: true },
     cvId: { type: Schema.Types.ObjectId, ref: 'CV', required: true, index: true },
-    employerId: { type: Schema.Types.ObjectId, ref: 'Employer', required: true, index: true },
+    employerId: { type: Schema.Types.ObjectId, ref: 'Employer', required: false, index: true },
     status: { type: String, enum: ['suggested', 'presented', 'viewed', 'contact-requested', 'rejected'], default: 'presented', index: true },
     source: { type: String, enum: ['admin', 'auto-embedding', 'auto-tfidf'], default: 'admin', index: true },
     adminNote: { type: String, trim: true },

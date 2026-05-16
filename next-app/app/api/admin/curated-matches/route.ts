@@ -29,18 +29,14 @@ export async function POST(req: NextRequest) {
 
         await connectDB();
 
-        const vacancy = await Vacancy.findById(vacancyId).select('title employerId company');
+        const vacancy = await Vacancy.findById(vacancyId).select('title employerId company location');
         if (!vacancy) {
             return NextResponse.json({ success: false, message: 'Vacature niet gevonden' }, { status: 404 });
         }
-        if (!vacancy.employerId) {
-            return NextResponse.json(
-                { success: false, message: 'Vacature heeft geen werkgever — kan niet pushen' },
-                { status: 400 },
-            );
-        }
+        // Geen werkgever = admin/internal vacature → email gaat naar het admin-team
+        // i.p.v. naar een werkgever-portaal.
 
-        const cv = await CV.findById(cvId).select('_id fullName');
+        const cv = await CV.findById(cvId).select('_id fullName email phone jobTitle location');
         if (!cv) {
             return NextResponse.json({ success: false, message: 'CV niet gevonden' }, { status: 404 });
         }
@@ -56,7 +52,7 @@ export async function POST(req: NextRequest) {
         const curated = await CuratedMatch.create({
             vacancyId,
             cvId,
-            employerId: vacancy.employerId,
+            employerId: vacancy.employerId, // undefined voor admin/internal — schema staat dit toe
             adminNote,
             matchScore,
             status: 'presented',
@@ -65,10 +61,12 @@ export async function POST(req: NextRequest) {
         let emailSent = false;
         if (sendEmail) {
             try {
-                const employer = await Employer.findById(vacancy.employerId).select('contactEmail companyName username');
-                if (employer?.contactEmail) {
-                    const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
-                    const html = `
+                const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
+                if (vacancy.employerId) {
+                    // Werkgever-vacature → bericht naar werkgever-portaal (anoniem)
+                    const employer = await Employer.findById(vacancy.employerId).select('contactEmail companyName username');
+                    if (employer?.contactEmail) {
+                        const html = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
   <h2 style="color: #2563eb;">Nieuwe match in je portaal</h2>
   <p>Hoi ${employer.companyName || employer.username},</p>
@@ -86,11 +84,42 @@ export async function POST(req: NextRequest) {
     Wil je in contact komen met deze kandidaat? Klik op &quot;Vraag contactgegevens aan&quot; in het portaal — wij regelen het verder.
   </p>
 </div>`;
+                        await getTransporter().sendMail({
+                            from: process.env.EMAIL_USER,
+                            to: employer.contactEmail,
+                            replyTo: APPLICATIONS_EMAIL,
+                            subject: `Nieuwe match voor vacature: ${vacancy.title}`,
+                            html,
+                        });
+                        await CuratedMatch.findByIdAndUpdate(curated._id, { notifiedAt: new Date() });
+                        emailSent = true;
+                    }
+                } else {
+                    // Admin/internal vacature → bericht naar admin-team met FULL kandidaat-info
+                    const scorePart = matchScore !== undefined ? ` (${matchScore}% match)` : '';
+                    const html = `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #2563eb;">Admin push: kandidaat → vacature</h2>
+  <p>Een admin heeft een kandidaat gekoppeld aan een interne vacature. Tijd om contact op te nemen met de kandidaat.</p>
+  <div style="background: #ebf8ff; padding: 16px; border-left: 4px solid #2563eb; margin: 20px 0;">
+    <p style="margin: 0 0 8px 0;"><strong>Vacature:</strong> ${vacancy.title}${vacancy.location ? ` · ${vacancy.location}` : ''}</p>
+    <p style="margin: 0;"><strong>Kandidaat:</strong> ${cv.fullName || '—'}${scorePart}</p>
+    ${cv.jobTitle ? `<p style="margin: 8px 0 0 0; color: #475569;">Functie: ${cv.jobTitle}</p>` : ''}
+    ${cv.location ? `<p style="margin: 4px 0 0 0; color: #475569;">Locatie: ${cv.location}</p>` : ''}
+    ${cv.email ? `<p style="margin: 4px 0 0 0; color: #475569;">Email: <a href="mailto:${cv.email}">${cv.email}</a></p>` : ''}
+    ${cv.phone ? `<p style="margin: 4px 0 0 0; color: #475569;">Telefoon: ${cv.phone}</p>` : ''}
+  </div>
+  ${adminNote ? `<p style="background: #fef3c7; padding: 12px; border-left: 4px solid #f59e0b;"><strong>Admin notitie:</strong> ${adminNote}</p>` : ''}
+  <p>
+    <a href="${baseUrl}/admin" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+      Open admin
+    </a>
+  </p>
+</div>`;
                     await getTransporter().sendMail({
                         from: process.env.EMAIL_USER,
-                        to: employer.contactEmail,
-                        replyTo: APPLICATIONS_EMAIL,
-                        subject: `Nieuwe match voor vacature: ${vacancy.title}`,
+                        to: APPLICATIONS_EMAIL,
+                        subject: `Admin-push: ${cv.fullName || 'Kandidaat'} → ${vacancy.title}`,
                         html,
                     });
                     await CuratedMatch.findByIdAndUpdate(curated._id, { notifiedAt: new Date() });

@@ -1,6 +1,7 @@
 // Triggert handmatig de auto-match (OpenAI embeddings) voor een vacature.
-// Vereist dat de vacature een employerId heeft — anders is er geen werkgever
-// om suggesties naar te pushen.
+// Werkt voor employer-vacatures én admin/internal vacatures. Voor admin/
+// internal worden suggesties opgeslagen zonder employerId — alleen admin
+// ziet ze in de AI-suggesties modal.
 
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
@@ -29,12 +30,6 @@ export async function POST(req: NextRequest, { params }: Params) {
         const vacancy = await Vacancy.findById(id).select('+embedding employerId title');
         if (!vacancy) {
             return NextResponse.json({ success: false, message: 'Vacature niet gevonden' }, { status: 404 });
-        }
-        if (!vacancy.employerId) {
-            return NextResponse.json(
-                { success: false, message: 'Vacature heeft geen werkgever — suggesties hebben geen ontvanger.' },
-                { status: 400 },
-            );
         }
 
         // Genereer embedding als die ontbreekt

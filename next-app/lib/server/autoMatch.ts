@@ -35,9 +35,11 @@ interface VacancyDoc {
 
 export async function runAutoMatchForVacancy(vacancyId: string): Promise<AutoMatchResult> {
     const vacancy = await Vacancy.findById(vacancyId).select('+embedding');
-    if (!vacancy || !vacancy.employerId) {
-        return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'no vacancy or no employer' };
+    if (!vacancy) {
+        return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'vacancy not found' };
     }
+    // employerId is optioneel: voor admin/internal vacatures slaan we suggesties
+    // op zonder werkgever-eigenaar (admin is dan zelf de "ontvanger").
     if (!process.env.OPENAI_API_KEY && process.env.NODE_ENV !== 'test') {
         return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'OPENAI_API_KEY missing' };
     }
