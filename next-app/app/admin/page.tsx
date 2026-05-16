@@ -555,6 +555,7 @@ function VacanciesTab({ token }: { token: string }) {
   const [jsResult, setJsResult] = useState<string | null>(null);
   const [jsQueries, setJsQueries] = useState(JSEARCH_PRESETS_SR);
   const [jsLocation, setJsLocation] = useState('Suriname');
+  const [showBulkVacancy, setShowBulkVacancy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({
     title: '', company: '', location: 'Paramaribo', description: '', requirements: '',
@@ -757,6 +758,9 @@ function VacanciesTab({ token }: { token: string }) {
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setShowCreate(s => !s)} className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2">
               <Plus className="w-3 h-3" /> Nieuwe Vacature
+            </button>
+            <button onClick={() => setShowBulkVacancy(s => !s)} className="bg-purple-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
+              <Upload className="w-3 h-3" /> Bulk Upload
             </button>
             <button onClick={() => setShowJSearch(s => !s)} className="bg-emerald-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
               <Globe className="w-3 h-3" /> JSearch (SR)
@@ -975,6 +979,16 @@ function VacanciesTab({ token }: { token: string }) {
                 {jsResult && <p className="text-[11px] font-bold flex-1">{jsResult}</p>}
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {showBulkVacancy && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <BulkVacancyPanel
+              token={token}
+              onClose={() => setShowBulkVacancy(false)}
+              onComplete={reload}
+            />
           </motion.div>
         )}
 
@@ -2258,6 +2272,315 @@ async function extractZipEntries(zipFile: File): Promise<File[]> {
     out.push(new File([blob], fileName, { type: cls.mime }));
   }
   return out;
+}
+
+type BulkVacancyStatus = 'pending' | 'parsing' | 'creating' | 'created' | 'failed';
+
+interface BulkVacancyItem {
+  id: string;
+  file: File;
+  status: BulkVacancyStatus;
+  message?: string;
+  vacancyId?: string;
+  parsedTitle?: string;
+}
+
+const BULK_VACANCY_CONCURRENCY = 3;
+
+function BulkVacancyPanel({
+  token, onClose, onComplete,
+}: {
+  token: string;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const [items, setItems] = useState<BulkVacancyItem[]>([]);
+  const [running, setRunning] = useState(false);
+  const [employerOptions, setEmployerOptions] = useState<Array<{ _id: string; companyName: string; username: string }>>([]);
+  const [employerId, setEmployerId] = useState('');
+  const cancelledRef = React.useRef(false);
+  const abortersRef = React.useRef<Set<AbortController>>(new Set());
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/employers', { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(data => { if (data.success) setEmployerOptions(data.data); })
+      .catch(() => { /* ignore */ });
+  }, [token]);
+
+  const stats = React.useMemo(() => {
+    const byStatus: Record<BulkVacancyStatus, number> = {
+      pending: 0, parsing: 0, creating: 0, created: 0, failed: 0,
+    };
+    items.forEach(i => { byStatus[i.status]++; });
+    return byStatus;
+  }, [items]);
+
+  const updateItem = (id: string, patch: Partial<BulkVacancyItem>) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+  };
+
+  const addFiles = (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    const newItems: BulkVacancyItem[] = arr.map(f => {
+      const lower = f.name.toLowerCase();
+      const isPdf = f.type === 'application/pdf' || lower.endsWith('.pdf');
+      const isDocx = f.type.includes('wordprocessingml') || lower.endsWith('.docx');
+      const tooLarge = f.size > MAX_FILE_BYTES;
+      const wrongType = !isPdf && !isDocx;
+      let status: BulkVacancyStatus = 'pending';
+      let message: string | undefined;
+      if (tooLarge) { status = 'failed'; message = 'Bestand te groot (>4.5 MB)'; }
+      else if (wrongType) { status = 'failed'; message = 'Alleen PDF of Word (.docx)'; }
+      return {
+        id: `${f.name}-${f.size}-${f.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+        file: f,
+        status,
+        message,
+      };
+    });
+    setItems(prev => [...prev, ...newItems]);
+  };
+
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) addFiles(e.target.files);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  };
+
+  const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
+  const clearCompleted = () => setItems(prev => prev.filter(i => i.status === 'pending'));
+
+  const processOne = async (item: BulkVacancyItem) => {
+    if (cancelledRef.current) return;
+    const ctrl = new AbortController();
+    abortersRef.current.add(ctrl);
+    try {
+      updateItem(item.id, { status: 'parsing', message: undefined });
+      const fileData = await readFileAsBase64(item.file);
+      if (cancelledRef.current) {
+        updateItem(item.id, { status: 'pending', message: undefined });
+        return;
+      }
+      const parseRes = await fetch('/api/parse-vacancy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileData, fileType: item.file.type, fileName: item.file.name }),
+        signal: ctrl.signal,
+      });
+      const parseData = await parseRes.json().catch(() => ({}));
+      if (!parseRes.ok || !parseData.success) {
+        updateItem(item.id, { status: 'failed', message: parseData.message || 'Parse mislukt' });
+        return;
+      }
+      const parsed = parseData.data || {};
+      const title = parsed.title || item.file.name.replace(/\.[^/.]+$/, '');
+
+      updateItem(item.id, { status: 'creating', parsedTitle: title });
+      if (cancelledRef.current) {
+        updateItem(item.id, { status: 'pending', message: undefined });
+        return;
+      }
+      const createRes = await fetch('/api/admin/vacancies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({
+          title,
+          location: parsed.location,
+          description: parsed.requirements,
+          employmentType: 'Full-time',
+          isRemote: false,
+          salaryCurrency: 'SRD',
+          salaryPeriod: 'month',
+          employerId: employerId || undefined,
+        }),
+        signal: ctrl.signal,
+      });
+      const createData = await createRes.json().catch(() => ({}));
+      if (!createRes.ok || !createData.success) {
+        updateItem(item.id, { status: 'failed', message: createData.message || `HTTP ${createRes.status}` });
+        return;
+      }
+      updateItem(item.id, { status: 'created', vacancyId: createData.data?._id, message: undefined });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        updateItem(item.id, { status: 'pending', message: undefined });
+        return;
+      }
+      const msg = err instanceof Error ? err.message : 'Verbinding mislukt';
+      updateItem(item.id, { status: 'failed', message: msg });
+    } finally {
+      abortersRef.current.delete(ctrl);
+    }
+  };
+
+  const start = async () => {
+    if (running) return;
+    cancelledRef.current = false;
+    setRunning(true);
+    const queue = [...items.filter(i => i.status === 'pending')];
+    const workers = Array.from({ length: BULK_VACANCY_CONCURRENCY }, async () => {
+      while (queue.length > 0 && !cancelledRef.current) {
+        const next = queue.shift();
+        if (!next) return;
+        await processOne(next);
+      }
+    });
+    await Promise.all(workers);
+    setRunning(false);
+    onComplete();
+  };
+
+  const cancel = () => {
+    cancelledRef.current = true;
+    abortersRef.current.forEach(c => c.abort());
+    abortersRef.current.clear();
+  };
+
+  const totalDone = stats.created + stats.failed;
+  const total = items.length;
+  const pct = total > 0 ? Math.round((totalDone / total) * 100) : 0;
+
+  return (
+    <div className="bg-white border-2 border-purple-600 p-6 mb-4">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-xl font-black uppercase tracking-tighter italic">Bulk Vacatures Upload</h3>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            PDF/Word · max 4.5 MB · concurrency {BULK_VACANCY_CONCURRENCY}
+          </p>
+        </div>
+        <button onClick={onClose} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+      </div>
+
+      <div className="mb-4">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">
+          Werkgever (optioneel)
+        </label>
+        <select
+          value={employerId}
+          onChange={(e) => setEmployerId(e.target.value)}
+          disabled={running}
+          className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm"
+        >
+          <option value="">— Geen werkgever (admin/internal) —</option>
+          {employerOptions.map(emp => (
+            <option key={emp._id} value={emp._id}>
+              {emp.companyName || emp.username}
+            </option>
+          ))}
+        </select>
+        <p className="text-[10px] font-bold text-slate-400 mt-2 italic">
+          {employerId
+            ? 'Vacatures worden aan deze werkgever gekoppeld + auto-match draait per vacature.'
+            : 'Vacatures worden als admin/internal opgeslagen. Geen auto-match, wel zichtbaar voor JobSeekers.'}
+        </p>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        multiple
+        onChange={handleSelect}
+        className="hidden"
+      />
+
+      <div
+        onClick={() => !running && fileInputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => !running && handleDrop(e)}
+        className={cn(
+          'border-4 border-dashed p-8 text-center transition-all',
+          running ? 'border-slate-200 cursor-not-allowed opacity-60' : 'border-slate-200 hover:border-purple-600 hover:bg-purple-50/30 cursor-pointer',
+        )}
+      >
+        <Upload className="w-10 h-10 text-purple-600 mx-auto mb-3" />
+        <p className="text-sm font-black uppercase tracking-widest mb-1">Sleep vacatures hierheen</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">PDF · DOCX — meerdere bestanden</p>
+      </div>
+
+      {items.length > 0 && (
+        <>
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatChip label="Totaal" value={total} />
+            <StatChip label="Wachten" value={stats.pending} color="slate" />
+            <StatChip label="Aangemaakt" value={stats.created} color="emerald" />
+            <StatChip label="Mislukt" value={stats.failed} color="red" />
+          </div>
+
+          {(running || totalDone > 0) && (
+            <div className="mt-4">
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
+                <span>{running ? 'Bezig...' : 'Voltooid'}</span>
+                <span>{totalDone}/{total} ({pct}%)</span>
+              </div>
+              <div className="h-1.5 bg-slate-100 overflow-hidden">
+                <div className="h-full bg-purple-600 transition-all" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {!running ? (
+              <button
+                onClick={start}
+                disabled={stats.pending === 0}
+                className="bg-purple-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2 disabled:opacity-50"
+              >
+                <Upload className="w-3 h-3" /> Start ({stats.pending})
+              </button>
+            ) : (
+              <button onClick={cancel} className="bg-red-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2">
+                <X className="w-3 h-3" /> Stoppen
+              </button>
+            )}
+            {totalDone > 0 && !running && (
+              <button onClick={clearCompleted} className="border-2 border-black px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white">
+                Wis voltooide
+              </button>
+            )}
+          </div>
+
+          <div className="mt-6 max-h-[40vh] overflow-y-auto border-2 border-slate-100">
+            <ul className="divide-y divide-slate-100">
+              {items.map(item => (
+                <li key={item.id} className="flex items-center gap-3 p-3 text-sm">
+                  <BulkVacancyStatusIcon status={item.status} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold truncate" title={item.file.name}>{item.parsedTitle || item.file.name}</p>
+                    {item.message && (
+                      <p className="text-[10px] font-bold text-slate-400 truncate" title={item.message}>{item.message}</p>
+                    )}
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 shrink-0">
+                    {(item.file.size / 1024).toFixed(0)} KB
+                  </span>
+                  {item.status === 'pending' && !running && (
+                    <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-600 shrink-0">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BulkVacancyStatusIcon({ status }: { status: BulkVacancyStatus }) {
+  if (status === 'parsing' || status === 'creating') return <Loader2 className="w-4 h-4 text-purple-600 animate-spin shrink-0" />;
+  if (status === 'created') return <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />;
+  if (status === 'failed') return <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />;
+  return <FileText className="w-4 h-4 text-slate-300 shrink-0" />;
 }
 
 function BulkUploadPanel({
