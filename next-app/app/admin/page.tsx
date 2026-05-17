@@ -570,6 +570,14 @@ function VacanciesTab({ token }: { token: string }) {
   const [createError, setCreateError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [embeddingBatch, setEmbeddingBatch] = useState(false);
+  const [vacancyEmbedProgress, setVacancyEmbedProgress] = useState<{
+    active: boolean;
+    current: number;
+    total: number;
+    currentTitle: string;
+    failed: number;
+    percentage: number;
+  } | null>(null);
   const [createParsing, setCreateParsing] = useState(false);
   const [createParsedFrom, setCreateParsedFrom] = useState<string | null>(null);
   const [createDragOver, setCreateDragOver] = useState(false);
@@ -640,6 +648,28 @@ function VacanciesTab({ token }: { token: string }) {
   }, [token]);
 
   useEffect(() => { reload(); }, [reload]);
+
+  const fetchVacancyEmbedProgress = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/embedding-progress/vacancy', { headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (data.success) setVacancyEmbedProgress(data);
+    } catch { /* ignore */ }
+  }, [token]);
+
+  useEffect(() => {
+    fetchVacancyEmbedProgress();
+    const id = setInterval(fetchVacancyEmbedProgress, 3000);
+    return () => clearInterval(id);
+  }, [fetchVacancyEmbedProgress]);
+
+  useEffect(() => {
+    // Wanneer batch zojuist klaar is, lijst opnieuw laden zodat 'embedding'-status klopt.
+    if (vacancyEmbedProgress && !vacancyEmbedProgress.active && vacancyEmbedProgress.total > 0 && vacancyEmbedProgress.current === vacancyEmbedProgress.total) {
+      reload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vacancyEmbedProgress?.active, vacancyEmbedProgress?.current, vacancyEmbedProgress?.total]);
 
   const runImport = async () => {
     setImporting(true);
@@ -712,9 +742,12 @@ function VacanciesTab({ token }: { token: string }) {
         headers: { 'x-admin-token': token },
       });
       const data = await res.json();
-      alert(data.success
-        ? `${data.message}. Ververs de pagina over een paar minuten om resultaat te zien.`
-        : (data.message || 'Genereren mislukt'));
+      if (!data.success) {
+        alert(data.message || 'Genereren mislukt');
+      } else {
+        // Direct progress ophalen zodat de balk meteen verschijnt.
+        await fetchVacancyEmbedProgress();
+      }
     } finally {
       setEmbeddingBatch(false);
     }
@@ -789,9 +822,11 @@ function VacanciesTab({ token }: { token: string }) {
             <button onClick={() => setShowImport(s => !s)} className="bg-blue-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
               <Globe className="w-3 h-3" /> Adzuna (NL)
             </button>
-            <button onClick={generateVacancyEmbeddings} disabled={busy || embeddingBatch} className="bg-amber-500 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50">
-              {embeddingBatch ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              Genereer embeddings
+            <button onClick={generateVacancyEmbeddings} disabled={busy || embeddingBatch || vacancyEmbedProgress?.active} className="bg-amber-500 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50">
+              {embeddingBatch || vacancyEmbedProgress?.active ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              {vacancyEmbedProgress?.active
+                ? `Bezig: ${vacancyEmbedProgress.current}/${vacancyEmbedProgress.total}`
+                : 'Genereer embeddings'}
             </button>
             <button onClick={deleteAllAdzuna} disabled={busy} className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors">
               Verwijder Adzuna
@@ -799,6 +834,29 @@ function VacanciesTab({ token }: { token: string }) {
           </div>
         }
       />
+
+      {vacancyEmbedProgress && vacancyEmbedProgress.total > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-500 p-4 space-y-2">
+          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+            <span className="flex items-center gap-2">
+              {vacancyEmbedProgress.active
+                ? <><Loader2 className="w-3 h-3 animate-spin text-amber-700" /> Embeddings worden gegenereerd</>
+                : <><Sparkles className="w-3 h-3 text-amber-700" /> Embeddings klaar</>}
+              <span className="text-slate-500 normal-case tracking-normal">— {vacancyEmbedProgress.current}/{vacancyEmbedProgress.total}</span>
+            </span>
+            <span className="text-amber-700">{vacancyEmbedProgress.percentage}%</span>
+          </div>
+          <div className="h-2 bg-amber-100">
+            <div className="h-full bg-amber-500 transition-all" style={{ width: `${vacancyEmbedProgress.percentage}%` }} />
+          </div>
+          {vacancyEmbedProgress.active && vacancyEmbedProgress.currentTitle && (
+            <p className="text-[10px] font-bold text-amber-800 italic truncate">Verwerkt: {vacancyEmbedProgress.currentTitle}</p>
+          )}
+          {vacancyEmbedProgress.failed > 0 && (
+            <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">{vacancyEmbedProgress.failed} mislukt</p>
+          )}
+        </div>
+      )}
 
       <AnimatePresence>
         {showCreate && (
