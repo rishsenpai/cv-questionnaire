@@ -878,7 +878,8 @@ function VacanciesTab({ token }: { token: string }) {
             </button>
             <button
               onClick={runMatchAll}
-              disabled={busy || matchBatch || (matchAllProgress?.active === true && matchAllProgress.current > 0)}
+              disabled={busy || matchBatch}
+              title={matchAllProgress?.active ? 'Klik om huidige batch te herstarten' : undefined}
               className="bg-fuchsia-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {matchBatch || matchAllProgress?.active ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
