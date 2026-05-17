@@ -30,6 +30,9 @@ export function Navbar() {
   useDismissibleLayer(showDropdown, dropdownRef, () => setShowDropdown(false));
   useDismissibleLayer(isMobileMenuOpen, mobileMenuRef, () => setIsMobileMenuOpen(false));
 
+  // Admin-console heeft een eigen header — verberg de publieke navigatie daar.
+  if (pathname?.startsWith('/admin')) return null;
+
   const handleLogout = () => {
     localStorage.removeItem('suri_candidate_token');
     localStorage.removeItem('suri_employer_token');

@@ -16,6 +16,7 @@ import {
     generateTextHash,
     prepareCVText,
 } from '@/lib/server/embeddings';
+import { linkCandidateByCvEmail } from '@/lib/server/candidateCvLink';
 
 export const maxDuration = 60;
 
@@ -120,6 +121,13 @@ export async function POST(req: NextRequest) {
             embedCvAsync(String(cv._id)).catch(err => {
                 console.error('Error generating embedding for submitted CV:', err.message);
             });
+        }
+
+        // Koppel direct aan een Candidate-account met dezelfde email (indien aanwezig).
+        if (formData.email) {
+            linkCandidateByCvEmail(String(cv._id), formData.email).catch(err =>
+                console.error('linkCandidateByCvEmail (submit-cv) failed:', err instanceof Error ? err.message : err),
+            );
         }
 
         return NextResponse.json({

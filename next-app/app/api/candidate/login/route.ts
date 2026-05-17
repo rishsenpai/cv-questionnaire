@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import Candidate from '@/models/Candidate';
 import CandidateToken from '@/models/CandidateToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
+import { linkCvsByEmail } from '@/lib/server/candidateCvLink';
 
 export async function POST(req: NextRequest) {
     try {
@@ -59,6 +60,13 @@ export async function POST(req: NextRequest) {
 
         await candidate.resetLoginAttempts();
         console.log(`[SECURITY] Candidate login successful: ${candidate.email} from IP: ${getClientIP(req)}`);
+
+        // Eventueel sinds vorige login geüploade CVs alsnog koppelen.
+        try {
+            await linkCvsByEmail(candidate._id as import('mongoose').Types.ObjectId, candidate.email);
+        } catch (err) {
+            console.error('linkCvsByEmail (login) failed:', err instanceof Error ? err.message : err);
+        }
 
         const token = generateToken();
         await CandidateToken.findOneAndUpdate(

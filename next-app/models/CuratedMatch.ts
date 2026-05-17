@@ -1,9 +1,10 @@
 import mongoose, { Schema, Model, Document, Types } from 'mongoose';
 
 // 'suggested' = AI-gegenereerd, alleen zichtbaar voor admin tot promote → 'presented'.
-export type CuratedMatchStatus = 'suggested' | 'presented' | 'viewed' | 'contact-requested' | 'rejected';
+// 'contact-shared' = admin heeft contactgegevens met de werkgever gedeeld (laatste stap).
+export type CuratedMatchStatus = 'suggested' | 'presented' | 'viewed' | 'contact-requested' | 'contact-shared' | 'rejected';
 
-export type CuratedMatchSource = 'admin' | 'auto-embedding' | 'auto-tfidf';
+export type CuratedMatchSource = 'admin' | 'auto-embedding' | 'auto-tfidf' | 'apply';
 
 export interface ICuratedMatch extends Document {
     vacancyId: Types.ObjectId;
@@ -18,6 +19,8 @@ export interface ICuratedMatch extends Document {
     addedAt: Date;
     viewedAt?: Date;
     contactRequestedAt?: Date;
+    contactSharedAt?: Date;
+    contactSharedNote?: string;
     rejectedAt?: Date;
     notifiedAt?: Date;
     promotedAt?: Date;
@@ -29,13 +32,15 @@ const curatedMatchSchema = new Schema<ICuratedMatch>({
     vacancyId: { type: Schema.Types.ObjectId, ref: 'Vacancy', required: true, index: true },
     cvId: { type: Schema.Types.ObjectId, ref: 'CV', required: true, index: true },
     employerId: { type: Schema.Types.ObjectId, ref: 'Employer', required: false, index: true },
-    status: { type: String, enum: ['suggested', 'presented', 'viewed', 'contact-requested', 'rejected'], default: 'presented', index: true },
-    source: { type: String, enum: ['admin', 'auto-embedding', 'auto-tfidf'], default: 'admin', index: true },
+    status: { type: String, enum: ['suggested', 'presented', 'viewed', 'contact-requested', 'contact-shared', 'rejected'], default: 'presented', index: true },
+    source: { type: String, enum: ['admin', 'auto-embedding', 'auto-tfidf', 'apply'], default: 'admin', index: true },
     adminNote: { type: String, trim: true },
     matchScore: { type: Number },
     addedAt: { type: Date, default: Date.now, index: true },
     viewedAt: { type: Date },
     contactRequestedAt: { type: Date },
+    contactSharedAt: { type: Date },
+    contactSharedNote: { type: String, trim: true },
     rejectedAt: { type: Date },
     notifiedAt: { type: Date },
     promotedAt: { type: Date },

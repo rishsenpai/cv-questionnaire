@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/db';
 import Candidate from '@/models/Candidate';
 import CandidateToken from '@/models/CandidateToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
+import { linkCvsByEmail } from '@/lib/server/candidateCvLink';
 
 export async function POST(req: NextRequest) {
     try {
@@ -48,6 +49,14 @@ export async function POST(req: NextRequest) {
             phone: phone ? String(phone).trim() : undefined,
             location: location ? String(location).trim() : undefined,
         });
+
+        // Eerder ingediende CVs met dezelfde email koppelen aan dit account.
+        try {
+            const linked = await linkCvsByEmail(candidate._id as import('mongoose').Types.ObjectId, normalizedEmail);
+            if (linked > 0) console.log(`[candidate] linked ${linked} CV(s) to ${normalizedEmail}`);
+        } catch (err) {
+            console.error('linkCvsByEmail (register) failed:', err instanceof Error ? err.message : err);
+        }
 
         const token = generateToken();
         await CandidateToken.create({

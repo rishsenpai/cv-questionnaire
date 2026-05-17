@@ -37,9 +37,15 @@ export async function GET(req: NextRequest) {
             const obj = v.toObject() as unknown as Record<string, unknown>;
             obj.description = sanitizeJobText(v.description, v.company);
             obj.requirements = sanitizeJobText(v.requirements, v.company);
+            // Anoniem: bedrijfsnaam altijd verbergen — kandidaat solliciteert via JobParsing.
             delete obj.company;
             delete obj.companyLogo;
             delete obj.applyLink;
+            // Internal vacatures (geen employerId) krijgen een vlag zodat de UI
+            // 'via JobParsing' kan tonen.
+            if (!v.employerId) {
+                obj.viaJobParsing = true;
+            }
             return obj;
         });
 

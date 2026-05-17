@@ -52,6 +52,8 @@ export async function GET(req: NextRequest, { params }: Params) {
                 addedAt: m.addedAt,
                 viewedAt: m.viewedAt,
                 contactRequestedAt: m.contactRequestedAt,
+                contactSharedAt: m.contactSharedAt,
+                contactSharedNote: m.contactSharedNote,
                 cv: anon,
             };
         }).filter(m => m.cv !== null);

@@ -26,6 +26,9 @@ import {
   GraduationCap,
   Clock,
   ArrowRight,
+  Pause,
+  Play,
+  CheckCheck,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -41,6 +44,7 @@ interface Vacancy {
   requirements?: string;
   employmentType?: string;
   isRemote?: boolean;
+  isActive?: boolean;
   salary?: { min?: number; max?: number; currency?: string; period?: string };
   source?: string;
   createdAt: string;
@@ -273,6 +277,21 @@ export default function CompanyDashboard() {
       await fetch(`/api/employer/vacancies/${id}`, {
         method: 'DELETE',
         headers: { 'x-employer-token': employerToken },
+      });
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleVacancyActive = async (id: string, current: boolean) => {
+    if (!employerToken) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/employer/vacancies/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-employer-token': employerToken },
+        body: JSON.stringify({ isActive: !current }),
       });
       await reload();
     } finally {
@@ -570,6 +589,7 @@ export default function CompanyDashboard() {
                 v={v}
                 token={employerToken!}
                 onDelete={() => deleteVacancy(v._id)}
+                onTogglePause={() => toggleVacancyActive(v._id, v.isActive !== false)}
                 busy={busy}
                 onNewCountChange={updateNewCount}
               />
@@ -593,10 +613,12 @@ function Label({ children }: { children: React.ReactNode }) {
 
 interface AnonMatch {
   _id: string;
-  status: 'presented' | 'viewed' | 'contact-requested' | 'rejected';
+  status: 'presented' | 'viewed' | 'contact-requested' | 'contact-shared' | 'rejected';
   adminNote?: string;
   matchScore?: number;
   addedAt: string;
+  contactSharedAt?: string;
+  contactSharedNote?: string;
   cv: {
     id: string;
     jobTitle: string;
@@ -615,14 +637,16 @@ interface VacancyAnalytics {
   presented: number;
   viewed: number;
   contactRequested: number;
+  contactShared: number;
   rejected: number;
+  suggestedPending: number;
   jobseekerMatchCount: number;
 }
 
 function VacancyRow({
-  v, onDelete, busy, token, onNewCountChange,
+  v, onDelete, onTogglePause, busy, token, onNewCountChange,
 }: {
-  v: Vacancy; onDelete: () => void; busy: boolean; token: string;
+  v: Vacancy; onDelete: () => void; onTogglePause: () => void; busy: boolean; token: string;
   onNewCountChange: (vId: string, count: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -684,7 +708,7 @@ function VacancyRow({
   };
 
   return <VacancyRowInner
-    v={v} onDelete={onDelete} busy={busy} expanded={expanded} handleToggle={handleToggle}
+    v={v} onDelete={onDelete} onTogglePause={onTogglePause} busy={busy} expanded={expanded} handleToggle={handleToggle}
     analytics={analytics} matches={matches} loadingExpand={loadingExpand}
     contactMatch={contactMatch} setContactMatch={setContactMatch}
     markViewed={markViewed} reloadExpand={loadExpand} token={token} newCount={newCount}
@@ -692,10 +716,10 @@ function VacancyRow({
 }
 
 function VacancyRowInner({
-  v, onDelete, busy, expanded, handleToggle, analytics, matches, loadingExpand,
+  v, onDelete, onTogglePause, busy, expanded, handleToggle, analytics, matches, loadingExpand,
   contactMatch, setContactMatch, markViewed, reloadExpand, token, newCount,
 }: {
-  v: Vacancy; onDelete: () => void; busy: boolean;
+  v: Vacancy; onDelete: () => void; onTogglePause: () => void; busy: boolean;
   expanded: boolean; handleToggle: () => void;
   analytics: VacancyAnalytics | null;
   matches: AnonMatch[] | null;
@@ -717,27 +741,39 @@ function VacancyRowInner({
   };
   const salary = formatSalary();
   const created = new Date(v.createdAt).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
+  const isPaused = v.isActive === false;
 
   return (
     <div
       id={`vacancy-${v._id}`}
       className={cn(
         'bg-white border-2 transition-all',
-        newCount > 0
-          ? 'border-blue-600 shadow-[6px_6px_0px_0px_rgba(59,130,246,0.18)]'
-          : 'border-slate-100 hover:border-blue-600',
+        isPaused
+          ? 'border-slate-200 opacity-70'
+          : newCount > 0
+            ? 'border-blue-600 shadow-[6px_6px_0px_0px_rgba(59,130,246,0.18)]'
+            : 'border-slate-100 hover:border-blue-600',
       )}
     >
       <div className="p-6 flex items-start justify-between gap-4 group">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex-wrap">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Actief
+            {isPaused ? (
+              <><Pause className="w-3 h-3 text-slate-400" /> <span className="text-slate-500">Gepauzeerd</span></>
+            ) : (
+              <><CheckCircle2 className="w-3 h-3 text-emerald-600" /> Actief</>
+            )}
             <span className="text-slate-300">·</span>
             <Calendar className="w-3 h-3" /> {created}
-            {newCount > 0 && (
+            {newCount > 0 && !isPaused && (
               <span className="inline-flex items-center gap-1 bg-blue-600 text-white px-2 py-0.5 ml-2 text-[10px] tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                 <Sparkles className="w-2.5 h-2.5" />
                 {newCount} nieuw{newCount === 1 ? '' : 'e'} match{newCount === 1 ? '' : 'es'}
+              </span>
+            )}
+            {!isPaused && analytics && analytics.suggestedPending > 0 && newCount === 0 && (
+              <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 ml-2 text-[10px] tracking-widest border border-purple-300">
+                <Sparkles className="w-2.5 h-2.5" /> Wordt gematcht door ons team
               </span>
             )}
           </div>
@@ -765,14 +801,25 @@ function VacancyRowInner({
             </div>
           )}
         </div>
-        <button
-          onClick={onDelete}
-          disabled={busy}
-          className="text-red-600 hover:bg-red-50 p-3 disabled:opacity-50 shrink-0 transition-colors"
-          aria-label="Vacature verwijderen"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-start gap-1 shrink-0">
+          <button
+            onClick={onTogglePause}
+            disabled={busy}
+            className="text-slate-500 hover:bg-slate-100 p-3 disabled:opacity-50 transition-colors"
+            aria-label={isPaused ? 'Vacature hervatten' : 'Vacature pauzeren'}
+            title={isPaused ? 'Hervat publicatie' : 'Pauzeer publicatie'}
+          >
+            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={busy}
+            className="text-red-600 hover:bg-red-50 p-3 disabled:opacity-50 transition-colors"
+            aria-label="Vacature verwijderen"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <button
@@ -865,8 +912,12 @@ function CuratedMatchCard({
 }) {
   const isNew = match.status === 'presented';
   const isContactRequested = match.status === 'contact-requested';
+  const isContactShared = match.status === 'contact-shared';
   const cv = match.cv;
   const added = new Date(match.addedAt).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' });
+  const sharedAt = match.contactSharedAt
+    ? new Date(match.contactSharedAt).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })
+    : null;
 
   return (
     <div
@@ -893,6 +944,14 @@ function CuratedMatchCard({
                 <span className="text-slate-300">·</span>
                 <span className="bg-amber-50 text-amber-700 px-2 py-0.5 inline-flex items-center gap-1">
                   <Clock className="w-3 h-3" /> Contact aangevraagd
+                </span>
+              </>
+            )}
+            {isContactShared && (
+              <>
+                <span className="text-slate-300">·</span>
+                <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 inline-flex items-center gap-1">
+                  <CheckCheck className="w-3 h-3" /> Contact gedeeld{sharedAt ? ` · ${sharedAt}` : ''}
                 </span>
               </>
             )}
@@ -925,6 +984,12 @@ function CuratedMatchCard({
               <p className="text-[11px] font-bold text-slate-700">{match.adminNote}</p>
             </div>
           )}
+          {isContactShared && match.contactSharedNote && (
+            <div className="mt-3 bg-emerald-50 border-l-4 border-emerald-600 p-3">
+              <p className="text-[9px] font-black text-emerald-700 uppercase tracking-widest mb-1">Bericht van ons team</p>
+              <p className="text-[11px] font-bold text-slate-700">{match.contactSharedNote}</p>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3 self-stretch lg:self-center shrink-0">
           {match.matchScore !== undefined && match.matchScore > 0 && (
@@ -941,15 +1006,19 @@ function CuratedMatchCard({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onContactRequest(); }}
-            disabled={isContactRequested}
+            disabled={isContactRequested || isContactShared}
             className={cn(
               'px-5 py-3 font-black uppercase tracking-widest text-[10px] transition-colors flex items-center gap-2 whitespace-nowrap',
-              isContactRequested
-                ? 'bg-amber-100 text-amber-700 cursor-not-allowed'
-                : 'bg-black text-white hover:bg-blue-600',
+              isContactShared
+                ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed'
+                : isContactRequested
+                  ? 'bg-amber-100 text-amber-700 cursor-not-allowed'
+                  : 'bg-black text-white hover:bg-blue-600',
             )}
           >
-            {isContactRequested ? 'Verzonden' : <>Vraag contact aan <ArrowRight className="w-3 h-3" /></>}
+            {isContactShared ? <>Contact gedeeld <CheckCheck className="w-3 h-3" /></>
+              : isContactRequested ? 'Verzonden'
+              : <>Vraag contact aan <ArrowRight className="w-3 h-3" /></>}
           </button>
         </div>
       </div>

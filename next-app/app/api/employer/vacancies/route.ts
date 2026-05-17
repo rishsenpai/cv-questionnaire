@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
     if (auth instanceof NextResponse) return auth;
     try {
         await connectDB();
-        const vacancies = await Vacancy.find({ employerId: auth.employerId, isActive: true })
+        // Ook gepauzeerde (isActive=false) vacatures meenemen zodat werkgever ze kan beheren.
+        const vacancies = await Vacancy.find({ employerId: auth.employerId })
             .select('-fileData -embedding')
             .sort({ createdAt: -1 });
         return NextResponse.json({ success: true, data: vacancies });
@@ -41,6 +42,28 @@ export async function POST(req: NextRequest) {
         if (!title || !String(title).trim()) {
             return NextResponse.json({ success: false, message: 'Vacaturetitel is verplicht' }, { status: 400 });
         }
+        const normalizedTitle = String(title).trim();
+
+        // Dedup: weiger een vacature met dezelfde titel (case-insensitive) voor dezelfde werkgever
+        // tenzij `force: true` meegegeven is. Voorkomt dat dezelfde vacature 10x in de queue belandt.
+        if (!body?.force) {
+            const dup = await Vacancy.findOne({
+                employerId: auth.employerId,
+                title: { $regex: `^${normalizedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+            }).select('_id title isActive createdAt');
+            if (dup) {
+                return NextResponse.json({
+                    success: false,
+                    message: 'Je hebt al een vacature met deze titel. Bevestig om opnieuw te plaatsen.',
+                    duplicate: {
+                        _id: String(dup._id),
+                        title: dup.title,
+                        isActive: dup.isActive,
+                        createdAt: dup.createdAt,
+                    },
+                }, { status: 409 });
+            }
+        }
 
         const fullText = [title, company, description, requirements, location].filter(Boolean).join(' ');
         const salary = (salaryMin || salaryMax) ? {
@@ -52,7 +75,7 @@ export async function POST(req: NextRequest) {
 
         const vacancy = await Vacancy.create({
             employerId: auth.employerId,
-            title: String(title).trim(),
+            title: normalizedTitle,
             company: company ? String(company).trim() : undefined,
             description: description ? String(description).trim() : undefined,
             location: location ? String(location).trim() : undefined,

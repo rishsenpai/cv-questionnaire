@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
+import CuratedMatch from '@/models/CuratedMatch';
+import MatchEvent from '@/models/MatchEvent';
 import { getTransporter } from '@/lib/server/mailer';
 import { ingestCvFromBuffer } from '@/lib/server/cvIngestion';
 import { fetchCvBlob } from '@/lib/server/blobStorage';
@@ -117,8 +119,9 @@ export async function POST(req: NextRequest) {
         }
 
         let vacancyForEmail: VacancyEmail | null = null;
+        let vacancyEmployerId: mongoose.Types.ObjectId | undefined;
         if (vacancyId && mongoose.Types.ObjectId.isValid(vacancyId)) {
-            const v = await Vacancy.findById(vacancyId).select('title location employmentType isRemote');
+            const v = await Vacancy.findById(vacancyId).select('title location employmentType isRemote employerId');
             if (v) {
                 vacancyForEmail = {
                     title: v.title,
@@ -126,6 +129,7 @@ export async function POST(req: NextRequest) {
                     employmentType: v.employmentType,
                     isRemote: v.isRemote,
                 };
+                vacancyEmployerId = v.employerId as mongoose.Types.ObjectId | undefined;
                 Vacancy.findByIdAndUpdate(vacancyId, { $inc: { applicationCount: 1 } }).catch(err => {
                     console.error('applicationCount inc failed:', err instanceof Error ? err.message : err);
                 });
@@ -182,6 +186,53 @@ export async function POST(req: NextRequest) {
         </a>
     </p>
 </div>`;
+
+        // CuratedMatch aanmaken zodat werkgever de sollicitatie ook in z'n portaal ziet
+        // (status 'contact-requested' — admin moet contact alsnog opzetten).
+        // Voor internal vacatures: employerId blijft undefined, alleen admin ziet het.
+        let curatedMatchId: mongoose.Types.ObjectId | null = null;
+        if (resolvedCv && vacancyId && mongoose.Types.ObjectId.isValid(vacancyId)) {
+            try {
+                const existing = await CuratedMatch.findOne({ vacancyId, cvId: resolvedCv._id });
+                if (existing) {
+                    // Alleen upgraden als de match nog niet voorbij contact-requested is.
+                    if (['suggested', 'presented', 'viewed'].includes(existing.status)) {
+                        existing.status = 'contact-requested';
+                        existing.contactRequestedAt = new Date();
+                        await existing.save();
+                    }
+                    curatedMatchId = existing._id as mongoose.Types.ObjectId;
+                } else {
+                    const created = await CuratedMatch.create({
+                        vacancyId,
+                        cvId: resolvedCv._id,
+                        employerId: vacancyEmployerId,
+                        status: 'contact-requested',
+                        source: 'apply',
+                        contactRequestedAt: new Date(),
+                    });
+                    curatedMatchId = created._id as mongoose.Types.ObjectId;
+                }
+            } catch (err) {
+                console.error('CuratedMatch upsert (apply) failed:', err instanceof Error ? err.message : err);
+            }
+
+            // MatchEvent log met cross-link naar de curated match.
+            try {
+                await MatchEvent.create({
+                    cvId: resolvedCv._id,
+                    cvFullName: resolvedCv.fullName,
+                    vacancyId,
+                    vacancyTitle: vacancyForEmail.title,
+                    score: vacancyForEmail.matchScore || 0,
+                    matchType: 'AI Semantic',
+                    source: 'apply',
+                    curatedMatchId: curatedMatchId || undefined,
+                });
+            } catch (err) {
+                console.error('MatchEvent log (apply) failed:', err instanceof Error ? err.message : err);
+            }
+        }
 
         const recipients = Array.from(new Set([
             APPLICATIONS_EMAIL,

@@ -29,11 +29,13 @@ export async function GET(req: NextRequest, { params }: Params) {
             return NextResponse.json({ success: false, message: 'Vacature niet gevonden' }, { status: 404 });
         }
 
-        const [byStatus, jobseekerMatchCount, recentMatchEvents] = await Promise.all([
+        // 'suggested' apart tellen: zichtbaar als "wordt gematcht" indicator voor de werkgever.
+        const [byStatus, suggestedCount, jobseekerMatchCount, recentMatchEvents] = await Promise.all([
             CuratedMatch.aggregate([
                 { $match: { vacancyId: vacancy._id, status: { $ne: 'suggested' } } },
                 { $group: { _id: '$status', count: { $sum: 1 } } },
             ]),
+            CuratedMatch.countDocuments({ vacancyId: vacancy._id, status: 'suggested' }),
             MatchEvent.countDocuments({ vacancyId: vacancy._id, source: 'jobseeker' }),
             MatchEvent.find({ vacancyId: vacancy._id })
                 .sort({ createdAt: -1 })
@@ -46,6 +48,7 @@ export async function GET(req: NextRequest, { params }: Params) {
             presented: 0,
             viewed: 0,
             'contact-requested': 0,
+            'contact-shared': 0,
             rejected: 0,
         };
         for (const s of byStatus) statusCounts[s._id] = s.count;
@@ -65,7 +68,9 @@ export async function GET(req: NextRequest, { params }: Params) {
                 presented: statusCounts.presented,
                 viewed: statusCounts.viewed,
                 contactRequested: statusCounts['contact-requested'],
+                contactShared: statusCounts['contact-shared'],
                 rejected: statusCounts.rejected,
+                suggestedPending: suggestedCount,
                 jobseekerMatchCount,
             },
             recentMatchEvents,

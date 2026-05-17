@@ -7,6 +7,7 @@ import {
     generateTextHash,
     prepareCVText,
 } from './embeddings';
+import { linkCandidateByCvEmail } from './candidateCvLink';
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -162,6 +163,13 @@ export async function ingestCvFromBuffer({
 
     if (process.env.OPENAI_API_KEY || process.env.NODE_ENV === 'test') {
         embedCvAsync(String(saved._id)).catch(err => console.error('embedCvAsync error:', err.message));
+    }
+
+    // Reverse link: als er een Candidate-account bestaat met dezelfde email, koppel direct.
+    if (parsed.email) {
+        linkCandidateByCvEmail(String(saved._id), parsed.email).catch(err =>
+            console.error('linkCandidateByCvEmail failed:', err instanceof Error ? err.message : err),
+        );
     }
 
     return { created: true, cvId: String(saved._id) };

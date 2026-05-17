@@ -60,11 +60,30 @@ function MatchesContent() {
   const router = useRouter();
   const cvIdFromUrl = params.get('cvId');
 
-  const [activeCvId] = useState<string | null>(cvIdFromUrl);
+  const [activeCvId, setActiveCvId] = useState<string | null>(cvIdFromUrl);
   const [cv, setCv] = useState<{ _id: string; fullName: string; jobTitle?: string } | null>(null);
   const [matches, setMatches] = useState<MatchVacancy[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [resolvingCandidate, setResolvingCandidate] = useState(false);
+
+  // Geen cvId in URL? Probeer via candidate-login te resolven (meest recente CV).
+  useEffect(() => {
+    if (activeCvId) return;
+    if (typeof window === 'undefined') return;
+    const token = window.localStorage.getItem('suri_candidate_token');
+    if (!token) return;
+    setResolvingCandidate(true);
+    fetch('/api/candidate/me', { headers: { 'x-candidate-token': token } })
+      .then(r => r.json())
+      .then((data: { success: boolean; candidate?: { cvs?: Array<{ _id: string }> } }) => {
+        if (data.success && data.candidate?.cvs && data.candidate.cvs.length > 0) {
+          setActiveCvId(data.candidate.cvs[0]._id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setResolvingCandidate(false));
+  }, [activeCvId]);
 
   useEffect(() => {
     if (!activeCvId) return;
@@ -100,8 +119,15 @@ function MatchesContent() {
 
   void router;
 
-  // No CV id in URL — prompt to upload
+  // No CV id in URL — prompt to upload (na candidate-resolve)
   if (!activeCvId) {
+    if (resolvingCandidate) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        </div>
+      );
+    }
     return <NoCvState />;
   }
 

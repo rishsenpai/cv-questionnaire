@@ -28,6 +28,7 @@ interface JobCard {
   salary: string;
   match: number;
   verified: boolean;
+  viaJobParsing: boolean;
   description?: string;
   requirements?: string[];
   postedAt?: string;
@@ -43,6 +44,7 @@ interface ApiVacancy {
   employmentType?: string;
   salary?: { min?: number; max?: number; currency?: string; period?: string };
   source?: string;
+  viaJobParsing?: boolean;
   postedAt?: string;
   createdAt?: string;
 }
@@ -56,15 +58,18 @@ function formatSalary(s?: ApiVacancy['salary']): string {
 }
 
 function vacancyToCard(v: ApiVacancy): JobCard {
+  const viaJobParsing = Boolean(v.viaJobParsing);
   return {
     id: v._id,
     title: v.title,
-    company: v.company || 'Onbekend bedrijf',
+    // Company wordt server-side gestript voor anoniem ophalen — toon altijd 'via JobParsing'.
+    company: viaJobParsing ? 'Via JobParsing' : (v.company || 'Via JobParsing'),
     location: v.location || 'Locatie onbekend',
     type: v.employmentType || 'Full-time',
     salary: formatSalary(v.salary),
     match: 0,
-    verified: Boolean(v.company),
+    verified: Boolean(v.company) && !viaJobParsing,
+    viaJobParsing,
     description: v.description,
     requirements: v.requirements ? [v.requirements] : undefined,
     postedAt: v.postedAt || v.createdAt,
@@ -411,7 +416,22 @@ function VacaturesContent() {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-4">
-                        {job.verified && (
+                        {job.viaJobParsing && (
+                          <div className="relative group/tooltip">
+                            <div className="flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 border-2 border-purple-600 italic cursor-help brutal-shadow">
+                              <Sparkles className="w-3 h-3" />
+                              <span className="text-[9px] font-black uppercase tracking-widest">Via JobParsing</span>
+                            </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 p-4 bg-black text-white text-[9px] font-bold uppercase tracking-widest leading-relaxed opacity-0 group-hover/tooltip:opacity-100 transition-all z-50 pointer-events-none border-2 border-purple-600 shadow-[8px_8px_0px_0px_rgba(168,85,247,1)] scale-95 group-hover/tooltip:scale-100">
+                              <div className="flex items-center gap-2 mb-2 text-purple-400">
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Bemiddeld door ons</span>
+                              </div>
+                              Deze vacature wordt bemiddeld door het JobParsing-team. Wij nemen contact met je op na je sollicitatie.
+                            </div>
+                          </div>
+                        )}
+                        {!job.viaJobParsing && job.verified && (
                           <div className="relative group/tooltip">
                             <div className="flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 border-2 border-blue-600 italic cursor-help brutal-shadow">
                               <Sparkles className="w-3 h-3" />

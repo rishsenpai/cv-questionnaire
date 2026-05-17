@@ -76,9 +76,13 @@ export async function GET(req: NextRequest, { params }: Params) {
             delete obj.embedding;
             obj.description = sanitizeJobText(vacancy.description, vacancy.company);
             obj.requirements = sanitizeJobText(vacancy.requirements, vacancy.company);
+            // Anoniem: bedrijfsnaam altijd verbergen — alles loopt via JobParsing.
             delete obj.company;
             delete obj.companyLogo;
             delete obj.applyLink;
+            if (!vacancy.employerId) {
+                obj.viaJobParsing = true;
+            }
             delete obj.fullText;
             return {
                 _vacancyId: vacancy._id,
@@ -88,7 +92,7 @@ export async function GET(req: NextRequest, { params }: Params) {
                 matchType: 'AI Semantic' as const,
             };
         })
-        .filter(v => v.matchScore >= 40)
+        .filter(v => v.matchScore >= 20)
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, 20);
 

@@ -1146,6 +1146,10 @@ interface SuggestionRow {
   _id: string;
   cvId: string;
   matchScore?: number;
+  status?: string;
+  contactRequestedAt?: string;
+  contactSharedAt?: string;
+  contactSharedNote?: string;
   source: string;
   addedAt: string;
   cv: { _id: string; fullName?: string; jobTitle?: string; location?: string } | null;
@@ -1156,16 +1160,19 @@ function SuggestionsModal({
 }: {
   vacancy: VacancyRow; token: string; onClose: () => void; onChange: () => void;
 }) {
+  const [tab, setTab] = useState<'suggested' | 'contact-requested'>('suggested');
   const [items, setItems] = useState<SuggestionRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [shareNote, setShareNote] = useState<Record<string, string>>({});
 
   const load = React.useCallback(async () => {
-    const res = await fetch(`/api/admin/vacancies/${vacancy._id}/curated-matches?status=suggested`, {
+    setItems(null);
+    const res = await fetch(`/api/admin/vacancies/${vacancy._id}/curated-matches?status=${tab}`, {
       headers: { 'x-admin-token': token },
     });
     const data = await res.json();
     if (data.success) setItems(data.matches);
-  }, [vacancy._id, token]);
+  }, [vacancy._id, token, tab]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1195,6 +1202,20 @@ function SuggestionsModal({
     } finally { setBusy(null); }
   };
 
+  const shareContact = async (id: string) => {
+    setBusy(id);
+    try {
+      await fetch(`/api/admin/curated-matches/${id}/share-contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ note: shareNote[id] || '' }),
+      });
+      setShareNote(prev => ({ ...prev, [id]: '' }));
+      await load();
+      onChange();
+    } finally { setBusy(null); }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1212,56 +1233,105 @@ function SuggestionsModal({
       >
         <div className="bg-black text-white p-6 flex items-center justify-between sticky top-0 z-10">
           <div>
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">AI-suggesties (OpenAI embeddings)</p>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Curated matches</p>
             <h3 className="text-xl font-black uppercase tracking-tighter italic">{vacancy.title}</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="border-b-2 border-slate-200 flex">
+          <button
+            type="button"
+            onClick={() => setTab('suggested')}
+            className={cn(
+              'flex-1 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors',
+              tab === 'suggested' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50',
+            )}
+          >
+            AI-suggesties
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('contact-requested')}
+            className={cn(
+              'flex-1 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors',
+              tab === 'contact-requested' ? 'bg-amber-500 text-white' : 'bg-white text-slate-600 hover:bg-slate-50',
+            )}
+          >
+            Contact aangevraagd
+          </button>
         </div>
         <div className="p-6 space-y-3">
           {!items ? (
             <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" /></div>
           ) : items.length === 0 ? (
             <p className="text-center py-8 text-[11px] font-black uppercase tracking-widest text-slate-400">
-              Geen open suggesties meer voor deze vacature.
+              {tab === 'suggested' ? 'Geen open suggesties meer voor deze vacature.' : 'Geen openstaande contactaanvragen.'}
             </p>
           ) : (
             items.map(s => (
-              <div key={s._id} className="border-2 border-slate-200 p-4 flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="font-black text-sm truncate">{s.cv?.fullName || '—'}</p>
-                  <p className="text-xs font-bold text-slate-500 truncate">{s.cv?.jobTitle || '—'} · {s.cv?.location || '—'}</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                    Bron: {s.source === 'auto-embedding' ? 'OpenAI semantic' : s.source}
-                  </p>
+              <div key={s._id} className="border-2 border-slate-200 p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-sm truncate">{s.cv?.fullName || '—'}</p>
+                    <p className="text-xs font-bold text-slate-500 truncate">{s.cv?.jobTitle || '—'} · {s.cv?.location || '—'}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                      Bron: {s.source === 'auto-embedding' ? 'OpenAI semantic' : s.source}
+                      {tab === 'contact-requested' && s.contactRequestedAt && (
+                        <> · Aangevraagd op {new Date(s.contactRequestedAt).toLocaleDateString('nl-NL')}</>
+                      )}
+                    </p>
+                  </div>
+                  {s.matchScore !== undefined && (
+                    <div className="text-right">
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Match</div>
+                      <div className={cn(
+                        'text-2xl font-black italic leading-none',
+                        s.matchScore >= 70 ? 'text-blue-600' : s.matchScore >= 60 ? 'text-emerald-600' : 'text-slate-700',
+                      )}>{s.matchScore}%</div>
+                    </div>
+                  )}
+                  {tab === 'suggested' && (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        disabled={busy === s._id}
+                        onClick={() => promote(s._id)}
+                        className="bg-blue-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                        Push
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy === s._id}
+                        onClick={() => reject(s._id)}
+                        className="border-2 border-red-300 text-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-50"
+                      >
+                        Negeer
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {s.matchScore !== undefined && (
-                  <div className="text-right">
-                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Match</div>
-                    <div className={cn(
-                      'text-2xl font-black italic leading-none',
-                      s.matchScore >= 70 ? 'text-blue-600' : s.matchScore >= 60 ? 'text-emerald-600' : 'text-slate-700',
-                    )}>{s.matchScore}%</div>
+                {tab === 'contact-requested' && (
+                  <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+                    <textarea
+                      value={shareNote[s._id] || ''}
+                      onChange={e => setShareNote(prev => ({ ...prev, [s._id]: e.target.value }))}
+                      placeholder="Optionele notitie voor de werkgever (bv. 'Kandidaat is op vakantie tot 24/5')…"
+                      className="w-full border-2 border-slate-200 p-2 text-xs font-bold focus:border-blue-600 outline-none"
+                      rows={2}
+                    />
+                    <button
+                      type="button"
+                      disabled={busy === s._id}
+                      onClick={() => shareContact(s._id)}
+                      className="bg-emerald-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                      Markeer contact gedeeld
+                    </button>
                   </div>
                 )}
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    disabled={busy === s._id}
-                    onClick={() => promote(s._id)}
-                    className="bg-blue-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
-                    Push
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy === s._id}
-                    onClick={() => reject(s._id)}
-                    className="border-2 border-red-300 text-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-50"
-                  >
-                    Negeer
-                  </button>
-                </div>
               </div>
             ))
           )}
