@@ -822,9 +822,13 @@ function VacanciesTab({ token }: { token: string }) {
             <button onClick={() => setShowImport(s => !s)} className="bg-blue-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
               <Globe className="w-3 h-3" /> Adzuna (NL)
             </button>
-            <button onClick={generateVacancyEmbeddings} disabled={busy || embeddingBatch || vacancyEmbedProgress?.active} className="bg-amber-500 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50">
+            <button
+              onClick={generateVacancyEmbeddings}
+              disabled={busy || embeddingBatch || (vacancyEmbedProgress?.active === true && vacancyEmbedProgress.current > 0)}
+              className="bg-amber-500 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
               {embeddingBatch || vacancyEmbedProgress?.active ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              {vacancyEmbedProgress?.active
+              {vacancyEmbedProgress?.active && vacancyEmbedProgress.current > 0
                 ? `Bezig: ${vacancyEmbedProgress.current}/${vacancyEmbedProgress.total}`
                 : 'Genereer embeddings'}
             </button>

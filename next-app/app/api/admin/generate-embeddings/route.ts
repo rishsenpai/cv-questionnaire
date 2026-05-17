@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import SyncState from '@/models/SyncState';
@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
         };
         await persistProgress(progress);
 
-        // Process in background (within function timeout window).
-        // Vercel Fluid Compute keeps the work running even after we return —
-        // 300s is plenty for ~hundreds of embeddings at ~200ms apart.
-        (async () => {
+        // after() vertelt Vercel Fluid Compute het werk te bewaren tot maxDuration,
+        // ook nadat de response al aan de client is teruggegeven. Zonder dit wordt
+        // de fire-and-forget async-IIFE direct na de response gekilled.
+        after(async () => {
             for (const cv of cvsWithoutEmbedding) {
                 progress.currentName = cv.fullName || 'Onbekend';
                 try {
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
             progress.active = false;
             await persistProgress(progress);
             console.log(`Embedding generation complete: ${progress.current - progress.failed} success, ${progress.failed} failed`);
-        })();
+        });
 
         return NextResponse.json({
             success: true,

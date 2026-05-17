@@ -2,7 +2,7 @@
 // Spiegelt /api/admin/generate-embeddings (CV-versie), met dezelfde
 // SyncState-progress sleutel 'embedding:vacancy-progress'.
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
 import SyncState from '@/models/SyncState';
@@ -73,8 +73,9 @@ export async function POST(req: NextRequest) {
         };
         await persistProgress(progress);
 
-        // Background processing — server returnt direct, werk gaat door tot maxDuration.
-        (async () => {
+        // after() vertelt Vercel Fluid Compute het werk te bewaren tot maxDuration,
+        // ook nadat de response al aan de client is teruggegeven.
+        after(async () => {
             for (const v of vacanciesWithout) {
                 progress.currentTitle = v.title || 'Onbekend';
                 try {
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
             progress.active = false;
             await persistProgress(progress);
             console.log(`Vacancy embedding done: ${progress.current - progress.failed} ok, ${progress.failed} failed`);
-        })();
+        });
 
         return NextResponse.json({
             success: true,
