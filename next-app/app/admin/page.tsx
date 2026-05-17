@@ -26,6 +26,8 @@ import {
   Eye,
   Target,
   Activity,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
@@ -543,6 +545,7 @@ function VacanciesTab({ token }: { token: string }) {
   const [vacancies, setVacancies] = useState<VacancyRow[]>([]);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'employer' | 'adzuna' | 'jsearch' | 'internal'>('all');
   const [suggestionsFor, setSuggestionsFor] = useState<VacancyRow | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -566,6 +569,7 @@ function VacanciesTab({ token }: { token: string }) {
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [embeddingBatch, setEmbeddingBatch] = useState(false);
   const [createParsing, setCreateParsing] = useState(false);
   const [createParsedFrom, setCreateParsedFrom] = useState<string | null>(null);
   const [createDragOver, setCreateDragOver] = useState(false);
@@ -699,6 +703,23 @@ function VacanciesTab({ token }: { token: string }) {
     } finally { setBusy(false); }
   };
 
+  const generateVacancyEmbeddings = async () => {
+    if (!confirm('Embedding-generatie starten voor alle vacatures zonder embedding? Loopt op de achtergrond.')) return;
+    setEmbeddingBatch(true);
+    try {
+      const res = await fetch('/api/admin/generate-vacancy-embeddings', {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      alert(data.success
+        ? `${data.message}. Ververs de pagina over een paar minuten om resultaat te zien.`
+        : (data.message || 'Genereren mislukt'));
+    } finally {
+      setEmbeddingBatch(false);
+    }
+  };
+
   const submitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError(null);
@@ -767,6 +788,10 @@ function VacanciesTab({ token }: { token: string }) {
             </button>
             <button onClick={() => setShowImport(s => !s)} className="bg-blue-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
               <Globe className="w-3 h-3" /> Adzuna (NL)
+            </button>
+            <button onClick={generateVacancyEmbeddings} disabled={busy || embeddingBatch} className="bg-amber-500 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50">
+              {embeddingBatch ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              Genereer embeddings
             </button>
             <button onClick={deleteAllAdzuna} disabled={busy} className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors">
               Verwijder Adzuna
@@ -1075,11 +1100,21 @@ function VacanciesTab({ token }: { token: string }) {
                 if (filtered.length === 0) {
                   return <tr><td colSpan={6} className="p-12 text-center text-[11px] font-black uppercase tracking-widest text-slate-300">Geen vacatures.</td></tr>;
                 }
-                return filtered.map(v => {
+                return filtered.flatMap(v => {
                   const src = v.source || 'internal';
-                  return (
+                  const isExpanded = expandedId === v._id;
+                  const rows = [
                     <tr key={v._id} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
-                      <td className="p-3 truncate max-w-[300px]">{v.title}</td>
+                      <td className="p-3 truncate max-w-[300px]">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(isExpanded ? null : v._id)}
+                          className="inline-flex items-center gap-2 hover:text-blue-600 transition-colors text-left"
+                        >
+                          {isExpanded ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
+                          <span className="truncate">{v.title}</span>
+                        </button>
+                      </td>
                       <td className="p-3 truncate max-w-[200px] text-slate-500">{v.company || '—'}</td>
                       <td className="p-3 truncate max-w-[150px] text-slate-500">{v.location || '—'}</td>
                       <td className="p-3">
@@ -1094,7 +1129,7 @@ function VacanciesTab({ token }: { token: string }) {
                         {v.suggestionCount && v.suggestionCount > 0 ? (
                           <button
                             type="button"
-                            onClick={() => setSuggestionsFor(v)}
+                            onClick={() => setExpandedId(isExpanded ? null : v._id)}
                             className="bg-blue-600 text-white px-3 py-1 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2"
                           >
                             <Sparkles className="w-3 h-3" /> {v.suggestionCount} suggestie{v.suggestionCount === 1 ? '' : 's'}
@@ -1119,8 +1154,18 @@ function VacanciesTab({ token }: { token: string }) {
                           </button>
                         </div>
                       </td>
-                    </tr>
-                  );
+                    </tr>,
+                  ];
+                  if (isExpanded) {
+                    rows.push(
+                      <tr key={v._id + '-expand'} className="bg-slate-50 border-t border-slate-200">
+                        <td colSpan={6} className="p-0">
+                          <InlineMatchesRow vacancyId={v._id} token={token} onChange={reload} />
+                        </td>
+                      </tr>,
+                    );
+                  }
+                  return rows;
                 });
               })()}
             </tbody>
@@ -1338,6 +1383,107 @@ function SuggestionsModal({
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+// Inline match-overzicht onder een vacancy-row in de Vacatures-tab.
+// Toont top-10 AI-suggesties met Push/Negeer-knoppen — geen modal nodig.
+function InlineMatchesRow({
+  vacancyId, token, onChange,
+}: {
+  vacancyId: string; token: string; onChange: () => void;
+}) {
+  const [items, setItems] = useState<SuggestionRow[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    setItems(null);
+    const res = await fetch(`/api/admin/vacancies/${vacancyId}/curated-matches?status=suggested`, {
+      headers: { 'x-admin-token': token },
+    });
+    const data = await res.json();
+    if (data.success) setItems((data.matches as SuggestionRow[]).slice(0, 10));
+  }, [vacancyId, token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const promote = async (id: string) => {
+    setBusy(id);
+    try {
+      await fetch(`/api/admin/curated-matches/${id}/promote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({}),
+      });
+      await load();
+      onChange();
+    } finally { setBusy(null); }
+  };
+
+  const reject = async (id: string) => {
+    if (!confirm('Suggestie verwijderen?')) return;
+    setBusy(id);
+    try {
+      await fetch(`/api/admin/curated-matches/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': token },
+      });
+      await load();
+      onChange();
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <div className="p-4 border-l-4 border-blue-600">
+      {!items ? (
+        <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-blue-600" /></div>
+      ) : items.length === 0 ? (
+        <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 py-4 text-center">
+          Geen open suggesties. Klik op ✨ rechts om opnieuw te matchen.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
+            Top {items.length} kandidaten (op match-score)
+          </p>
+          {items.map(s => (
+            <div key={s._id} className="bg-white border-2 border-slate-200 p-3 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-sm truncate">{s.cv?.fullName || '—'}</p>
+                <p className="text-xs font-bold text-slate-500 truncate">{s.cv?.jobTitle || '—'} · {s.cv?.location || '—'}</p>
+              </div>
+              {s.matchScore !== undefined && (
+                <div className="text-right shrink-0">
+                  <div className={cn(
+                    'text-xl font-black italic leading-none',
+                    s.matchScore >= 70 ? 'text-blue-600' : s.matchScore >= 50 ? 'text-emerald-600' : 'text-slate-700',
+                  )}>{s.matchScore}%</div>
+                </div>
+              )}
+              <div className="flex gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={busy === s._id}
+                  onClick={() => promote(s._id)}
+                  className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
+                >
+                  {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                  Push
+                </button>
+                <button
+                  type="button"
+                  disabled={busy === s._id}
+                  onClick={() => reject(s._id)}
+                  className="border-2 border-red-300 text-red-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-50"
+                >
+                  Negeer
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
