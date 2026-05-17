@@ -1534,6 +1534,14 @@ function InlineMatchesRow({
 }) {
   const [items, setItems] = useState<SuggestionRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [debug, setDebug] = useState<{
+    cvsScanned: number;
+    threshold: number;
+    aboveThreshold: number;
+    meanCosine: number;
+    topRaw: Array<{ cvId: string; fullName: string; email: string; cosine: number; pct: number }>;
+  } | null>(null);
+  const [debugBusy, setDebugBusy] = useState(false);
 
   const load = React.useCallback(async () => {
     setItems(null);
@@ -1543,6 +1551,20 @@ function InlineMatchesRow({
     const data = await res.json();
     if (data.success) setItems((data.matches as SuggestionRow[]).slice(0, 10));
   }, [vacancyId, token]);
+
+  const runDebug = async () => {
+    setDebugBusy(true);
+    try {
+      const res = await fetch(`/api/admin/vacancies/${vacancyId}/debug-match`, {
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      if (data.success) setDebug(data);
+      else alert(data.message || 'Debug mislukt');
+    } finally {
+      setDebugBusy(false);
+    }
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -1577,9 +1599,47 @@ function InlineMatchesRow({
       {!items ? (
         <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-blue-600" /></div>
       ) : items.length === 0 ? (
-        <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 py-4 text-center">
-          Geen open suggesties. Klik op ✨ rechts om opnieuw te matchen.
-        </p>
+        <div className="py-4 space-y-3 text-center">
+          <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+            Geen open suggesties. Klik op ✨ rechts om opnieuw te matchen.
+          </p>
+          <button
+            type="button"
+            onClick={runDebug}
+            disabled={debugBusy}
+            className="bg-slate-900 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            {debugBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            Diagnose: toon top-20 rauwe scores
+          </button>
+          {debug && (
+            <div className="mt-3 bg-slate-50 border-2 border-slate-300 p-3 text-left">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-2">
+                {debug.cvsScanned} CV&apos;s gescand · drempel {Math.round(debug.threshold * 100)}% · {debug.aboveThreshold} boven drempel · gem. cosine {debug.meanCosine}
+              </p>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">
+                    <th className="text-left p-1">Naam</th>
+                    <th className="text-left p-1">Email</th>
+                    <th className="text-right p-1">Cosine</th>
+                    <th className="text-right p-1">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {debug.topRaw.map(r => (
+                    <tr key={r.cvId} className="border-b border-slate-100">
+                      <td className="p-1 font-bold truncate max-w-[180px]">{r.fullName}</td>
+                      <td className="p-1 text-slate-500 truncate max-w-[180px]">{r.email}</td>
+                      <td className="p-1 text-right font-mono">{r.cosine.toFixed(3)}</td>
+                      <td className={cn('p-1 text-right font-black', r.cosine >= 0.20 ? 'text-emerald-600' : 'text-slate-400')}>{r.pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="space-y-2">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
