@@ -5,6 +5,7 @@
 // Schrijft top-N (default 10) als CuratedMatch met status 'suggested':
 // onzichtbaar voor werkgever, admin promoot ze handmatig naar 'presented'.
 
+import { Types } from 'mongoose';
 import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
 import CuratedMatch from '@/models/CuratedMatch';
@@ -86,21 +87,48 @@ async function persistSuggestions(
     top: Array<{ cvId: string; score: number }>,
 ): Promise<number> {
     if (top.length === 0) return 0;
-    const docs = top.map(t => ({
-        vacancyId: vacancy._id,
-        cvId: t.cvId,
-        employerId: vacancy.employerId,
-        status: 'suggested' as const,
-        source: 'auto-embedding' as const,
-        matchScore: t.score,
-        addedAt: new Date(),
-    }));
-    try {
-        // ordered:false zodat één dup-key niet de hele insert blokkeert
-        const res = await CuratedMatch.insertMany(docs, { ordered: false });
-        return res.length;
-    } catch (err) {
-        const e = err as { insertedDocs?: unknown[] };
-        return Array.isArray(e.insertedDocs) ? e.insertedDocs.length : 0;
+    // bulkWrite met upsert is idempotent: nieuwe pairs worden geïnsert,
+    // bestaande (vacancyId+cvId) krijgen een score-update zonder dup-key error.
+    // Per-doc try/catch + console.error zodat eventuele schema/cast/validation
+    // problemen zichtbaar zijn in Vercel logs i.p.v. stil 0 te retourneren.
+    const vacancyObjectId = vacancy._id as Types.ObjectId;
+    const employerObjectId = vacancy.employerId as Types.ObjectId | undefined;
+    let upserted = 0;
+    let modified = 0;
+    const errors: string[] = [];
+    for (const t of top) {
+        let cvObjectId: Types.ObjectId;
+        try {
+            cvObjectId = new Types.ObjectId(t.cvId);
+        } catch (err) {
+            errors.push(`invalid cvId ${t.cvId}: ${err instanceof Error ? err.message : String(err)}`);
+            continue;
+        }
+        try {
+            const res = await CuratedMatch.updateOne(
+                { vacancyId: vacancyObjectId, cvId: cvObjectId },
+                {
+                    $setOnInsert: {
+                        vacancyId: vacancyObjectId,
+                        cvId: cvObjectId,
+                        ...(employerObjectId ? { employerId: employerObjectId } : {}),
+                        status: 'suggested',
+                        source: 'auto-embedding',
+                        addedAt: new Date(),
+                    },
+                    $set: { matchScore: t.score },
+                },
+                { upsert: true },
+            );
+            if (res.upsertedCount > 0) upserted++;
+            else if (res.modifiedCount > 0) modified++;
+        } catch (err) {
+            errors.push(err instanceof Error ? err.message : String(err));
+        }
     }
+    if (errors.length > 0) {
+        console.error(`persistSuggestions errors for vacancy ${String(vacancyObjectId)}: ${errors.length} failed (${errors.slice(0, 3).join(' | ')})`);
+    }
+    console.log(`persistSuggestions vacancy ${String(vacancyObjectId)}: ${upserted} new + ${modified} updated (of ${top.length} candidates, ${errors.length} errors)`);
+    return upserted;
 }

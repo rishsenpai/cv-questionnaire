@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
+import CuratedMatch from '@/models/CuratedMatch';
 import { requireAdmin } from '@/lib/server/auth';
 import { cosineSimilarity } from '@/lib/server/embeddings';
 
@@ -53,6 +54,14 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
     scored.sort((a, b) => b.cosine - a.cosine);
 
+    // Bestaande CuratedMatch records voor deze vacature, per status.
+    const existing = await CuratedMatch.aggregate([
+        { $match: { vacancyId: new mongoose.Types.ObjectId(id) } },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]);
+    const existingByStatus: Record<string, number> = {};
+    for (const e of existing) existingByStatus[e._id] = e.count;
+
     return NextResponse.json({
         success: true,
         vacancyTitle: vacancy.title,
@@ -64,5 +73,6 @@ export async function GET(req: NextRequest, { params }: Params) {
         topRaw: scored.slice(0, 20),
         bottomRaw: scored.slice(-5),
         meanCosine: scored.length > 0 ? Math.round((scored.reduce((a, b) => a + b.cosine, 0) / scored.length) * 1000) / 1000 : 0,
+        existingMatches: existingByStatus,
     });
 }
