@@ -578,6 +578,16 @@ function VacanciesTab({ token }: { token: string }) {
     failed: number;
     percentage: number;
   } | null>(null);
+  const [matchAllProgress, setMatchAllProgress] = useState<{
+    active: boolean;
+    current: number;
+    total: number;
+    currentTitle: string;
+    failed: number;
+    suggestionsTotal: number;
+    percentage: number;
+  } | null>(null);
+  const [matchBatch, setMatchBatch] = useState(false);
   const [createParsing, setCreateParsing] = useState(false);
   const [createParsedFrom, setCreateParsedFrom] = useState<string | null>(null);
   const [createDragOver, setCreateDragOver] = useState(false);
@@ -662,6 +672,40 @@ function VacanciesTab({ token }: { token: string }) {
     const id = setInterval(fetchVacancyEmbedProgress, 3000);
     return () => clearInterval(id);
   }, [fetchVacancyEmbedProgress]);
+
+  const fetchMatchAllProgress = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/match-progress', { headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (data.success) setMatchAllProgress(data);
+    } catch { /* ignore */ }
+  }, [token]);
+
+  useEffect(() => {
+    fetchMatchAllProgress();
+    const id = setInterval(fetchMatchAllProgress, 3000);
+    return () => clearInterval(id);
+  }, [fetchMatchAllProgress]);
+
+  useEffect(() => {
+    if (matchAllProgress && !matchAllProgress.active && matchAllProgress.total > 0 && matchAllProgress.current === matchAllProgress.total) {
+      reload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchAllProgress?.active, matchAllProgress?.current, matchAllProgress?.total]);
+
+  const runMatchAll = async () => {
+    if (!confirm('Match-batch starten voor alle vacatures met embedding? Dit kan een paar minuten duren.')) return;
+    setMatchBatch(true);
+    try {
+      const res = await fetch('/api/admin/match-all-vacancies', { method: 'POST', headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (!data.success) alert(data.message || 'Match-batch starten mislukt');
+      else await fetchMatchAllProgress();
+    } finally {
+      setMatchBatch(false);
+    }
+  };
 
   useEffect(() => {
     // Wanneer batch zojuist klaar is, lijst opnieuw laden zodat 'embedding'-status klopt.
@@ -832,6 +876,16 @@ function VacanciesTab({ token }: { token: string }) {
                 ? `Bezig: ${vacancyEmbedProgress.current}/${vacancyEmbedProgress.total}`
                 : 'Genereer embeddings'}
             </button>
+            <button
+              onClick={runMatchAll}
+              disabled={busy || matchBatch || (matchAllProgress?.active === true && matchAllProgress.current > 0)}
+              className="bg-fuchsia-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {matchBatch || matchAllProgress?.active ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              {matchAllProgress?.active && matchAllProgress.current > 0
+                ? `Matchen: ${matchAllProgress.current}/${matchAllProgress.total}`
+                : 'Match alle'}
+            </button>
             <button onClick={deleteAllAdzuna} disabled={busy} className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors">
               Verwijder Adzuna
             </button>
@@ -858,6 +912,29 @@ function VacanciesTab({ token }: { token: string }) {
           )}
           {vacancyEmbedProgress.failed > 0 && (
             <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">{vacancyEmbedProgress.failed} mislukt</p>
+          )}
+        </div>
+      )}
+
+      {matchAllProgress && matchAllProgress.total > 0 && (
+        <div className="bg-fuchsia-50 border-2 border-fuchsia-600 p-4 space-y-2">
+          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+            <span className="flex items-center gap-2">
+              {matchAllProgress.active
+                ? <><Loader2 className="w-3 h-3 animate-spin text-fuchsia-700" /> Matching loopt</>
+                : <><Sparkles className="w-3 h-3 text-fuchsia-700" /> Matching klaar</>}
+              <span className="text-slate-500 normal-case tracking-normal">— {matchAllProgress.current}/{matchAllProgress.total} vacatures · {matchAllProgress.suggestionsTotal} suggesties</span>
+            </span>
+            <span className="text-fuchsia-700">{matchAllProgress.percentage}%</span>
+          </div>
+          <div className="h-2 bg-fuchsia-100">
+            <div className="h-full bg-fuchsia-600 transition-all" style={{ width: `${matchAllProgress.percentage}%` }} />
+          </div>
+          {matchAllProgress.active && matchAllProgress.currentTitle && (
+            <p className="text-[10px] font-bold text-fuchsia-800 italic truncate">Verwerkt: {matchAllProgress.currentTitle}</p>
+          )}
+          {matchAllProgress.failed > 0 && (
+            <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">{matchAllProgress.failed} mislukt</p>
           )}
         </div>
       )}
