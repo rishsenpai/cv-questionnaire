@@ -1541,6 +1541,7 @@ function InlineMatchesRow({
     aboveThreshold: number;
     meanCosine: number;
     topRaw: Array<{ cvId: string; fullName: string; email: string; cosine: number; pct: number }>;
+    existingMatches?: Record<string, number>;
   } | null>(null);
   const [debugBusy, setDebugBusy] = useState(false);
 
@@ -1618,6 +1619,11 @@ function InlineMatchesRow({
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-2">
                 {debug.cvsScanned} CV&apos;s gescand · drempel {Math.round(debug.threshold * 100)}% · {debug.aboveThreshold} boven drempel · gem. cosine {debug.meanCosine}
               </p>
+              {debug.existingMatches && Object.keys(debug.existingMatches).length > 0 && (
+                <p className="text-[10px] font-black uppercase tracking-widest text-fuchsia-700 mb-2">
+                  Bestaande records: {Object.entries(debug.existingMatches).map(([s, n]) => `${s}=${n}`).join(' · ')}
+                </p>
+              )}
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">

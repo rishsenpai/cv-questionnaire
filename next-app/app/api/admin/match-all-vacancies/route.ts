@@ -87,45 +87,41 @@ export async function POST(req: NextRequest) {
                 embedding: { $exists: true, $ne: [] },
                 isInternal: { $ne: true },
             }).select('+embedding _id').lean();
-            console.log(`Match-all: ${cvs.length} CVs ingeladen voor ${total} vacatures`);
+            const cvsWithEmb = cvs.filter(c => {
+                const e = (c as unknown as { embedding?: number[] }).embedding;
+                return Array.isArray(e) && e.length > 0;
+            });
+            console.log(`Match-all: ${cvs.length} CVs uit DB, ${cvsWithEmb.length} hebben daadwerkelijk embedding (na select +embedding)`);
 
-            // Laad bestaande (vacancyId, cvId) pairs één keer voor exclude-set.
-            // Map: vacancyIdHex -> Set<cvIdHex>
-            const existingByVacancy = new Map<string, Set<string>>();
-            const existingRaw = await CuratedMatch.find({}).select('vacancyId cvId').lean();
-            for (const m of existingRaw) {
-                const vKey = String(m.vacancyId);
-                const cKey = String(m.cvId);
-                if (!existingByVacancy.has(vKey)) existingByVacancy.set(vKey, new Set());
-                existingByVacancy.get(vKey)!.add(cKey);
-            }
-            console.log(`Match-all: ${existingRaw.length} bestaande CuratedMatch records geladen`);
+            const vacanciesWithEmb = vacancies.filter(v => {
+                const e = (v as unknown as { embedding?: number[] }).embedding;
+                return Array.isArray(e) && e.length > 0;
+            });
+            console.log(`Match-all: ${vacancies.length} vacatures uit DB, ${vacanciesWithEmb.length} hebben daadwerkelijk embedding`);
 
             for (let i = 0; i < vacancies.length; i++) {
                 const v = vacancies[i];
-                const vIdStr = String(v._id);
                 progress.currentTitle = v.title || 'Onbekend';
                 try {
                     const vEmb = (v as unknown as { embedding?: number[] }).embedding;
                     if (!vEmb || vEmb.length === 0) {
+                        if (i < 3) console.log(`Match ${i + 1}: vacature ${v.title} HEEFT GEEN embedding (probably select issue)`);
                         progress.current++;
                         continue;
                     }
-                    const excludeSet = existingByVacancy.get(vIdStr) || new Set<string>();
 
                     const scored: Array<{ cvId: string; score: number }> = [];
-                    for (const cv of cvs) {
-                        const cvIdStr = String(cv._id);
-                        if (excludeSet.has(cvIdStr)) continue;
-                        const cvEmb = (cv as unknown as { embedding?: number[] }).embedding;
-                        if (!cvEmb || cvEmb.length === 0) continue;
+                    for (const cv of cvsWithEmb) {
+                        const cvEmb = (cv as unknown as { embedding?: number[] }).embedding!;
                         const sim = cosineSimilarity(vEmb, cvEmb);
                         if (sim >= EMBEDDING_THRESHOLD) {
-                            scored.push({ cvId: cvIdStr, score: Math.round(sim * 100) });
+                            scored.push({ cvId: String(cv._id), score: Math.round(sim * 100) });
                         }
                     }
                     scored.sort((a, b) => b.score - a.score);
                     const top = scored.slice(0, TOP_N);
+
+                    if (i < 3) console.log(`Match ${i + 1} (${v.title}): ${scored.length} CVs boven drempel, top ${top.length}`);
 
                     if (top.length > 0) {
                         const vacancyObjectId = v._id as Types.ObjectId;
@@ -149,7 +145,9 @@ export async function POST(req: NextRequest) {
                         }));
                         const res = await CuratedMatch.bulkWrite(ops, { ordered: false });
                         const insertedCount = res.upsertedCount || 0;
+                        const matchedCount = res.matchedCount || 0;
                         progress.suggestionsTotal += insertedCount;
+                        if (i < 3) console.log(`Match ${i + 1} bulkWrite: ${insertedCount} new, ${matchedCount} matched-existing`);
                     }
                     progress.current++;
                 } catch (err) {
