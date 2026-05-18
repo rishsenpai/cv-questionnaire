@@ -1959,7 +1959,7 @@ function InlineMatchesRow({
                     )}>{s.matchScore}%</div>
                   </div>
                 )}
-                <div className="flex flex-col gap-2 shrink-0">
+                <div className="flex gap-2 shrink-0 items-start">
                   <button
                     type="button"
                     disabled={reasonBusy === s._id}
@@ -1979,7 +1979,7 @@ function InlineMatchesRow({
                       Gepushed {new Date(pushedDate).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })}
                     </span>
                   ) : (
-                    <div className="flex gap-2">
+                    <>
                       <button
                         type="button"
                         disabled={busy === s._id}
@@ -1997,7 +1997,7 @@ function InlineMatchesRow({
                       >
                         Negeer
                       </button>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -2792,12 +2792,33 @@ function VacancyMatchesList({
   onPush,
   pushingId,
   pushedIds,
+  cvId,
+  token,
 }: {
   matches: MatchVacancyResult[];
   onPush?: (vacancy: MatchVacancyResult) => void;
   pushingId?: string | null;
   pushedIds?: Set<string>;
+  cvId?: string;
+  token?: string;
 }) {
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [reasonBusy, setReasonBusy] = useState<string | null>(null);
+
+  const loadReason = async (vacancyId: string) => {
+    if (!cvId || !token) return;
+    setReasonBusy(vacancyId);
+    try {
+      const qs = new URLSearchParams({ vacancyId, cvId });
+      const res = await fetch(`/api/admin/match-reason?${qs}`, { headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (data.success) setReasons(prev => ({ ...prev, [vacancyId]: data.reason }));
+      else setReasons(prev => ({ ...prev, [vacancyId]: data.message || 'Toelichting genereren mislukt' }));
+    } finally {
+      setReasonBusy(null);
+    }
+  };
+
   if (matches.length === 0) {
     return <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches gevonden.</p>;
   }
@@ -2811,6 +2832,8 @@ function VacancyMatchesList({
         const salary = formatSalary(m.salary);
         const posted = daysAgo(m.postedAt);
         const descPreview = m.description ? m.description.replace(/\s+/g, ' ').trim().slice(0, 180) : '';
+        const reason = id ? reasons[id] : undefined;
+        const canShowReason = Boolean(cvId && token);
         return (
           <div key={id || `${m.title}-${i}`} className="bg-white border-2 border-slate-200 p-3 space-y-2">
             <div className="flex items-start gap-3">
@@ -2829,26 +2852,36 @@ function VacancyMatchesList({
                   m.matchScore >= 70 ? 'text-blue-600' : m.matchScore >= 50 ? 'text-emerald-600' : 'text-slate-700',
                 )}>{m.matchScore}%</div>
               </div>
-              {onPush && (
-                <div className="shrink-0">
-                  {isPushed ? (
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 inline-flex items-center gap-1 px-2 py-1.5">
-                      <CheckCircle2 className="w-3 h-3" /> Gepusht
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onPush(m)}
-                      disabled={!!isPushing || !id}
-                      className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                      title="Push naar werkgever-portaal"
-                    >
-                      {isPushing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
-                      Push
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="shrink-0 flex gap-2">
+                {canShowReason && id && (
+                  <button
+                    type="button"
+                    onClick={() => loadReason(id)}
+                    disabled={reasonBusy === id}
+                    title={reason ? 'Toelichting opnieuw genereren' : 'Genereer AI-uitleg waarom deze vacature past'}
+                    className="border-2 border-fuchsia-300 text-fuchsia-700 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 hover:text-white hover:border-fuchsia-600 disabled:opacity-50 inline-flex items-center gap-1"
+                  >
+                    {reasonBusy === id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    {reason ? 'Opnieuw' : 'Waarom?'}
+                  </button>
+                )}
+                {onPush && (isPushed ? (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 inline-flex items-center gap-1 px-2 py-1.5">
+                    <CheckCircle2 className="w-3 h-3" /> Gepusht
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onPush(m)}
+                    disabled={!!isPushing || !id}
+                    className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                    title="Push naar werkgever-portaal"
+                  >
+                    {isPushing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                    Push
+                  </button>
+                ))}
+              </div>
             </div>
             {descPreview && (
               <p className="text-[11px] text-slate-600 leading-snug line-clamp-2">{descPreview}…</p>
@@ -2877,6 +2910,14 @@ function VacancyMatchesList({
                 </a>
               )}
             </div>
+            {reason && (
+              <div className="border-t-2 border-fuchsia-200 bg-fuchsia-50 px-3 py-2 -mx-3 -mb-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-fuchsia-700 mb-1 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> AI-toelichting
+                </p>
+                <p className="text-[12px] text-slate-700 leading-snug">{reason}</p>
+              </div>
+            )}
           </div>
         );
       })}
@@ -3000,6 +3041,8 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
               onPush={pushToVacancy}
               pushingId={pushingId}
               pushedIds={pushedIds}
+              cvId={cv._id}
+              token={token}
             />
           ) : (
             <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches.</p>
