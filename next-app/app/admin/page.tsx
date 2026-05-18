@@ -1220,8 +1220,13 @@ function VacanciesTab({ token }: { token: string }) {
               </div>
               <div className="grid md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Zoekterm</label>
-                  <input value={importQuery} onChange={(e) => setImportQuery(e.target.value)} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Zoekterm(en) — komma-gescheiden</label>
+                  <input
+                    value={importQuery}
+                    onChange={(e) => setImportQuery(e.target.value)}
+                    placeholder="bv. ANVA, polisadministratie, administratief medewerker verzekeringen"
+                    className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Locatie (optioneel)</label>
