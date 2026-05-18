@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         // Embedding meeladen — we hebben 'm in de batch nodig zonder per-vacature roundtrip.
         const vacancies = await Vacancy.find({
             embedding: { $exists: true, $not: { $size: 0 } },
-        }).select('+embedding _id title employerId').lean();
+        }).select({ embedding: 1, _id: 1, title: 1, employerId: 1 }).lean();
 
         if (vacancies.length === 0) {
             return NextResponse.json({
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
             const cvs = await CV.find({
                 embedding: { $exists: true, $ne: [] },
                 isInternal: { $ne: true },
-            }).select('+embedding _id').lean();
+            }).select({ embedding: 1, _id: 1 }).lean();
             const cvsWithEmb = cvs.filter(c => {
                 const e = (c as unknown as { embedding?: number[] }).embedding;
                 return Array.isArray(e) && e.length > 0;

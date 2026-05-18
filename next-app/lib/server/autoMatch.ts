@@ -62,7 +62,7 @@ export async function runAutoMatchForVacancy(vacancyId: string): Promise<AutoMat
     const cvs = await CV.find({
         embedding: { $exists: true, $ne: [] },
         isInternal: { $ne: true },
-    }).select('+embedding _id').lean();
+    }).select({ embedding: 1, _id: 1 }).lean();
 
     const scored: Array<{ cvId: string; score: number }> = [];
     for (const cv of cvs) {
