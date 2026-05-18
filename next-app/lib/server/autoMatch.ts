@@ -35,7 +35,7 @@ interface VacancyDoc {
 }
 
 export async function runAutoMatchForVacancy(vacancyId: string): Promise<AutoMatchResult> {
-    const vacancy = await Vacancy.findById(vacancyId).select('+embedding');
+    const vacancy = await Vacancy.findById(vacancyId).select('+embedding country');
     if (!vacancy) {
         return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'vacancy not found' };
     }
@@ -59,10 +59,14 @@ export async function runAutoMatchForVacancy(vacancyId: string): Promise<AutoMat
         await Vacancy.findByIdAndUpdate(vacancy._id, { embedding: vacEmbedding });
     }
 
-    const cvs = await CV.find({
+    // Wanneer de vacature een land heeft, scopen we kandidaten tot hetzelfde
+    // land. Zonder country op de vacancy matchen we breed (legacy gedrag).
+    const cvQuery: Record<string, unknown> = {
         embedding: { $exists: true, $ne: [] },
         isInternal: { $ne: true },
-    }).select({ embedding: 1, _id: 1 }).lean();
+    };
+    if (vacancy.country) cvQuery.country = vacancy.country;
+    const cvs = await CV.find(cvQuery).select({ embedding: 1, _id: 1 }).lean();
 
     const scored: Array<{ cvId: string; score: number }> = [];
     for (const cv of cvs) {

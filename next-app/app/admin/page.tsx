@@ -571,6 +571,8 @@ function VacanciesTab({ token }: { token: string }) {
   const [createError, setCreateError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [embeddingBatch, setEmbeddingBatch] = useState(false);
+  const [matchCountry, setMatchCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>('');
+  const [backfillBusy, setBackfillBusy] = useState(false);
   const [vacancyEmbedProgress, setVacancyEmbedProgress] = useState<{
     active: boolean;
     current: number;
@@ -696,15 +698,35 @@ function VacanciesTab({ token }: { token: string }) {
   }, [matchAllProgress?.active, matchAllProgress?.current, matchAllProgress?.total]);
 
   const runMatchAll = async () => {
-    if (!confirm('Match-batch starten voor alle vacatures met embedding? Dit kan een paar minuten duren.')) return;
+    const countryLabel = matchCountry === 'guyana' ? 'Guyana'
+      : matchCountry === 'netherlands' ? 'Nederland'
+      : matchCountry === 'suriname' ? 'Suriname'
+      : 'alle landen';
+    if (!confirm(`Match-batch starten voor ${countryLabel}? Dit kan een paar minuten duren.`)) return;
     setMatchBatch(true);
     try {
-      const res = await fetch('/api/admin/match-all-vacancies', { method: 'POST', headers: { 'x-admin-token': token } });
+      const qs = matchCountry ? `?country=${matchCountry}` : '';
+      const res = await fetch(`/api/admin/match-all-vacancies${qs}`, { method: 'POST', headers: { 'x-admin-token': token } });
       const data = await res.json();
       if (!data.success) alert(data.message || 'Match-batch starten mislukt');
       else await fetchMatchAllProgress();
     } finally {
       setMatchBatch(false);
+    }
+  };
+
+  const runBackfillCountry = async () => {
+    setBackfillBusy(true);
+    try {
+      const res = await fetch('/api/admin/backfill-country', { method: 'POST', headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Land-backfill klaar:\nCV's: ${data.cvs.updated}/${data.cvs.scanned} bijgewerkt\nVacatures: ${data.vacancies.updated}/${data.vacancies.scanned} bijgewerkt`);
+      } else {
+        alert(data.message || 'Backfill mislukt');
+      }
+    } finally {
+      setBackfillBusy(false);
     }
   };
 
@@ -877,16 +899,39 @@ function VacanciesTab({ token }: { token: string }) {
                 ? `Bezig: ${vacancyEmbedProgress.current}/${vacancyEmbedProgress.total}`
                 : 'Genereer embeddings'}
             </button>
+            <div className="flex items-stretch">
+              <select
+                value={matchCountry}
+                onChange={(e) => setMatchCountry(e.target.value as typeof matchCountry)}
+                disabled={busy || matchBatch || matchAllProgress?.active}
+                className="bg-fuchsia-50 border-2 border-fuchsia-600 border-r-0 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-fuchsia-700 outline-none disabled:opacity-50"
+                title="Beperk de match tot één land — match alleen CV's tegen vacatures uit hetzelfde land"
+              >
+                <option value="">Alle landen</option>
+                <option value="guyana">Guyana</option>
+                <option value="netherlands">Nederland</option>
+                <option value="suriname">Suriname</option>
+              </select>
+              <button
+                onClick={runMatchAll}
+                disabled={busy || matchBatch}
+                title={matchAllProgress?.active ? 'Klik om huidige batch te herstarten' : undefined}
+                className="bg-fuchsia-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {matchBatch || matchAllProgress?.active ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                {matchAllProgress?.active && matchAllProgress.current > 0
+                  ? `Matchen: ${matchAllProgress.current}/${matchAllProgress.total}`
+                  : 'Match alle'}
+              </button>
+            </div>
             <button
-              onClick={runMatchAll}
-              disabled={busy || matchBatch}
-              title={matchAllProgress?.active ? 'Klik om huidige batch te herstarten' : undefined}
-              className="bg-fuchsia-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50"
+              onClick={runBackfillCountry}
+              disabled={busy || backfillBusy}
+              title="Eenmalig: vul country in op CV's en vacatures op basis van location-tekst"
+              className="border-2 border-slate-400 text-slate-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50"
             >
-              {matchBatch || matchAllProgress?.active ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              {matchAllProgress?.active && matchAllProgress.current > 0
-                ? `Matchen: ${matchAllProgress.current}/${matchAllProgress.total}`
-                : 'Match alle'}
+              {backfillBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              Backfill land
             </button>
             <button onClick={deleteAllAdzuna} disabled={busy} className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors">
               Verwijder Adzuna

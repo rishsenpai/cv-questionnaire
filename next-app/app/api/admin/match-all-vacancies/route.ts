@@ -56,11 +56,25 @@ export async function POST(req: NextRequest) {
 
     try {
         await connectDB();
+        // Optioneel land-filter: 'guyana' | 'netherlands' | 'suriname'.
+        // Wanneer gezet beperken we BEIDE kanten van de match (vacatures én CVs)
+        // tot dat land — een NL-CV mag niet als kandidaat verschijnen bij een
+        // Guyana-vacature.
+        const url = new URL(req.url);
+        const countryParam = url.searchParams.get('country');
+        const country = countryParam && ['guyana', 'netherlands', 'suriname'].includes(countryParam)
+            ? countryParam
+            : null;
+
         // Embedding meeladen — we hebben 'm in de batch nodig zonder per-vacature roundtrip.
-        const vacancies = await Vacancy.find({
+        const vacancyQuery: Record<string, unknown> = {
             embedding: { $exists: true, $not: { $size: 0 } },
             isActive: true,
-        }).select({ embedding: 1, _id: 1, title: 1, employerId: 1 }).lean();
+        };
+        if (country) vacancyQuery.country = country;
+        const vacancies = await Vacancy.find(vacancyQuery)
+            .select({ embedding: 1, _id: 1, title: 1, employerId: 1 })
+            .lean();
 
         if (vacancies.length === 0) {
             return NextResponse.json({
@@ -84,10 +98,12 @@ export async function POST(req: NextRequest) {
 
         after(async () => {
             // Laad CVs één keer — voorkomt 361 × CV-fetch.
-            const cvs = await CV.find({
+            const cvQuery: Record<string, unknown> = {
                 embedding: { $exists: true, $ne: [] },
                 isInternal: { $ne: true },
-            }).select({ embedding: 1, _id: 1 }).lean();
+            };
+            if (country) cvQuery.country = country;
+            const cvs = await CV.find(cvQuery).select({ embedding: 1, _id: 1 }).lean();
             const cvsWithEmb = cvs.filter(c => {
                 const e = (c as unknown as { embedding?: number[] }).embedding;
                 return Array.isArray(e) && e.length > 0;

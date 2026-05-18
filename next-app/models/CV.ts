@@ -1,4 +1,5 @@
 import mongoose, { Schema, Model, Document } from 'mongoose';
+import { inferCountry } from '@/lib/country';
 
 export interface ICV extends Document {
     fullName: string;
@@ -20,6 +21,7 @@ export interface ICV extends Document {
     fileUrl?: string;
     fileType?: string;
     fileSize?: number;
+    country?: 'guyana' | 'netherlands' | 'suriname';
     embedding?: number[];
     embeddingModel?: string;
     textHash?: string;
@@ -52,6 +54,7 @@ const cvSchema = new Schema<ICV>({
     fileUrl: { type: String, trim: true },
     fileType: { type: String, trim: true },
     fileSize: { type: Number },
+    country: { type: String, enum: ['guyana', 'netherlands', 'suriname'], index: true },
     embedding: { type: [Number], select: false },
     embeddingModel: { type: String, default: 'text-embedding-3-small' },
     textHash: { type: String, index: true },
@@ -65,6 +68,14 @@ const cvSchema = new Schema<ICV>({
         fetchedAt: Date,
     },
 }, { timestamps: true });
+
+// Auto-fill country uit location bij create/save als die nog niet expliciet is gezet.
+cvSchema.pre('save', async function () {
+    if (!this.country && this.location) {
+        const c = inferCountry(this.location);
+        if (c) this.country = c;
+    }
+});
 
 const CV: Model<ICV> = (mongoose.models.CV as Model<ICV>) || mongoose.model<ICV>('CV', cvSchema);
 export default CV;

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Model, Document, Types } from 'mongoose';
+import { inferCountry } from '@/lib/country';
 
 export interface IVacancySalary {
     min?: number;
@@ -27,6 +28,7 @@ export interface IVacancy extends Document {
     fileData?: string;
     fileType?: string;
     isActive?: boolean;
+    country?: 'guyana' | 'netherlands' | 'suriname';
     embedding?: number[];
     embeddingModel?: string;
     viewCount?: number;
@@ -60,11 +62,19 @@ const vacancySchema = new Schema<IVacancy>({
     fileData: { type: String },
     fileType: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
+    country: { type: String, enum: ['guyana', 'netherlands', 'suriname'], index: true },
     embedding: { type: [Number], select: false },
     embeddingModel: { type: String, default: 'text-embedding-3-small' },
     viewCount: { type: Number, default: 0 },
     applicationCount: { type: Number, default: 0 },
 }, { timestamps: true });
+
+vacancySchema.pre('save', async function () {
+    if (!this.country && this.location) {
+        const c = inferCountry(this.location);
+        if (c) this.country = c;
+    }
+});
 
 vacancySchema.index(
     { externalId: 1, source: 1 },
