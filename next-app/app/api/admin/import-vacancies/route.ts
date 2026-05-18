@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
         await connectDB();
 
         let totalImported = 0;
+        let totalReactivated = 0;
         let totalSkipped = 0;
         let totalErrors = 0;
         const maxPages = Math.min(pages, 10);
@@ -48,14 +49,28 @@ export async function POST(req: NextRequest) {
                             externalId: String(job.id),
                             source: 'adzuna',
                         });
-                        if (existing) {
-                            totalSkipped++;
-                            continue;
-                        }
-
                         const fullText = [job.title, job.company, job.description, job.location, job.category]
                             .filter(Boolean)
                             .join(' ');
+
+                        if (existing) {
+                            // Bestaande adzuna-record: alleen reactiveren als 'ie soft-deleted is.
+                            // Anders skip — geen onnodige updates op active records.
+                            if (existing.isActive === false) {
+                                existing.isActive = true;
+                                existing.title = job.title;
+                                existing.company = job.company;
+                                existing.location = job.location;
+                                existing.description = job.description ? job.description.substring(0, 5000) : '';
+                                existing.applyLink = job.applyLink;
+                                existing.fullText = fullText;
+                                await existing.save();
+                                totalReactivated++;
+                            } else {
+                                totalSkipped++;
+                            }
+                            continue;
+                        }
 
                         await Vacancy.create({
                             title: job.title,
@@ -97,6 +112,7 @@ export async function POST(req: NextRequest) {
             message: 'Import voltooid',
             stats: {
                 imported: totalImported,
+                reactivated: totalReactivated,
                 skipped: totalSkipped,
                 errors: totalErrors,
                 query,

@@ -749,7 +749,7 @@ function VacanciesTab({ token }: { token: string }) {
       });
       const data = await res.json();
       if (data.success) {
-        setImportResult(`✓ ${data.stats.imported} geïmporteerd, ${data.stats.skipped} overgeslagen, ${data.stats.errors} fouten`);
+        setImportResult(`✓ ${data.stats.imported} nieuw, ${data.stats.reactivated || 0} gereactiveerd, ${data.stats.skipped} overgeslagen, ${data.stats.errors} fouten`);
         await reload();
       } else {
         setImportResult(`✗ ${data.message}`);
