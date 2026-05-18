@@ -856,6 +856,9 @@ function VacanciesTab({ token }: { token: string }) {
       const data = await res.json();
       if (!data.success) {
         alert(data.message || 'Genereren mislukt');
+      } else if ((data.processing ?? data.total ?? 0) === 0) {
+        // Niks te doen — alle vacatures hebben al een embedding.
+        alert(data.message || 'Alle vacatures hebben al een embedding. Niets te doen.');
       } else {
         // Direct progress ophalen zodat de balk meteen verschijnt.
         await fetchVacancyEmbedProgress();
