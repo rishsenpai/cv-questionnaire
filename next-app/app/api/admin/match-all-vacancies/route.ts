@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
         // Embedding meeladen — we hebben 'm in de batch nodig zonder per-vacature roundtrip.
         const vacancies = await Vacancy.find({
             embedding: { $exists: true, $not: { $size: 0 } },
+            isActive: true,
         }).select({ embedding: 1, _id: 1, title: 1, employerId: 1 }).lean();
 
         if (vacancies.length === 0) {
