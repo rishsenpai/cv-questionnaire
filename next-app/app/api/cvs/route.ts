@@ -9,15 +9,45 @@ export async function GET(req: NextRequest) {
 
     try {
         await connectDB();
-        // Slank projectie: bij 4000+ CVs werd de response > Vercel's 4.5MB
-        // limiet als we fullText/experience/education meestuurden. Admin-tabel
-        // heeft alleen identificatie-velden nodig; volledige CV ophalen kan
-        // via /api/cvs/[id] op de detail-view.
-        const cvs = await CV.find()
-            .select('_id fullName email phone jobTitle location fileName isInternal country createdAt emailSent recruiterRequested')
-            .sort({ createdAt: -1 })
-            .lean();
-        return NextResponse.json({ success: true, count: cvs.length, data: cvs });
+        // Server-side paginatie + search. Bij 4000+ CVs liep een ongepagineerde
+        // response zelfs met slim projectie tegen Vercel response-limieten aan;
+        // bovendien duurde de sort op een grote dataset onnodig lang per call.
+        const url = new URL(req.url);
+        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+        const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10)));
+        const search = (url.searchParams.get('search') || '').trim();
+        const skip = (page - 1) * limit;
+
+        const query: Record<string, unknown> = {};
+        if (search) {
+            const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+            query.$or = [
+                { fullName: re },
+                { email: re },
+                { jobTitle: re },
+                { location: re },
+            ];
+        }
+
+        const [total, cvs] = await Promise.all([
+            CV.countDocuments(query),
+            CV.find(query)
+                .select('_id fullName email phone jobTitle location fileName isInternal country createdAt emailSent recruiterRequested')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+        ]);
+
+        return NextResponse.json({
+            success: true,
+            count: cvs.length,
+            total,
+            page,
+            limit,
+            pages: Math.ceil(total / limit),
+            data: cvs,
+        });
     } catch (err) {
         console.error('Error fetching CVs:', err);
         return NextResponse.json({ success: false, message: 'Failed to fetch CVs' }, { status: 500 });

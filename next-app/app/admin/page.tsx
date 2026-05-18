@@ -310,33 +310,52 @@ function CvsTab({ token }: { token: string }) {
   const [cvs, setCvs] = useState<CvRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [matchCv, setMatchCv] = useState<CvRow | null>(null);
 
+  const LIMIT = 50;
+
+  // Debounce de zoekterm zodat we niet bij elke keystroke een DB-call doen.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const reload = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/cvs', { headers: { 'x-admin-token': token } });
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(LIMIT),
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      });
+      const res = await fetch(`/api/cvs?${qs}`, { headers: { 'x-admin-token': token } });
       const data = await res.json();
-      if (data.success) setCvs(data.data);
+      if (data.success) {
+        setCvs(data.data);
+        setTotal(data.total || 0);
+        setPages(data.pages || 0);
+      }
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, page, debouncedSearch]);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
-  const filtered = cvs.filter(cv => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return cv.fullName.toLowerCase().includes(q) ||
-      (cv.email || '').toLowerCase().includes(q) ||
-      (cv.jobTitle || '').toLowerCase().includes(q);
-  });
+  // Server-side gefilterd: 'filtered' = 'cvs'.
+  const filtered = cvs;
 
   const toggleSelect = (id: string) => {
     setSelected(s => {
@@ -383,7 +402,7 @@ function CvsTab({ token }: { token: string }) {
     <div className="space-y-8">
       <SectionHeader
         title="CVs"
-        subtitle={`${cvs.length} totaal · ${filtered.length} getoond`}
+        subtitle={`${total} totaal${debouncedSearch ? ` (gefilterd op "${debouncedSearch}")` : ''} · pagina ${page}/${Math.max(1, pages)}`}
         action={
           <div className="flex flex-wrap gap-2">
             <button
@@ -501,6 +520,30 @@ function CvsTab({ token }: { token: string }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {pages > 1 && (
+        <div className="flex items-center justify-between gap-4">
+          <button
+            type="button"
+            disabled={page <= 1 || loading}
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            className="border-2 border-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ← Vorige
+          </button>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+            Pagina {page} van {pages} · {total} CVs
+          </span>
+          <button
+            type="button"
+            disabled={page >= pages || loading}
+            onClick={() => setPage(p => Math.min(pages, p + 1))}
+            className="border-2 border-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Volgende →
+          </button>
         </div>
       )}
 
