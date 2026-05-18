@@ -14,12 +14,15 @@ import CV from '@/models/CV';
 import CuratedMatch from '@/models/CuratedMatch';
 import SyncState from '@/models/SyncState';
 import { requireAdmin } from '@/lib/server/auth';
-import { cosineSimilarity } from '@/lib/server/embeddings';
+import { cosineSimilarity, prepareCVText } from '@/lib/server/embeddings';
+import { rerank, isRerankConfigured } from '@/lib/server/rerank';
 
 export const maxDuration = 300;
 
 const EMBEDDING_THRESHOLD = 0.20;
 const TOP_N = 25;
+const RERANK_INPUT_SIZE = 50;
+const RERANK_THRESHOLD = 0.10;
 
 interface MatchAllProgress {
     active: boolean;
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
         };
         if (country) vacancyQuery.country = country;
         const vacancies = await Vacancy.find(vacancyQuery)
-            .select({ embedding: 1, _id: 1, title: 1, employerId: 1 })
+            .select({ embedding: 1, _id: 1, title: 1, employerId: 1, description: 1, requirements: 1 })
             .lean();
 
         if (vacancies.length === 0) {
@@ -136,9 +139,31 @@ export async function POST(req: NextRequest) {
                         }
                     }
                     scored.sort((a, b) => b.score - a.score);
-                    const top = scored.slice(0, TOP_N);
 
-                    if (i < 3) console.log(`Match ${i + 1} (${v.title}): ${scored.length} CVs boven drempel, top ${top.length}`);
+                    // Fase 2: rerank top-50 met Cohere; bij fail fallback op cosine top-25.
+                    let top = scored.slice(0, TOP_N);
+                    const rerankPool = scored.slice(0, RERANK_INPUT_SIZE);
+                    if (isRerankConfigured() && rerankPool.length > 0) {
+                        const cvIds = rerankPool.map(p => new Types.ObjectId(p.cvId));
+                        const cvTexts = await CV.find({ _id: { $in: cvIds } })
+                            .select('_id jobTitle skills experience education languages summary')
+                            .lean();
+                        const textMap = new Map<string, string>();
+                        for (const cv of cvTexts) textMap.set(String(cv._id), prepareCVText(cv));
+                        const docs = rerankPool
+                            .map(p => ({ id: p.cvId, text: textMap.get(p.cvId) || '' }))
+                            .filter(d => d.text.length > 0);
+                        const vacancyText = [v.title, (v as { description?: string }).description, (v as { requirements?: string }).requirements]
+                            .filter(Boolean).join('\n\n');
+                        const reranked = await rerank(vacancyText, docs, TOP_N);
+                        if (reranked) {
+                            top = reranked
+                                .filter(r => r.relevanceScore >= RERANK_THRESHOLD)
+                                .map(r => ({ cvId: r.id, score: Math.round(r.relevanceScore * 100) }));
+                        }
+                    }
+
+                    if (i < 3) console.log(`Match ${i + 1} (${v.title}): ${scored.length} CVs boven cosine-drempel, ${top.length} na rerank`);
 
                     if (top.length > 0) {
                         const vacancyObjectId = v._id as Types.ObjectId;

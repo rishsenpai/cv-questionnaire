@@ -9,13 +9,20 @@ import { Types } from 'mongoose';
 import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
 import CuratedMatch from '@/models/CuratedMatch';
-import { cosineSimilarity, generateEmbedding } from './embeddings';
+import { cosineSimilarity, generateEmbedding, prepareCVText } from './embeddings';
+import { rerank, isRerankConfigured } from './rerank';
 
-// Lage drempel (20%) filtert pure ruis maar laat alle plausibele matches door.
-// TOP_N cap voorkomt dat we duizenden suggesties opslaan; admin ziet de
-// hoogste 25 op score gesorteerd.
+// Twee-fase pipeline:
+//   1. Embedding cosine → recall: pak top-RERANK_INPUT_SIZE kandidaten (50)
+//   2. Cohere rerank   → precisie: pak top-TOP_N (25) op relevance-score
+// Drempel 0.20 voor cosine om volledige ruis (cosine < 20%) te skippen.
+// Drempel 0.10 op rerank-score om CVs die het rerank-model als 'totaal
+// irrelevant' bestempelt te dumpen — voorkomt dat we 25 trash-suggesties
+// opslaan als de query weinig goede matches heeft.
 const TOP_N = 25;
+const RERANK_INPUT_SIZE = 50;
 const EMBEDDING_THRESHOLD = 0.20;
+const RERANK_THRESHOLD = 0.10;
 
 export interface AutoMatchResult {
     method: 'embedding' | 'skipped';
@@ -91,10 +98,47 @@ export async function runAutoMatchForVacancy(
         }
     }
     scored.sort((a, b) => b.score - a.score);
-    const top = scored.slice(0, TOP_N);
+
+    // Fase 2: rerank top-RERANK_INPUT_SIZE met Cohere als de key geconfigureerd is.
+    // Bij ontbrekende key of API-fout vallen we terug op de embedding-volgorde.
+    const rerankPool = scored.slice(0, RERANK_INPUT_SIZE);
+    const top = await rerankCandidates(vacancy, rerankPool) ?? scored.slice(0, TOP_N);
 
     const created = await persistSuggestions(vacancy as VacancyDoc, top);
     return { method: 'embedding', suggestionsCreated: created, candidatesScanned: cvs.length };
+}
+
+// Tweede-fase reranking: query = vacancy-tekst, docs = CV-tekst.
+// Retourneert null als rerank niet beschikbaar is zodat caller terugvalt.
+async function rerankCandidates(
+    vacancy: { title?: string; description?: string; requirements?: string },
+    pool: Array<{ cvId: string; score: number }>,
+): Promise<Array<{ cvId: string; score: number }> | null> {
+    if (!isRerankConfigured() || pool.length === 0) return null;
+
+    // Tekst van de top-50 CVs ophalen (alleen text-velden, geen embedding).
+    const cvIds = pool.map(p => new Types.ObjectId(p.cvId));
+    const cvTexts = await CV.find({ _id: { $in: cvIds } })
+        .select('_id jobTitle skills experience education languages summary')
+        .lean();
+    const textMap = new Map<string, string>();
+    for (const cv of cvTexts) {
+        textMap.set(String(cv._id), prepareCVText(cv));
+    }
+    const docs = pool
+        .map(p => ({ id: p.cvId, text: textMap.get(p.cvId) || '' }))
+        .filter(d => d.text.length > 0);
+    if (docs.length === 0) return null;
+
+    const vacancyText = [vacancy.title, vacancy.description, vacancy.requirements]
+        .filter(Boolean)
+        .join('\n\n');
+    const reranked = await rerank(vacancyText, docs, TOP_N);
+    if (!reranked) return null;
+
+    return reranked
+        .filter(r => r.relevanceScore >= RERANK_THRESHOLD)
+        .map(r => ({ cvId: r.id, score: Math.round(r.relevanceScore * 100) }));
 }
 
 async function persistSuggestions(

@@ -11,8 +11,13 @@ import {
     generateTextHash,
     prepareCVText,
 } from '@/lib/server/embeddings';
+import { rerank, isRerankConfigured } from '@/lib/server/rerank';
 
 export const maxDuration = 60;
+
+const RERANK_INPUT_SIZE = 50;
+const RERANK_THRESHOLD = 0.10;
+const FINAL_TOP_N = 20;
 
 interface Params {
     params: Promise<{ id: string }>;
@@ -64,7 +69,8 @@ export async function GET(req: NextRequest, { params }: Params) {
         if (country) vacancyQuery.country = country;
         const vacancies = await Vacancy.find(vacancyQuery).select('+embedding -fileData');
 
-        const matches = vacancies.map(vacancy => {
+        // Fase 1: cosine-recall over alle vacatures.
+        const scored = vacancies.map(vacancy => {
             const score = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
             const obj = vacancy.toObject() as unknown as Record<string, unknown>;
             delete obj.embedding;
@@ -72,19 +78,55 @@ export async function GET(req: NextRequest, { params }: Params) {
             obj.requirements = sanitizeJobText(vacancy.requirements, vacancy.company);
             return {
                 ...obj,
-                matchScore: Math.round(score * 100),
-                matchType: 'AI Semantic',
+                _vid: String(vacancy._id),
+                cosineScore: Math.round(score * 100),
             };
-        })
-        .filter(v => v.matchScore >= 30)
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, 20);
+        }).sort((a, b) => b.cosineScore - a.cosineScore);
+
+        // Fase 2: rerank top-50 met Cohere. Bij fail fallback op cosine.
+        const rerankPool = scored.slice(0, RERANK_INPUT_SIZE);
+        let ranked: Array<typeof scored[number] & { matchScore: number; matchType: string }>;
+
+        if (isRerankConfigured() && rerankPool.length > 0) {
+            const cvText = prepareCVText(cv);
+            const docs = rerankPool.map(v => {
+                const r = v as Record<string, unknown>;
+                return {
+                    id: v._vid,
+                    text: [r.title, r.description, r.requirements].filter(Boolean).join('\n\n'),
+                };
+            });
+            const rr = await rerank(cvText, docs, FINAL_TOP_N);
+            if (rr) {
+                const rrMap = new Map(rr.map(r => [r.id, r.relevanceScore]));
+                ranked = rerankPool
+                    .filter(v => rrMap.has(v._vid))
+                    .map(v => ({
+                        ...v,
+                        matchScore: Math.round((rrMap.get(v._vid)! ) * 100),
+                        matchType: 'AI Rerank',
+                    }))
+                    .filter(v => v.matchScore >= Math.round(RERANK_THRESHOLD * 100))
+                    .sort((a, b) => b.matchScore - a.matchScore);
+            } else {
+                // Rerank API kapot → terugvallen op cosine
+                ranked = scored
+                    .filter(v => v.cosineScore >= 30)
+                    .slice(0, FINAL_TOP_N)
+                    .map(v => ({ ...v, matchScore: v.cosineScore, matchType: 'AI Semantic' }));
+            }
+        } else {
+            ranked = scored
+                .filter(v => v.cosineScore >= 30)
+                .slice(0, FINAL_TOP_N)
+                .map(v => ({ ...v, matchScore: v.cosineScore, matchType: 'AI Semantic' }));
+        }
 
         return NextResponse.json({
             success: true,
             cv: { _id: cv._id, fullName: cv.fullName, jobTitle: cv.jobTitle, location: cv.location },
             totalVacancies: vacancies.length,
-            matches,
+            matches: ranked,
         });
     } catch (err) {
         console.error('admin cvs/[id]/matches error:', err);
