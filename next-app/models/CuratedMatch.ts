@@ -16,6 +16,11 @@ export interface ICuratedMatch extends Document {
     source: CuratedMatchSource;
     adminNote?: string;
     matchScore?: number;
+    // LLM-gegenereerde toelichting van waarom deze CV bij deze vacature past.
+    // Lazy gevuld: alleen op-aanvraag via /reason endpoint zodat we niet
+    // 9000 reasons pre-genereren. Eenmalig betaald (~$0.002 met gpt-4o-mini).
+    matchReason?: string;
+    matchReasonGeneratedAt?: Date;
     addedAt: Date;
     viewedAt?: Date;
     contactRequestedAt?: Date;
@@ -36,6 +41,8 @@ const curatedMatchSchema = new Schema<ICuratedMatch>({
     source: { type: String, enum: ['admin', 'auto-embedding', 'auto-tfidf', 'apply'], default: 'admin', index: true },
     adminNote: { type: String, trim: true },
     matchScore: { type: Number },
+    matchReason: { type: String, trim: true },
+    matchReasonGeneratedAt: { type: Date },
     addedAt: { type: Date, default: Date.now, index: true },
     viewedAt: { type: Date },
     contactRequestedAt: { type: Date },

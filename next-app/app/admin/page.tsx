@@ -1439,6 +1439,7 @@ interface SuggestionRow {
   _id: string;
   cvId: string;
   matchScore?: number;
+  matchReason?: string;
   status?: string;
   contactRequestedAt?: string;
   contactSharedAt?: string;
@@ -1720,6 +1721,26 @@ function InlineMatchesRow({
   // (handig voor remote-rollen of relocation-kandidaten).
   const [rematchCountry, setRematchCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>(vacancyCountry || '');
   const [rematchBusy, setRematchBusy] = useState(false);
+  // Per-suggestie LLM-toelichting: id → reason. null = nog niet geladen.
+  const [reasons, setReasons] = useState<Record<string, string | null>>({});
+  const [reasonBusy, setReasonBusy] = useState<string | null>(null);
+
+  const loadReason = async (matchId: string) => {
+    setReasonBusy(matchId);
+    try {
+      const res = await fetch(`/api/admin/curated-matches/${matchId}/reason`, {
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReasons(prev => ({ ...prev, [matchId]: data.reason }));
+      } else {
+        setReasons(prev => ({ ...prev, [matchId]: data.message || 'Toelichting genereren mislukt' }));
+      }
+    } finally {
+      setReasonBusy(null);
+    }
+  };
 
   const load = React.useCallback(async () => {
     setItems(null);
@@ -1896,11 +1917,13 @@ function InlineMatchesRow({
             const skills = topSkills(cv?.skills);
             const edu = educationLevel(cv?.education);
             const flag = cv?.country ? COUNTRY_FLAG[cv.country] : '';
+            const reason = reasons[s._id] ?? s.matchReason ?? null;
             return (
               <div key={s._id} className={cn(
-                'border-2 p-3 flex items-start gap-3',
+                'border-2 p-3 space-y-2',
                 isPushed ? 'bg-slate-50 border-slate-200 opacity-80' : 'bg-white border-slate-200',
               )}>
+                <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex items-baseline gap-2">
                     <p className="font-black text-sm truncate">{cv?.fullName || '—'}</p>
@@ -1936,7 +1959,17 @@ function InlineMatchesRow({
                     )}>{s.matchScore}%</div>
                   </div>
                 )}
-                <div className="flex gap-2 shrink-0">
+                <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    type="button"
+                    disabled={reasonBusy === s._id}
+                    onClick={() => loadReason(s._id)}
+                    title={reason ? 'Toelichting opnieuw genereren' : 'Genereer een AI-uitleg waarom deze kandidaat past'}
+                    className="border-2 border-fuchsia-300 text-fuchsia-700 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 hover:text-white hover:border-fuchsia-600 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {reasonBusy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    {reason ? 'Opnieuw' : 'Waarom?'}
+                  </button>
                   {isPushed ? (
                     <span
                       title={s.status}
@@ -1946,7 +1979,7 @@ function InlineMatchesRow({
                       Gepushed {new Date(pushedDate).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })}
                     </span>
                   ) : (
-                    <>
+                    <div className="flex gap-2">
                       <button
                         type="button"
                         disabled={busy === s._id}
@@ -1964,9 +1997,18 @@ function InlineMatchesRow({
                       >
                         Negeer
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
+              </div>
+              {reason && (
+                <div className="border-t-2 border-fuchsia-200 bg-fuchsia-50 px-3 py-2 -mx-3 -mb-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-fuchsia-700 mb-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> AI-toelichting
+                  </p>
+                  <p className="text-[12px] text-slate-700 leading-snug">{reason}</p>
+                </div>
+              )}
               </div>
             );
           })}
