@@ -70,9 +70,13 @@ const cvSchema = new Schema<ICV>({
 }, { timestamps: true });
 
 // Auto-fill country uit location bij create/save als die nog niet expliciet is gezet.
+// Fallback naar experience/education/skills/fullText voor CVs zonder duidelijke
+// location maar wel met NL-signalen (WFT, AOW, Nederlandse steden, etc).
 cvSchema.pre('save', async function () {
-    if (!this.country && this.location) {
-        const c = inferCountry(this.location);
+    if (!this.country) {
+        const fallback = [this.experience, this.education, this.skills, this.fullText]
+            .filter(Boolean).join(' ');
+        const c = inferCountry(this.location, fallback || undefined);
         if (c) this.country = c;
     }
 });

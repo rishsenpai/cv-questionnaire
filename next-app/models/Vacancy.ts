@@ -70,8 +70,10 @@ const vacancySchema = new Schema<IVacancy>({
 }, { timestamps: true });
 
 vacancySchema.pre('save', async function () {
-    if (!this.country && this.location) {
-        const c = inferCountry(this.location);
+    if (!this.country) {
+        const fallback = [this.title, this.description, this.requirements, this.fullText]
+            .filter(Boolean).join(' ');
+        const c = inferCountry(this.location, fallback || undefined);
         if (c) this.country = c;
     }
 });
