@@ -2290,11 +2290,12 @@ interface MatchCvResult {
   matchedTerms?: string[];
 }
 
-type MatchingSubTab = 'history' | 'vacancy-to-cvs' | 'cv-to-vacancies';
+type MatchingSubTab = 'top' | 'history' | 'vacancy-to-cvs' | 'cv-to-vacancies';
 
 function MatchingTab({ token }: { token: string }) {
-  const [sub, setSub] = useState<MatchingSubTab>('history');
+  const [sub, setSub] = useState<MatchingSubTab>('top');
   const subTabs: Array<{ id: MatchingSubTab; label: string }> = [
+    { id: 'top', label: 'Top Matches' },
     { id: 'history', label: 'Geschiedenis' },
     { id: 'vacancy-to-cvs', label: 'Vacature → CVs' },
     { id: 'cv-to-vacancies', label: 'CV → Vacatures' },
@@ -2317,9 +2318,231 @@ function MatchingTab({ token }: { token: string }) {
           </button>
         ))}
       </div>
+      {sub === 'top' && <TopMatchesPanel token={token} />}
       {sub === 'history' && <MatchHistoryPanel token={token} />}
       {sub === 'vacancy-to-cvs' && <VacancyToCvsPanel token={token} />}
       {sub === 'cv-to-vacancies' && <CvToVacanciesPanel token={token} />}
+    </div>
+  );
+}
+
+interface TopMatchRow {
+  _id: string;
+  matchScore?: number;
+  matchReason?: string;
+  status: string;
+  source: string;
+  addedAt: string;
+  promotedAt?: string;
+  cv: { _id: string; fullName?: string; jobTitle?: string; location?: string; email?: string; phone?: string; country?: 'guyana' | 'netherlands' | 'suriname' } | null;
+  vacancy: { _id: string; title?: string; company?: string; location?: string; source?: string; country?: 'guyana' | 'netherlands' | 'suriname'; applyLink?: string } | null;
+}
+
+function TopMatchesPanel({ token }: { token: string }) {
+  const [items, setItems] = useState<TopMatchRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<'' | 'suggested' | 'pushed'>('suggested');
+  const [country, setCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>('');
+  const [minScore, setMinScore] = useState(40);
+  const [limit, setLimit] = useState(50);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [pushedSet, setPushedSet] = useState<Set<string>>(new Set());
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [reasonBusy, setReasonBusy] = useState<string | null>(null);
+
+  const reload = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const qs = new URLSearchParams({ minScore: String(minScore), limit: String(limit) });
+      if (status) qs.set('status', status);
+      if (country) qs.set('country', country);
+      const res = await fetch(`/api/admin/top-matches?${qs}`, { headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (data.success) setItems(data.matches as TopMatchRow[]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, status, country, minScore, limit]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const promote = async (matchId: string) => {
+    setBusy(matchId);
+    try {
+      await fetch(`/api/admin/curated-matches/${matchId}/promote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({}),
+      });
+      setPushedSet(prev => new Set([...prev, matchId]));
+    } finally { setBusy(null); }
+  };
+
+  const reject = async (matchId: string) => {
+    if (!confirm('Suggestie verwijderen?')) return;
+    setBusy(matchId);
+    try {
+      await fetch(`/api/admin/curated-matches/${matchId}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': token },
+      });
+      setItems(prev => prev.filter(i => i._id !== matchId));
+    } finally { setBusy(null); }
+  };
+
+  const loadReason = async (matchId: string) => {
+    setReasonBusy(matchId);
+    try {
+      const res = await fetch(`/api/admin/curated-matches/${matchId}/reason`, { headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (data.success) setReasons(prev => ({ ...prev, [matchId]: data.reason }));
+      else setReasons(prev => ({ ...prev, [matchId]: data.message || 'Toelichting mislukt' }));
+    } finally { setReasonBusy(null); }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="bg-white border-2 border-black p-4 flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Status</label>
+          <select value={status} onChange={e => setStatus(e.target.value as typeof status)} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
+            <option value="suggested">Open suggesties</option>
+            <option value="pushed">Al gepushed</option>
+            <option value="">Alle</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Land</label>
+          <select value={country} onChange={e => setCountry(e.target.value as typeof country)} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
+            <option value="">Alle landen</option>
+            <option value="guyana">Guyana</option>
+            <option value="netherlands">Nederland</option>
+            <option value="suriname">Suriname</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Min. score (%)</label>
+          <input type="number" min={0} max={100} value={minScore} onChange={e => setMinScore(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black w-24 outline-none" />
+        </div>
+        <div>
+          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Limiet</label>
+          <select value={limit} onChange={e => setLimit(Number(e.target.value))} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
+            <option value={25}>Top 25</option>
+            <option value={50}>Top 50</option>
+            <option value={100}>Top 100</option>
+            <option value={200}>Top 200</option>
+          </select>
+        </div>
+        <button onClick={reload} disabled={loading} className="border-2 border-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white disabled:opacity-50">
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
+        </button>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-auto self-center">{items.length} matches</p>
+      </div>
+
+      {/* Lijst */}
+      {loading ? (
+        <div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
+      ) : items.length === 0 ? (
+        <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches met deze filters.</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map(m => {
+            const cv = m.cv;
+            const vac = m.vacancy;
+            const cvFlag = cv?.country ? COUNTRY_FLAG[cv.country] : '';
+            const vacFlag = vac?.country ? COUNTRY_FLAG[vac.country] : '';
+            const score = m.matchScore ?? 0;
+            const reason = reasons[m._id] ?? m.matchReason;
+            const isPushed = pushedSet.has(m._id) || m.status !== 'suggested';
+            return (
+              <div key={m._id} className={cn(
+                'bg-white border-2 p-3 space-y-2',
+                isPushed ? 'border-slate-200 opacity-80' : 'border-slate-200',
+              )}>
+                <div className="flex items-start gap-3">
+                  {/* CV info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Kandidaat</p>
+                    <div className="flex items-baseline gap-1">
+                      <p className="font-black text-sm truncate">{cv?.fullName || '—'}</p>
+                      {cvFlag && <span className="text-xs shrink-0">{cvFlag}</span>}
+                    </div>
+                    <p className="text-xs font-bold text-slate-500 truncate">{cv?.jobTitle || '—'}{cv?.location ? ` · ${cv.location}` : ''}</p>
+                  </div>
+
+                  <div className="text-slate-300 text-2xl font-black self-center px-2">×</div>
+
+                  {/* Vacature info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Vacature</p>
+                    <div className="flex items-baseline gap-1">
+                      <p className="font-black text-sm truncate">{vac?.title || '—'}</p>
+                      {vacFlag && <span className="text-xs shrink-0">{vacFlag}</span>}
+                    </div>
+                    <p className="text-xs font-bold text-slate-500 truncate">{vac?.company || '—'}{vac?.location ? ` · ${vac.location}` : ''}</p>
+                  </div>
+
+                  {/* Score */}
+                  <div className="shrink-0 self-center">
+                    <div className={cn(
+                      'text-2xl font-black italic leading-none',
+                      score >= 70 ? 'text-blue-600' : score >= 50 ? 'text-emerald-600' : 'text-slate-700',
+                    )}>{score}%</div>
+                  </div>
+
+                  {/* Acties */}
+                  <div className="shrink-0 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadReason(m._id)}
+                      disabled={reasonBusy === m._id}
+                      title="Genereer AI-uitleg"
+                      className="border-2 border-fuchsia-300 text-fuchsia-700 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 hover:text-white hover:border-fuchsia-600 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {reasonBusy === m._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                      {reason ? 'Opnieuw' : 'Waarom?'}
+                    </button>
+                    {isPushed ? (
+                      <span className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Gepushed
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => promote(m._id)}
+                          disabled={busy === m._id}
+                          className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {busy === m._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                          Push
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => reject(m._id)}
+                          disabled={busy === m._id}
+                          className="border-2 border-red-300 text-red-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-50"
+                        >
+                          Negeer
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {reason && (
+                  <div className="border-t-2 border-fuchsia-200 bg-fuchsia-50 px-3 py-2 -mx-3 -mb-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-fuchsia-700 mb-1 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> AI-toelichting
+                    </p>
+                    <p className="text-[12px] text-slate-700 leading-snug">{reason}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
