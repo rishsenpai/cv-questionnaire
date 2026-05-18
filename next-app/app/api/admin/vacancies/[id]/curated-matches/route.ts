@@ -36,7 +36,9 @@ export async function GET(req: NextRequest, { params }: Params) {
         const matches = await CuratedMatch.find(query).sort(sort).lean();
 
         const cvIds = matches.map(m => m.cvId).filter(Boolean);
-        const cvs = await CV.find({ _id: { $in: cvIds } }).select('_id fullName jobTitle location').lean();
+        const cvs = await CV.find({ _id: { $in: cvIds } })
+            .select('_id fullName email phone jobTitle location skills experience education country')
+            .lean();
         const cvMap = new Map(cvs.map(c => [String(c._id), c]));
 
         const enriched = matches.map(m => ({

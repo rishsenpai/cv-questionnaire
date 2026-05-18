@@ -1403,7 +1403,18 @@ interface SuggestionRow {
   promotedAt?: string;
   source: string;
   addedAt: string;
-  cv: { _id: string; fullName?: string; jobTitle?: string; location?: string } | null;
+  cv: {
+    _id: string;
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    jobTitle?: string;
+    location?: string;
+    skills?: string;
+    experience?: string;
+    education?: string;
+    country?: 'guyana' | 'netherlands' | 'suriname';
+  } | null;
 }
 
 function SuggestionsModal({
@@ -1590,6 +1601,58 @@ function SuggestionsModal({
       </motion.div>
     </motion.div>
   );
+}
+
+// Lichte heuristieken voor match-info — geen externe deps.
+function yearsFromExperience(experience?: string): number | null {
+  if (!experience) return null;
+  const years = experience.match(/\b(19|20)\d{2}\b/g);
+  if (!years || years.length < 2) return null;
+  const nums = years.map(y => parseInt(y, 10)).sort((a, b) => a - b);
+  const total = Math.min(new Date().getFullYear(), nums[nums.length - 1]) - nums[0];
+  return total > 0 && total < 50 ? total : null;
+}
+
+function topSkills(skills?: string, limit = 4): string[] {
+  if (!skills) return [];
+  return skills.split(/[,;|\n]/).map(s => s.trim()).filter(s => s.length > 0 && s.length < 40).slice(0, limit);
+}
+
+function educationLevel(education?: string): string | null {
+  if (!education) return null;
+  const text = education.toLowerCase();
+  if (/\b(phd|doctor|prof\.?|promotie)\b/.test(text)) return 'PhD';
+  if (/\b(master|msc|ma\b|mba|wo[- ]?master)\b/.test(text)) return 'Master';
+  if (/\b(bachelor|hbo|bsc|ba\b)\b/.test(text)) return 'HBO/Bachelor';
+  if (/\bwo\b|universiteit/.test(text)) return 'WO';
+  if (/\bmbo\b/.test(text)) return 'MBO';
+  if (/\bhavo\b/.test(text)) return 'HAVO';
+  if (/\bvwo\b/.test(text)) return 'VWO';
+  if (/\bmavo\b/.test(text)) return 'MAVO';
+  return null;
+}
+
+const COUNTRY_FLAG: Record<string, string> = { guyana: '🇬🇾', netherlands: '🇳🇱', suriname: '🇸🇷' };
+
+function daysAgo(iso?: string): string | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  if (days < 0) return null;
+  if (days === 0) return 'vandaag';
+  if (days === 1) return '1 dag geleden';
+  if (days < 30) return `${days} dagen geleden`;
+  if (days < 365) return `${Math.floor(days / 30)} mnd geleden`;
+  return `${Math.floor(days / 365)} jaar geleden`;
+}
+
+function formatSalary(s?: { min?: number; max?: number; currency?: string; period?: string }): string | null {
+  if (!s || (!s.min && !s.max)) return null;
+  const cur = s.currency || 'EUR';
+  const fmt = (n?: number) => n ? n.toLocaleString('nl-NL') : '?';
+  const range = s.min && s.max ? `${fmt(s.min)} – ${fmt(s.max)}` : `${fmt(s.min || s.max)}`;
+  const period = s.period === 'month' ? '/mnd' : s.period === 'year' ? '/jr' : s.period === 'hour' ? '/u' : '';
+  return `${cur} ${range}${period}`;
 }
 
 // Inline match-overzicht onder een vacancy-row in de Vacatures-tab.
@@ -1785,14 +1848,42 @@ function InlineMatchesRow({
           {items.map(s => {
             const isPushed = s.status !== 'suggested';
             const pushedDate = s.promotedAt || s.addedAt;
+            const cv = s.cv;
+            const years = yearsFromExperience(cv?.experience);
+            const skills = topSkills(cv?.skills);
+            const edu = educationLevel(cv?.education);
+            const flag = cv?.country ? COUNTRY_FLAG[cv.country] : '';
             return (
               <div key={s._id} className={cn(
-                'border-2 p-3 flex items-center gap-3',
+                'border-2 p-3 flex items-start gap-3',
                 isPushed ? 'bg-slate-50 border-slate-200 opacity-80' : 'bg-white border-slate-200',
               )}>
-                <div className="flex-1 min-w-0">
-                  <p className="font-black text-sm truncate">{s.cv?.fullName || '—'}</p>
-                  <p className="text-xs font-bold text-slate-500 truncate">{s.cv?.jobTitle || '—'} · {s.cv?.location || '—'}</p>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex items-baseline gap-2">
+                    <p className="font-black text-sm truncate">{cv?.fullName || '—'}</p>
+                    {flag && <span className="text-xs shrink-0" title={cv?.country}>{flag}</span>}
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 truncate">
+                    {cv?.jobTitle || '—'}{cv?.location ? ` · ${cv.location}` : ''}
+                    {years !== null && ` · ${years} jr ervaring`}
+                    {edu && ` · ${edu}`}
+                  </p>
+                  {(cv?.email || cv?.phone) && (
+                    <p className="text-[11px] font-bold text-slate-600 truncate">
+                      {cv?.email && <span>{cv.email}</span>}
+                      {cv?.email && cv?.phone && <span className="text-slate-300"> · </span>}
+                      {cv?.phone && <span>{cv.phone}</span>}
+                    </p>
+                  )}
+                  {skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {skills.map((sk, i) => (
+                        <span key={i} className="text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-700 px-1.5 py-0.5 border border-blue-200">
+                          {sk}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {s.matchScore !== undefined && (
                   <div className="text-right shrink-0">
@@ -2096,6 +2187,12 @@ interface MatchVacancyResult {
   source?: string;
   matchScore: number;
   matchType: string;
+  description?: string;
+  employmentType?: string;
+  applyLink?: string;
+  postedAt?: string;
+  country?: 'guyana' | 'netherlands' | 'suriname';
+  salary?: { min?: number; max?: number; currency?: string; period?: string };
 }
 
 interface MatchCvResult {
@@ -2620,55 +2717,84 @@ function VacancyMatchesList({
     return <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches gevonden.</p>;
   }
   return (
-    <div className="bg-white border-2 border-black overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-black text-white">
-          <tr className="text-[10px] font-black uppercase tracking-widest">
-            <th className="p-3 text-left">Vacature</th>
-            <th className="p-3 text-left">Bedrijf</th>
-            <th className="p-3 text-left">Locatie</th>
-            <th className="p-3 text-left w-24">Score</th>
-            <th className="p-3 text-left w-32">Type</th>
-            {onPush && <th className="p-3 text-right w-32">Push</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {matches.map((m, i) => {
-            const id = m._id || '';
-            const isPushed = id && pushedIds?.has(id);
-            const isPushing = id && pushingId === id;
-            return (
-              <tr key={id || `${m.title}-${i}`} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
-                <td className="p-3 truncate max-w-[260px]">{m.title}</td>
-                <td className="p-3 truncate max-w-[180px] text-slate-500">{m.company || '—'}</td>
-                <td className="p-3 truncate max-w-[150px] text-slate-500">{m.location || '—'}</td>
-                <td className="p-3"><ScoreBadge score={m.matchScore} /></td>
-                <td className="p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">{m.matchType}</td>
-                {onPush && (
-                  <td className="p-3 text-right">
-                    {isPushed ? (
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 inline-flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Gepusht
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onPush(m)}
-                        disabled={isPushing || !id}
-                        className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                        title="Push naar werkgever-portaal"
-                      >
-                        {isPushing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
-                        Push
-                      </button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-2">
+      {matches.map((m, i) => {
+        const id = m._id || '';
+        const isPushed = id && pushedIds?.has(id);
+        const isPushing = id && pushingId === id;
+        const flag = m.country ? COUNTRY_FLAG[m.country] : '';
+        const salary = formatSalary(m.salary);
+        const posted = daysAgo(m.postedAt);
+        const descPreview = m.description ? m.description.replace(/\s+/g, ' ').trim().slice(0, 180) : '';
+        return (
+          <div key={id || `${m.title}-${i}`} className="bg-white border-2 border-slate-200 p-3 space-y-2">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <p className="font-black text-sm truncate">{m.title}</p>
+                  {flag && <span className="text-xs shrink-0" title={m.country}>{flag}</span>}
+                </div>
+                <p className="text-xs font-bold text-slate-500 truncate">
+                  {m.company || '—'}{m.location ? ` · ${m.location}` : ''}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <div className={cn(
+                  'text-xl font-black italic leading-none',
+                  m.matchScore >= 70 ? 'text-blue-600' : m.matchScore >= 50 ? 'text-emerald-600' : 'text-slate-700',
+                )}>{m.matchScore}%</div>
+              </div>
+              {onPush && (
+                <div className="shrink-0">
+                  {isPushed ? (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 inline-flex items-center gap-1 px-2 py-1.5">
+                      <CheckCircle2 className="w-3 h-3" /> Gepusht
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onPush(m)}
+                      disabled={!!isPushing || !id}
+                      className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                      title="Push naar werkgever-portaal"
+                    >
+                      {isPushing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                      Push
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {descPreview && (
+              <p className="text-[11px] text-slate-600 leading-snug line-clamp-2">{descPreview}…</p>
+            )}
+            <div className="flex flex-wrap gap-2 items-center text-[9px] font-black uppercase tracking-widest">
+              {m.source && (
+                <span className={cn(
+                  'px-1.5 py-0.5 border',
+                  m.source === 'employer' ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : m.source === 'adzuna' ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : m.source === 'jsearch' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-100 text-slate-700 border-slate-200',
+                )}>{m.source}</span>
+              )}
+              {m.employmentType && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200">{m.employmentType}</span>}
+              {salary && <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200">{salary}</span>}
+              {posted && <span className="text-slate-400 normal-case tracking-normal font-bold">{posted}</span>}
+              {m.applyLink && (
+                <a
+                  href={m.applyLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-blue-600 hover:text-black underline normal-case tracking-normal font-bold"
+                >
+                  Bekijk vacature →
+                </a>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
