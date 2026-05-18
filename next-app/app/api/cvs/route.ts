@@ -9,7 +9,14 @@ export async function GET(req: NextRequest) {
 
     try {
         await connectDB();
-        const cvs = await CV.find().select('-fileData').sort({ createdAt: -1 });
+        // Slank projectie: bij 4000+ CVs werd de response > Vercel's 4.5MB
+        // limiet als we fullText/experience/education meestuurden. Admin-tabel
+        // heeft alleen identificatie-velden nodig; volledige CV ophalen kan
+        // via /api/cvs/[id] op de detail-view.
+        const cvs = await CV.find()
+            .select('_id fullName email phone jobTitle location fileName isInternal country createdAt emailSent recruiterRequested')
+            .sort({ createdAt: -1 })
+            .lean();
         return NextResponse.json({ success: true, count: cvs.length, data: cvs });
     } catch (err) {
         console.error('Error fetching CVs:', err);
