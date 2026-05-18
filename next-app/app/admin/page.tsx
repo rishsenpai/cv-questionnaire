@@ -1755,10 +1755,12 @@ function InlineMatchesRow({
     const all = data.matches as SuggestionRow[];
     // Suggested eerst (op score desc), daarna gepushte (op promotedAt/addedAt desc).
     // Toon top 10 suggested + alle pushed zodat gepushte kandidaten zichtbaar blijven.
+    // Tot 50 zichtbaar zodat admin echt kan vergelijken; autoMatch slaat
+    // typisch top-25 per run op (run-match accumuleert tot ~50).
     const suggested = all
       .filter(m => m.status === 'suggested')
       .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
-      .slice(0, 10);
+      .slice(0, 50);
     const pushed = all
       .filter(m => m.status !== 'suggested')
       .sort((a, b) => {
