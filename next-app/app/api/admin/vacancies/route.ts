@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
         const total = await Vacancy.countDocuments(query);
         const vacancies = await Vacancy.find(query)
-            .select('-fileData -embedding -fullText')
+            .select('_id title company location source employerId country createdAt isActive')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)

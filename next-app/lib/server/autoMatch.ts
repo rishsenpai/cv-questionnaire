@@ -34,7 +34,17 @@ interface VacancyDoc {
     embedding?: number[];
 }
 
-export async function runAutoMatchForVacancy(vacancyId: string): Promise<AutoMatchResult> {
+interface RunAutoMatchOptions {
+    // Override de country-scope (standaard = vacancy.country). Met
+    // 'guyana' | 'netherlands' | 'suriname' forceer je dat land;
+    // met undefined valt 't terug op vacancy.country.
+    countryOverride?: 'guyana' | 'netherlands' | 'suriname';
+}
+
+export async function runAutoMatchForVacancy(
+    vacancyId: string,
+    options: RunAutoMatchOptions = {},
+): Promise<AutoMatchResult> {
     const vacancy = await Vacancy.findById(vacancyId).select('+embedding country');
     if (!vacancy) {
         return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'vacancy not found' };
@@ -59,13 +69,14 @@ export async function runAutoMatchForVacancy(vacancyId: string): Promise<AutoMat
         await Vacancy.findByIdAndUpdate(vacancy._id, { embedding: vacEmbedding });
     }
 
-    // Wanneer de vacature een land heeft, scopen we kandidaten tot hetzelfde
-    // land. Zonder country op de vacancy matchen we breed (legacy gedrag).
+    // Scope-bepaling: explicit override wint van vacancy.country.
+    // Zonder beide matchen we breed (legacy gedrag).
+    const scopeCountry = options.countryOverride || vacancy.country;
     const cvQuery: Record<string, unknown> = {
         embedding: { $exists: true, $ne: [] },
         isInternal: { $ne: true },
     };
-    if (vacancy.country) cvQuery.country = vacancy.country;
+    if (scopeCountry) cvQuery.country = scopeCountry;
     const cvs = await CV.find(cvQuery).select({ embedding: 1, _id: 1 }).lean();
 
     const scored: Array<{ cvId: string; score: number }> = [];

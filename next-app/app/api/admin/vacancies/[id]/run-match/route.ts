@@ -37,7 +37,16 @@ export async function POST(req: NextRequest, { params }: Params) {
             await generateVacancyEmbedding(id);
         }
 
-        const result = await runAutoMatchForVacancy(id);
+        // Optionele country-override: standaard scopet runAutoMatchForVacancy op
+        // vacancy.country, maar admin kan via ?country= een ander land afdwingen
+        // (bv. om relocation-kandidaten uit een andere markt te vinden).
+        const url = new URL(req.url);
+        const countryParam = url.searchParams.get('country');
+        const countryOverride = countryParam && ['guyana', 'netherlands', 'suriname'].includes(countryParam)
+            ? countryParam as 'guyana' | 'netherlands' | 'suriname'
+            : undefined;
+
+        const result = await runAutoMatchForVacancy(id, { countryOverride });
         return NextResponse.json({ success: true, vacancyTitle: vacancy.title, result });
     } catch (err) {
         console.error('run-match error:', err);

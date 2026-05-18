@@ -302,6 +302,7 @@ interface CvRow {
   location?: string;
   fileName?: string;
   isInternal?: boolean;
+  country?: 'guyana' | 'netherlands' | 'suriname';
   createdAt: string;
 }
 
@@ -521,6 +522,7 @@ interface VacancyRow {
   location?: string;
   source?: string;
   employerId?: string;
+  country?: 'guyana' | 'netherlands' | 'suriname';
   createdAt: string;
   suggestionCount?: number;
   pushedCount?: number;
@@ -1363,7 +1365,7 @@ function VacanciesTab({ token }: { token: string }) {
                     rows.push(
                       <tr key={v._id + '-expand'} className="bg-slate-50 border-t border-slate-200">
                         <td colSpan={6} className="p-0">
-                          <InlineMatchesRow vacancyId={v._id} token={token} onChange={reload} />
+                          <InlineMatchesRow vacancyId={v._id} vacancyCountry={v.country} token={token} onChange={reload} />
                         </td>
                       </tr>,
                     );
@@ -1593,9 +1595,9 @@ function SuggestionsModal({
 // Inline match-overzicht onder een vacancy-row in de Vacatures-tab.
 // Toont top-10 AI-suggesties met Push/Negeer-knoppen — geen modal nodig.
 function InlineMatchesRow({
-  vacancyId, token, onChange,
+  vacancyId, vacancyCountry, token, onChange,
 }: {
-  vacancyId: string; token: string; onChange: () => void;
+  vacancyId: string; vacancyCountry?: 'guyana' | 'netherlands' | 'suriname'; token: string; onChange: () => void;
 }) {
   const [items, setItems] = useState<SuggestionRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -1608,6 +1610,10 @@ function InlineMatchesRow({
     existingMatches?: Record<string, number>;
   } | null>(null);
   const [debugBusy, setDebugBusy] = useState(false);
+  // Default: vacancy's eigen land. Lege string = match tegen CVs uit alle landen
+  // (handig voor remote-rollen of relocation-kandidaten).
+  const [rematchCountry, setRematchCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>(vacancyCountry || '');
+  const [rematchBusy, setRematchBusy] = useState(false);
 
   const load = React.useCallback(async () => {
     setItems(null);
@@ -1675,8 +1681,53 @@ function InlineMatchesRow({
     } finally { setBusy(null); }
   };
 
+  const rematch = async () => {
+    setRematchBusy(true);
+    try {
+      const qs = rematchCountry ? `?country=${rematchCountry}` : '';
+      const res = await fetch(`/api/admin/vacancies/${vacancyId}/run-match${qs}`, {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Match mislukt');
+        return;
+      }
+      const r = data.result || {};
+      alert(`Klaar: ${r.suggestionsCreated || 0} nieuwe suggesties (${r.candidatesScanned || 0} CVs gescand).`);
+      await load();
+      onChange();
+    } finally {
+      setRematchBusy(false);
+    }
+  };
+
   return (
-    <div className="p-4 border-l-4 border-blue-600">
+    <div className="p-4 border-l-4 border-blue-600 space-y-3">
+      <div className="flex items-stretch gap-0 justify-end">
+        <select
+          value={rematchCountry}
+          onChange={(e) => setRematchCountry(e.target.value as typeof rematchCountry)}
+          disabled={rematchBusy}
+          className="bg-fuchsia-50 border-2 border-fuchsia-600 border-r-0 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-fuchsia-700 outline-none disabled:opacity-50"
+          title="Beperk de re-match tot CVs uit één land"
+        >
+          <option value="">Alle landen</option>
+          <option value="guyana">Guyana</option>
+          <option value="netherlands">Nederland</option>
+          <option value="suriname">Suriname</option>
+        </select>
+        <button
+          type="button"
+          onClick={rematch}
+          disabled={rematchBusy}
+          className="bg-fuchsia-600 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
+        >
+          {rematchBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          Match opnieuw
+        </button>
+      </div>
       {!items ? (
         <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-blue-600" /></div>
       ) : items.length === 0 ? (
@@ -2629,10 +2680,17 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
   const [pushingId, setPushingId] = useState<string | null>(null);
   const [pushedIds, setPushedIds] = useState<Set<string>>(new Set());
   const [pushMessage, setPushMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  // Default naar CV's eigen land — voor een Rotterdam-CV hoef je zelden
+  // tegen Guyana-vacatures te matchen. Lege string = alle landen.
+  const [country, setCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>(cv.country || '');
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/admin/cvs/${cv._id}/matches`, { headers: { 'x-admin-token': token } })
+    setLoading(true);
+    setMatches(null);
+    setError(null);
+    const qs = country ? `?country=${country}` : '';
+    fetch(`/api/admin/cvs/${cv._id}/matches${qs}`, { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
@@ -2642,7 +2700,7 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
       .catch(err => !cancelled && setError(err instanceof Error ? err.message : 'Match mislukt'))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [cv._id, token]);
+  }, [cv._id, token, country]);
 
   const pushToVacancy = async (vacancy: MatchVacancyResult) => {
     if (!vacancy._id) return;
@@ -2696,7 +2754,20 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
             <h3 className="text-2xl font-black tracking-tighter italic">{cv.fullName}</h3>
             {cv.jobTitle && <p className="text-[11px] font-bold text-slate-300">{cv.jobTitle}</p>}
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
+          <div className="flex items-center gap-3">
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value as typeof country)}
+              className="bg-white text-black px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none border-2 border-blue-400"
+              title="Beperk matches tot één land"
+            >
+              <option value="">Alle landen</option>
+              <option value="guyana">Guyana</option>
+              <option value="netherlands">Nederland</option>
+              <option value="suriname">Suriname</option>
+            </select>
+            <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
+          </div>
         </div>
         <div className="p-6 space-y-4">
           {pushMessage && (

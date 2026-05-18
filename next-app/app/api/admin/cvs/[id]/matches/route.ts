@@ -48,10 +48,21 @@ export async function GET(req: NextRequest, { params }: Params) {
             await CV.findByIdAndUpdate(cv._id, { embedding: cvEmbedding, textHash });
         }
 
-        const vacancies = await Vacancy.find({
+        // Optioneel land-filter: 'guyana' | 'netherlands' | 'suriname'.
+        // Default ongefilterd, maar admin-UI stuurt meestal CV's eigen land
+        // mee zodat een NL-CV niet als kandidaat verschijnt bij Guyana-jobs.
+        const url = new URL(req.url);
+        const countryParam = url.searchParams.get('country');
+        const country = countryParam && ['guyana', 'netherlands', 'suriname'].includes(countryParam)
+            ? countryParam
+            : null;
+
+        const vacancyQuery: Record<string, unknown> = {
             isActive: true,
             embedding: { $exists: true, $ne: [] },
-        }).select('+embedding -fileData');
+        };
+        if (country) vacancyQuery.country = country;
+        const vacancies = await Vacancy.find(vacancyQuery).select('+embedding -fileData');
 
         const matches = vacancies.map(vacancy => {
             const score = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
