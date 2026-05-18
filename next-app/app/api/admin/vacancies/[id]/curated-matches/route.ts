@@ -22,7 +22,13 @@ export async function GET(req: NextRequest, { params }: Params) {
         const url = new URL(req.url);
         const statusFilter = url.searchParams.get('status'); // optioneel: 'suggested' | 'presented' | etc.
         const query: Record<string, unknown> = { vacancyId: id };
-        if (statusFilter) query.status = statusFilter;
+        if (statusFilter) {
+            query.status = statusFilter;
+        } else {
+            // Default: sluit 'rejected' uit zodat gepushte/contact-shared matches
+            // wel zichtbaar blijven in de admin-UI maar weggegooide niet.
+            query.status = { $ne: 'rejected' };
+        }
         // Voor suggesties: hoogste score eerst. Anders: meest recent eerst.
         const sort: Record<string, 1 | -1> = statusFilter === 'suggested'
             ? { matchScore: -1, addedAt: -1 }

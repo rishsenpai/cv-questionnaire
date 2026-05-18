@@ -38,19 +38,27 @@ export async function GET(req: NextRequest) {
             .limit(limit)
             .lean();
 
-        // Tel open suggesties per vacature in één aggregate
+        // Tel open suggesties én al-gepushte matches per vacature in één aggregate.
+        // Pushed = alle non-rejected, non-suggested statussen (presented, viewed, contact-*).
         const vacancyIds = vacancies.map(v => v._id);
-        const suggestionCounts = vacancyIds.length > 0
+        const matchCounts = vacancyIds.length > 0
             ? await CuratedMatch.aggregate([
-                { $match: { vacancyId: { $in: vacancyIds }, status: 'suggested' } },
-                { $group: { _id: '$vacancyId', count: { $sum: 1 } } },
+                { $match: { vacancyId: { $in: vacancyIds }, status: { $ne: 'rejected' } } },
+                { $group: { _id: { vacancyId: '$vacancyId', status: '$status' }, count: { $sum: 1 } } },
             ])
             : [];
-        const countMap = new Map(suggestionCounts.map(s => [String(s._id), s.count]));
-        const enriched = vacancies.map(v => ({
-            ...v,
-            suggestionCount: countMap.get(String(v._id)) || 0,
-        }));
+        const countMap = new Map<string, { suggested: number; pushed: number }>();
+        for (const c of matchCounts) {
+            const vid = String(c._id.vacancyId);
+            const entry = countMap.get(vid) || { suggested: 0, pushed: 0 };
+            if (c._id.status === 'suggested') entry.suggested += c.count;
+            else entry.pushed += c.count;
+            countMap.set(vid, entry);
+        }
+        const enriched = vacancies.map(v => {
+            const counts = countMap.get(String(v._id)) || { suggested: 0, pushed: 0 };
+            return { ...v, suggestionCount: counts.suggested, pushedCount: counts.pushed };
+        });
 
         return NextResponse.json({
             success: true,

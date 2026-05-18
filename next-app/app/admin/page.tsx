@@ -523,6 +523,7 @@ interface VacancyRow {
   employerId?: string;
   createdAt: string;
   suggestionCount?: number;
+  pushedCount?: number;
 }
 
 const SOURCE_BADGE: Record<string, string> = {
@@ -1266,13 +1267,25 @@ function VacanciesTab({ token }: { token: string }) {
                         </span>
                       </td>
                       <td className="p-3">
-                        {v.suggestionCount && v.suggestionCount > 0 ? (
+                        {(v.suggestionCount ?? 0) > 0 || (v.pushedCount ?? 0) > 0 ? (
                           <button
                             type="button"
                             onClick={() => setExpandedId(isExpanded ? null : v._id)}
-                            className="bg-blue-600 text-white px-3 py-1 text-[10px] font-black uppercase tracking-widest hover:bg-black flex items-center gap-2"
+                            className={cn(
+                              'px-3 py-1 text-[10px] font-black uppercase tracking-widest flex items-center gap-2',
+                              (v.suggestionCount ?? 0) > 0
+                                ? 'bg-blue-600 text-white hover:bg-black'
+                                : 'bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200',
+                            )}
                           >
-                            <Sparkles className="w-3 h-3" /> {v.suggestionCount} suggestie{v.suggestionCount === 1 ? '' : 's'}
+                            {(v.suggestionCount ?? 0) > 0 ? (
+                              <><Sparkles className="w-3 h-3" /> {v.suggestionCount} open</>
+                            ) : (
+                              <><CheckCircle2 className="w-3 h-3" /> {v.pushedCount} gepushed</>
+                            )}
+                            {(v.suggestionCount ?? 0) > 0 && (v.pushedCount ?? 0) > 0 && (
+                              <span className="text-emerald-200">· {v.pushedCount} gepushed</span>
+                            )}
                           </button>
                         ) : (
                           <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest">—</span>
@@ -1335,6 +1348,7 @@ interface SuggestionRow {
   contactRequestedAt?: string;
   contactSharedAt?: string;
   contactSharedNote?: string;
+  promotedAt?: string;
   source: string;
   addedAt: string;
   cv: { _id: string; fullName?: string; jobTitle?: string; location?: string } | null;
@@ -1547,11 +1561,26 @@ function InlineMatchesRow({
 
   const load = React.useCallback(async () => {
     setItems(null);
-    const res = await fetch(`/api/admin/vacancies/${vacancyId}/curated-matches?status=suggested`, {
+    const res = await fetch(`/api/admin/vacancies/${vacancyId}/curated-matches`, {
       headers: { 'x-admin-token': token },
     });
     const data = await res.json();
-    if (data.success) setItems((data.matches as SuggestionRow[]).slice(0, 10));
+    if (!data.success) return;
+    const all = data.matches as SuggestionRow[];
+    // Suggested eerst (op score desc), daarna gepushte (op promotedAt/addedAt desc).
+    // Toon top 10 suggested + alle pushed zodat gepushte kandidaten zichtbaar blijven.
+    const suggested = all
+      .filter(m => m.status === 'suggested')
+      .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
+      .slice(0, 10);
+    const pushed = all
+      .filter(m => m.status !== 'suggested')
+      .sort((a, b) => {
+        const aDate = a.promotedAt || a.addedAt;
+        const bDate = b.promotedAt || b.addedAt;
+        return new Date(bDate).getTime() - new Date(aDate).getTime();
+      });
+    setItems([...suggested, ...pushed]);
   }, [vacancyId, token]);
 
   const runDebug = async () => {
@@ -1650,43 +1679,62 @@ function InlineMatchesRow({
       ) : (
         <div className="space-y-2">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
-            Top {items.length} kandidaten (op match-score)
+            {items.filter(i => i.status === 'suggested').length} open · {items.filter(i => i.status !== 'suggested').length} gepushed
           </p>
-          {items.map(s => (
-            <div key={s._id} className="bg-white border-2 border-slate-200 p-3 flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-black text-sm truncate">{s.cv?.fullName || '—'}</p>
-                <p className="text-xs font-bold text-slate-500 truncate">{s.cv?.jobTitle || '—'} · {s.cv?.location || '—'}</p>
-              </div>
-              {s.matchScore !== undefined && (
-                <div className="text-right shrink-0">
-                  <div className={cn(
-                    'text-xl font-black italic leading-none',
-                    s.matchScore >= 70 ? 'text-blue-600' : s.matchScore >= 50 ? 'text-emerald-600' : 'text-slate-700',
-                  )}>{s.matchScore}%</div>
+          {items.map(s => {
+            const isPushed = s.status !== 'suggested';
+            const pushedDate = s.promotedAt || s.addedAt;
+            return (
+              <div key={s._id} className={cn(
+                'border-2 p-3 flex items-center gap-3',
+                isPushed ? 'bg-slate-50 border-slate-200 opacity-80' : 'bg-white border-slate-200',
+              )}>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-sm truncate">{s.cv?.fullName || '—'}</p>
+                  <p className="text-xs font-bold text-slate-500 truncate">{s.cv?.jobTitle || '—'} · {s.cv?.location || '—'}</p>
                 </div>
-              )}
-              <div className="flex gap-2 shrink-0">
-                <button
-                  type="button"
-                  disabled={busy === s._id}
-                  onClick={() => promote(s._id)}
-                  className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
-                >
-                  {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
-                  Push
-                </button>
-                <button
-                  type="button"
-                  disabled={busy === s._id}
-                  onClick={() => reject(s._id)}
-                  className="border-2 border-red-300 text-red-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-50"
-                >
-                  Negeer
-                </button>
+                {s.matchScore !== undefined && (
+                  <div className="text-right shrink-0">
+                    <div className={cn(
+                      'text-xl font-black italic leading-none',
+                      s.matchScore >= 70 ? 'text-blue-600' : s.matchScore >= 50 ? 'text-emerald-600' : 'text-slate-700',
+                    )}>{s.matchScore}%</div>
+                  </div>
+                )}
+                <div className="flex gap-2 shrink-0">
+                  {isPushed ? (
+                    <span
+                      title={s.status}
+                      className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      Gepushed {new Date(pushedDate).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })}
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busy === s._id}
+                        onClick={() => promote(s._id)}
+                        className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                        Push
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy === s._id}
+                        onClick={() => reject(s._id)}
+                        className="border-2 border-red-300 text-red-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-50"
+                      >
+                        Negeer
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
