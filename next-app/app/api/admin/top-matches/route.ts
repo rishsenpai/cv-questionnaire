@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
             CV.find({ _id: { $in: cvIds } })
                 .select('_id fullName email phone jobTitle location country')
                 .lean(),
-            Vacancy.find({ _id: { $in: vacancyIds } })
+            Vacancy.find({ _id: { $in: vacancyIds }, fulfilledAt: null })
                 .select('_id title company location country source applyLink')
                 .lean(),
         ]);

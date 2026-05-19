@@ -66,6 +66,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
         const vacancyQuery: Record<string, unknown> = {
             isActive: true,
+            fulfilledAt: null,
             embedding: { $exists: true, $ne: [] },
         };
         if (country) vacancyQuery.country = country;

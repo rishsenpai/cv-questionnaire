@@ -54,9 +54,12 @@ export async function runAutoMatchForVacancy(
     vacancyId: string,
     options: RunAutoMatchOptions = {},
 ): Promise<AutoMatchResult> {
-    const vacancy = await Vacancy.findById(vacancyId).select('+embedding country');
+    const vacancy = await Vacancy.findById(vacancyId).select('+embedding country fulfilledAt');
     if (!vacancy) {
         return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'vacancy not found' };
+    }
+    if (vacancy.fulfilledAt) {
+        return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'vacancy fulfilled' };
     }
     // employerId is optioneel: voor admin/internal vacatures slaan we suggesties
     // op zonder werkgever-eigenaar (admin is dan zelf de "ontvanger").

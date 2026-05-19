@@ -28,6 +28,7 @@ export interface IVacancy extends Document {
     fileData?: string;
     fileType?: string;
     isActive?: boolean;
+    fulfilledAt?: Date | null;
     country?: 'guyana' | 'netherlands' | 'suriname';
     embedding?: number[];
     embeddingModel?: string;
@@ -62,6 +63,7 @@ const vacancySchema = new Schema<IVacancy>({
     fileData: { type: String },
     fileType: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
+    fulfilledAt: { type: Date, default: null, index: true },
     country: { type: String, enum: ['guyana', 'netherlands', 'suriname'], index: true },
     embedding: { type: [Number], select: false },
     embeddingModel: { type: String, default: 'text-embedding-3-small' },

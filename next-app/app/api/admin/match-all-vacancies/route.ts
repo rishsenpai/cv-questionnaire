@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         const vacancyQuery: Record<string, unknown> = {
             embedding: { $exists: true, $not: { $size: 0 } },
             isActive: true,
+            fulfilledAt: null,
         };
         if (country) vacancyQuery.country = country;
         const vacancies = await Vacancy.find(vacancyQuery)
