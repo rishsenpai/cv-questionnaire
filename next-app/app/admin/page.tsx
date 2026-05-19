@@ -1716,10 +1716,25 @@ function InlineMatchesRow({
     threshold: number;
     aboveThreshold: number;
     meanCosine: number;
+    vacancyCountry?: string | null;
     topRaw: Array<{ cvId: string; fullName: string; email: string; cosine: number; pct: number }>;
     existingMatches?: Record<string, number>;
+    specificCv?: Array<{
+      cvId: string;
+      fullName: string;
+      email: string;
+      cosine: number;
+      pct: number;
+      rank: number;
+      isInternal?: boolean;
+      hasEmbedding?: boolean;
+      country?: string | null;
+      alreadyLinked?: boolean;
+      countryMismatch?: boolean;
+    }> | null;
   } | null>(null);
   const [debugBusy, setDebugBusy] = useState(false);
+  const [cvSearch, setCvSearch] = useState('');
   // Default: vacancy's eigen land. Lege string = match tegen CVs uit alle landen
   // (handig voor remote-rollen of relocation-kandidaten).
   const [rematchCountry, setRematchCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>(vacancyCountry || '');
@@ -1774,7 +1789,8 @@ function InlineMatchesRow({
   const runDebug = async () => {
     setDebugBusy(true);
     try {
-      const res = await fetch(`/api/admin/vacancies/${vacancyId}/debug-match`, {
+      const qs = cvSearch.trim() ? `?cvSearch=${encodeURIComponent(cvSearch.trim())}` : '';
+      const res = await fetch(`/api/admin/vacancies/${vacancyId}/debug-match${qs}`, {
         headers: { 'x-admin-token': token },
       });
       const data = await res.json();
@@ -1859,12 +1875,19 @@ function InlineMatchesRow({
           {rematchBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
           Match opnieuw
         </button>
+        <input
+          type="text"
+          value={cvSearch}
+          onChange={(e) => setCvSearch(e.target.value)}
+          placeholder="Zoek CV (naam/email)"
+          className="border-2 border-slate-300 px-2 py-1.5 text-[10px] font-bold sm:ml-2 w-full sm:w-44"
+        />
         <button
           type="button"
           onClick={runDebug}
           disabled={debugBusy}
           title="Toon de top-50 rauwe cosine-scores zonder threshold/rerank (handig om te zien waar een specifieke CV in de ranking staat)"
-          className="border-2 border-slate-900 text-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white disabled:opacity-50 flex items-center gap-1 sm:ml-2"
+          className="border-2 border-slate-900 text-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white disabled:opacity-50 flex items-center gap-1"
         >
           {debugBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
           Diagnose top-50
@@ -1874,7 +1897,53 @@ function InlineMatchesRow({
         <div className="bg-slate-50 border-2 border-slate-300 p-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-2">
             {debug.cvsScanned} CV&apos;s gescand · drempel {Math.round(debug.threshold * 100)}% · {debug.aboveThreshold} boven drempel · gem. cosine {debug.meanCosine}
+            {debug.vacancyCountry && ` · vacature-land: ${debug.vacancyCountry}`}
           </p>
+          {debug.specificCv && debug.specificCv.length > 0 && (
+            <div className="mb-3 bg-yellow-50 border-2 border-yellow-400 p-2 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-yellow-800">
+                Gevonden voor &quot;{cvSearch}&quot;:
+              </p>
+              {debug.specificCv.map(c => {
+                const blockers: string[] = [];
+                if (c.isInternal) blockers.push('isInternal=true (uitgesloten)');
+                if (!c.hasEmbedding) blockers.push('GEEN embedding (uitgesloten)');
+                if (c.alreadyLinked) blockers.push('al gekoppeld aan deze vacature');
+                if (c.countryMismatch) {
+                  blockers.push(
+                    c.country
+                      ? `country='${c.country}' ≠ '${debug.vacancyCountry}' (uitgesloten)`
+                      : `country leeg, vacancy='${debug.vacancyCountry}' (uitgesloten)`,
+                  );
+                }
+                return (
+                  <div key={c.cvId} className="text-[11px] font-bold text-slate-700 space-y-0.5">
+                    <div>
+                      <span className="font-black">{c.fullName}</span> · {c.email}
+                    </div>
+                    <div>
+                      rank #{c.rank === -1 ? '—' : c.rank} · cosine {c.cosine.toFixed(3)} ({c.pct}%) ·{' '}
+                      country={c.country || '(leeg)'}
+                    </div>
+                    {blockers.length === 0 ? (
+                      <div className="text-emerald-700 font-black">
+                        ✓ Geen blockers — moet zichtbaar zijn in de matches
+                      </div>
+                    ) : (
+                      <div className="text-red-700 font-black">
+                        ✗ Blockers: {blockers.join(' · ')}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {debug.specificCv && debug.specificCv.length === 0 && cvSearch && (
+            <div className="mb-3 bg-red-50 border-2 border-red-400 p-2 text-[11px] font-black text-red-800">
+              Geen CV gevonden met naam/email &quot;{cvSearch}&quot; in de hele DB.
+            </div>
+          )}
           <table className="w-full text-xs">
             <thead>
               <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">

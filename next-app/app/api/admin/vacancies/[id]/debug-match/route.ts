@@ -66,25 +66,36 @@ export async function GET(req: NextRequest, { params }: Params) {
     // cosine + rank in het geheel terug. Helpt bij debug 'waarom staat
     // X niet in de matches?'
     const cvSearch = req.nextUrl.searchParams.get('cvSearch')?.trim();
-    let specificCv: Array<{ cvId: string; fullName: string; email: string; cosine: number; pct: number; rank: number; isInternal?: boolean; hasEmbedding?: boolean }> | null = null;
+    let specificCv: Array<{ cvId: string; fullName: string; email: string; cosine: number; pct: number; rank: number; isInternal?: boolean; hasEmbedding?: boolean; country?: string | null; alreadyLinked?: boolean; countryMismatch?: boolean }> | null = null;
     if (cvSearch) {
         const re = new RegExp(cvSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
         const matches = await CV.find({
             $or: [{ fullName: re }, { email: re }],
-        }).select('+embedding _id fullName email isInternal').lean();
+        }).select('+embedding _id fullName email isInternal country').lean();
+        // Set van al-gekoppelde CV-ids zodat we per-result kunnen tonen
+        // of een CV door de excludeSet wordt geweerd.
+        const linkedIds = new Set(
+            (await CuratedMatch.find({ vacancyId: new mongoose.Types.ObjectId(id) }).distinct('cvId'))
+                .map(String),
+        );
+        const vacancyCountry = (vacancy as unknown as { country?: string }).country || null;
         specificCv = matches.map(cv => {
             const name = (cv as { fullName?: string }).fullName || '—';
             const email = (cv as { email?: string }).email || '—';
             const cvEmb = (cv as unknown as { embedding?: number[] }).embedding;
             const internal = (cv as { isInternal?: boolean }).isInternal === true;
+            const country = (cv as { country?: string }).country || null;
+            const cvId = String(cv._id);
+            const alreadyLinked = linkedIds.has(cvId);
+            const countryMismatch = Boolean(vacancyCountry && country && country !== vacancyCountry)
+                || Boolean(vacancyCountry && !country); // CV zonder country wordt ook geweigerd
             if (!cvEmb || cvEmb.length === 0) {
-                return { cvId: String(cv._id), fullName: name, email, cosine: 0, pct: 0, rank: -1, isInternal: internal, hasEmbedding: false };
+                return { cvId, fullName: name, email, cosine: 0, pct: 0, rank: -1, isInternal: internal, hasEmbedding: false, country, alreadyLinked, countryMismatch };
             }
             const sim = cosineSimilarity(vacancy.embedding!, cvEmb);
-            // Rank: hoeveel CVs hebben strikt hogere cosine? +1 = 1-indexed
             const rank = scored.filter(s => s.cosine > sim).length + 1;
             return {
-                cvId: String(cv._id),
+                cvId,
                 fullName: name,
                 email,
                 cosine: sim,
@@ -92,6 +103,9 @@ export async function GET(req: NextRequest, { params }: Params) {
                 rank,
                 isInternal: internal,
                 hasEmbedding: true,
+                country,
+                alreadyLinked,
+                countryMismatch,
             };
         });
     }
@@ -99,6 +113,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({
         success: true,
         vacancyTitle: vacancy.title,
+        vacancyCountry: (vacancy as unknown as { country?: string }).country || null,
         vacancyEmbeddingDim: vacancy.embedding.length,
         cvsScanned: cvs.length,
         threshold: 0.20,
