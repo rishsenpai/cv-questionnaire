@@ -453,8 +453,8 @@ function CvsTab({ token }: { token: string }) {
       {loading ? (
         <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
       ) : (
-        <div className="bg-white border-2 border-black overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white border-2 border-black overflow-x-auto">
+          <table className="w-full min-w-[700px]">
             <thead className="bg-black text-white">
               <tr className="text-[10px] font-black uppercase tracking-widest">
                 <th className="p-3 text-left w-10">
@@ -1317,8 +1317,8 @@ function VacanciesTab({ token }: { token: string }) {
       {loading ? (
         <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
       ) : (
-        <div className="bg-white border-2 border-black overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white border-2 border-black overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-black text-white">
               <tr className="text-[10px] font-black uppercase tracking-widest">
                 <th className="p-3 text-left">Functie</th>
@@ -2166,8 +2166,8 @@ function EmployersTab({ token }: { token: string }) {
       {loading ? (
         <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
       ) : (
-        <div className="bg-white border-2 border-black overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white border-2 border-black overflow-x-auto">
+          <table className="w-full min-w-[700px]">
             <thead className="bg-black text-white">
               <tr className="text-[10px] font-black uppercase tracking-widest">
                 <th className="p-3 text-left">Username</th>
@@ -2710,8 +2710,8 @@ function MatchHistoryPanel({ token }: { token: string }) {
       {loading ? (
         <div className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" /></div>
       ) : (
-        <div className="bg-white border-2 border-black overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white border-2 border-black overflow-x-auto">
+          <table className="w-full min-w-[700px]">
             <thead className="bg-black text-white">
               <tr className="text-[10px] font-black uppercase tracking-widest">
                 <th className="p-3 text-left">CV</th>
@@ -3027,8 +3027,8 @@ function MatchResultsList({ matches }: { matches: MatchCvResult[] }) {
     return <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches gevonden.</p>;
   }
   return (
-    <div className="bg-white border-2 border-black overflow-hidden">
-      <table className="w-full">
+    <div className="bg-white border-2 border-black overflow-x-auto">
+      <table className="w-full min-w-[700px]">
         <thead className="bg-black text-white">
           <tr className="text-[10px] font-black uppercase tracking-widest">
             <th className="p-3 text-left">CV</th>
