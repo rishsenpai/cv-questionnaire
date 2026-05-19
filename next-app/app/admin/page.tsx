@@ -1014,13 +1014,11 @@ function VacanciesTab({ token }: { token: string }) {
         }
       />
 
-      {vacancyEmbedProgress && vacancyEmbedProgress.total > 0 && (
+      {vacancyEmbedProgress && vacancyEmbedProgress.total > 0 && vacancyEmbedProgress.active && (
         <div className="bg-amber-50 border-2 border-amber-500 p-4 space-y-2">
           <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
             <span className="flex items-center gap-2">
-              {vacancyEmbedProgress.active
-                ? <><Loader2 className="w-3 h-3 animate-spin text-amber-700" /> Embeddings worden gegenereerd</>
-                : <><Sparkles className="w-3 h-3 text-amber-700" /> Embeddings klaar</>}
+              <Loader2 className="w-3 h-3 animate-spin text-amber-700" /> Embeddings worden gegenereerd
               <span className="text-slate-500 normal-case tracking-normal">— {vacancyEmbedProgress.current}/{vacancyEmbedProgress.total}</span>
             </span>
             <span className="text-amber-700">{vacancyEmbedProgress.percentage}%</span>
@@ -1028,7 +1026,7 @@ function VacanciesTab({ token }: { token: string }) {
           <div className="h-2 bg-amber-100">
             <div className="h-full bg-amber-500 transition-all" style={{ width: `${vacancyEmbedProgress.percentage}%` }} />
           </div>
-          {vacancyEmbedProgress.active && vacancyEmbedProgress.currentTitle && (
+          {vacancyEmbedProgress.currentTitle && (
             <p className="text-[10px] font-bold text-amber-800 italic truncate">Verwerkt: {vacancyEmbedProgress.currentTitle}</p>
           )}
           {vacancyEmbedProgress.failed > 0 && (
@@ -1037,13 +1035,11 @@ function VacanciesTab({ token }: { token: string }) {
         </div>
       )}
 
-      {matchAllProgress && matchAllProgress.total > 0 && (
+      {matchAllProgress && matchAllProgress.total > 0 && matchAllProgress.active && (
         <div className="bg-fuchsia-50 border-2 border-fuchsia-600 p-4 space-y-2">
           <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
             <span className="flex items-center gap-2">
-              {matchAllProgress.active
-                ? <><Loader2 className="w-3 h-3 animate-spin text-fuchsia-700" /> Matching loopt</>
-                : <><Sparkles className="w-3 h-3 text-fuchsia-700" /> Matching klaar</>}
+              <Loader2 className="w-3 h-3 animate-spin text-fuchsia-700" /> Matching loopt
               <span className="text-slate-500 normal-case tracking-normal">— {matchAllProgress.current}/{matchAllProgress.total} vacatures · {matchAllProgress.suggestionsTotal} suggesties</span>
             </span>
             <span className="text-fuchsia-700">{matchAllProgress.percentage}%</span>
@@ -1051,7 +1047,7 @@ function VacanciesTab({ token }: { token: string }) {
           <div className="h-2 bg-fuchsia-100">
             <div className="h-full bg-fuchsia-600 transition-all" style={{ width: `${matchAllProgress.percentage}%` }} />
           </div>
-          {matchAllProgress.active && matchAllProgress.currentTitle && (
+          {matchAllProgress.currentTitle && (
             <p className="text-[10px] font-bold text-fuchsia-800 italic truncate">Verwerkt: {matchAllProgress.currentTitle}</p>
           )}
           {matchAllProgress.failed > 0 && (
