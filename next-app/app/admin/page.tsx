@@ -3359,6 +3359,7 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
   const [matches, setMatches] = useState<MatchVacancyResult[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [pushingId, setPushingId] = useState<string | null>(null);
   const [pushedIds, setPushedIds] = useState<Set<string>>(new Set());
   const [pushMessage, setPushMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
@@ -3371,13 +3372,18 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
     setLoading(true);
     setMatches(null);
     setError(null);
+    setHint(null);
     const qs = country ? `?country=${country}` : '';
     fetch(`/api/admin/cvs/${cv._id}/matches${qs}`, { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
-        if (data.success) setMatches(data.matches || []);
-        else setError(data.message || 'Match mislukt');
+        if (data.success) {
+          setMatches(data.matches || []);
+          if (data.hint) setHint(data.hint);
+        } else {
+          setError(data.message || 'Match mislukt');
+        }
       })
       .catch(err => !cancelled && setError(err instanceof Error ? err.message : 'Match mislukt'))
       .finally(() => !cancelled && setLoading(false));
@@ -3475,7 +3481,14 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
               token={token}
             />
           ) : (
-            <p className="text-center py-12 text-[11px] font-black uppercase tracking-widest text-slate-300">Geen matches.</p>
+            <div className="text-center py-12 space-y-3">
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                {hint ? 'Nog geen match-records voor deze CV' : 'Geen matches.'}
+              </p>
+              {hint && (
+                <p className="text-[12px] font-bold text-slate-500 max-w-md mx-auto leading-snug">{hint}</p>
+              )}
+            </div>
           )}
         </div>
       </motion.div>
