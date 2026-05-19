@@ -29,9 +29,15 @@ export async function POST(req: NextRequest) {
 
         await connectDB();
 
-        const vacancy = await Vacancy.findById(vacancyId).select('title employerId company location');
+        const vacancy = await Vacancy.findById(vacancyId).select('title employerId company location fulfilledAt');
         if (!vacancy) {
             return NextResponse.json({ success: false, message: 'Vacature niet gevonden' }, { status: 404 });
+        }
+        if (vacancy.fulfilledAt) {
+            return NextResponse.json({
+                success: false,
+                message: `Vacature "${vacancy.title}" is gemarkeerd als vervuld. Heropen 'm eerst.`,
+            }, { status: 409 });
         }
         // Geen werkgever = admin/internal vacature → email gaat naar het admin-team
         // i.p.v. naar een werkgever-portaal.

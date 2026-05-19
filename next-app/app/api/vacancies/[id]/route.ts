@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
         }
         await connectDB();
         // Haal company op voor sanitization, strip 'm uit de response
-        const vacancy = await Vacancy.findOne({ _id: id, isActive: true })
+        const vacancy = await Vacancy.findOne({ _id: id, isActive: true, fulfilledAt: null })
             .select('-fileData -embedding -fullText');
         if (!vacancy) {
             return NextResponse.json({ success: false, message: 'Vacancy not found' }, { status: 404 });

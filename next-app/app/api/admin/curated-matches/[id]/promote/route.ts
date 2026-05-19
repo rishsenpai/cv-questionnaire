@@ -37,6 +37,14 @@ export async function POST(req: NextRequest, { params }: Params) {
         if (match.status !== 'suggested') {
             return NextResponse.json({ success: false, message: `Status is "${match.status}", alleen "suggested" kan gepromoot worden` }, { status: 400 });
         }
+        // Vervulde vacatures kunnen geen nieuwe pushes meer ontvangen.
+        const vacancyCheck = await Vacancy.findById(match.vacancyId).select('fulfilledAt title');
+        if (vacancyCheck?.fulfilledAt) {
+            return NextResponse.json({
+                success: false,
+                message: `Vacature "${vacancyCheck.title}" is gemarkeerd als vervuld. Heropen de vacature voordat je nog pushes uitvoert.`,
+            }, { status: 409 });
+        }
 
         match.status = 'presented';
         match.promotedAt = new Date();

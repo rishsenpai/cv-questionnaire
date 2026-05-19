@@ -58,6 +58,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
         const vacancies = await Vacancy.find({
             isActive: true,
+            fulfilledAt: null,
             embedding: { $exists: true, $ne: [] },
         }).select('+embedding -fileData');
 

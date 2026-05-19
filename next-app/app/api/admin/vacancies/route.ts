@@ -30,9 +30,16 @@ export async function GET(req: NextRequest) {
         }
         if (source) query.source = source;
 
+        // Optioneel filter op vervuld-status. ?fulfilled=open (default) toont
+        // alleen niet-vervulde, ?fulfilled=fulfilled alleen vervulde, ?fulfilled=all alles.
+        const fulfilledFilter = url.searchParams.get('fulfilled') || 'open';
+        if (fulfilledFilter === 'fulfilled') query.fulfilledAt = { $ne: null };
+        else if (fulfilledFilter === 'open') query.fulfilledAt = null;
+        // 'all' = geen filter
+
         const total = await Vacancy.countDocuments(query);
         const vacancies = await Vacancy.find(query)
-            .select('_id title company location source employerId country createdAt isActive')
+            .select('_id title company location source employerId country createdAt isActive fulfilledAt')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)

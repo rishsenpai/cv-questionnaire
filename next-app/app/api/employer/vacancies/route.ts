@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
     try {
         await connectDB();
         // Ook gepauzeerde (isActive=false) vacatures meenemen zodat werkgever ze kan beheren.
-        const vacancies = await Vacancy.find({ employerId: auth.employerId })
+        // Vervulde vacatures (fulfilledAt) verbergen — admin kan ze heropenen.
+        const vacancies = await Vacancy.find({ employerId: auth.employerId, fulfilledAt: null })
             .select('-fileData -embedding')
             .sort({ createdAt: -1 });
         return NextResponse.json({ success: true, data: vacancies });

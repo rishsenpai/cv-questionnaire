@@ -569,6 +569,7 @@ interface VacancyRow {
   createdAt: string;
   suggestionCount?: number;
   pushedCount?: number;
+  fulfilledAt?: string | null;
 }
 
 const SOURCE_BADGE: Record<string, string> = {
@@ -590,6 +591,7 @@ const JSEARCH_PRESETS_SR = 'manager, engineer, officer, consultant, sales, devel
 function VacanciesTab({ token }: { token: string }) {
   const [vacancies, setVacancies] = useState<VacancyRow[]>([]);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'employer' | 'adzuna' | 'jsearch' | 'internal'>('all');
+  const [fulfilledFilter, setFulfilledFilter] = useState<'open' | 'fulfilled' | 'all'>('open');
   const [suggestionsFor, setSuggestionsFor] = useState<VacancyRow | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -698,13 +700,13 @@ function VacanciesTab({ token }: { token: string }) {
   const reload = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/vacancies?limit=100', { headers: { 'x-admin-token': token } });
+      const res = await fetch(`/api/admin/vacancies?limit=100&fulfilled=${fulfilledFilter}`, { headers: { 'x-admin-token': token } });
       const data = await res.json();
       if (data.success) setVacancies(data.vacancies);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, fulfilledFilter]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -833,6 +835,31 @@ function VacanciesTab({ token }: { token: string }) {
   };
 
   const [matchingId, setMatchingId] = useState<string | null>(null);
+  const [fulfillingId, setFulfillingId] = useState<string | null>(null);
+
+  const toggleFulfilled = async (v: VacancyRow) => {
+    const isCurrentlyFulfilled = Boolean(v.fulfilledAt);
+    const verb = isCurrentlyFulfilled ? 'heropenen' : 'markeren als vervuld';
+    if (!confirm(`"${v.title}" ${verb}?\n\n${isCurrentlyFulfilled
+      ? 'De vacature komt weer mee in matching en is publiek zichtbaar.'
+      : 'De vacature verdwijnt uit publieke lijsten en matching, pushes worden geblokkeerd.'}`)) return;
+    setFulfillingId(v._id);
+    try {
+      const res = await fetch(`/api/admin/vacancies/${v._id}/fulfill`, {
+        method: isCurrentlyFulfilled ? 'DELETE' : 'POST',
+        headers: { 'x-admin-token': token },
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Mislukt');
+        return;
+      }
+      await reload();
+    } finally {
+      setFulfillingId(null);
+    }
+  };
+
   const runMatch = async (v: VacancyRow) => {
     setMatchingId(v._id);
     try {
@@ -1336,6 +1363,28 @@ function VacanciesTab({ token }: { token: string }) {
         ))}
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {([
+          { v: 'open', label: 'Open' },
+          { v: 'fulfilled', label: 'Vervuld' },
+          { v: 'all', label: 'Alle (open + vervuld)' },
+        ] as const).map(f => (
+          <button
+            key={f.v}
+            type="button"
+            onClick={() => setFulfilledFilter(f.v)}
+            className={cn(
+              'px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border-2 transition-colors',
+              fulfilledFilter === f.v
+                ? 'bg-emerald-700 text-white border-emerald-700'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-700',
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
       ) : (
@@ -1365,7 +1414,10 @@ function VacanciesTab({ token }: { token: string }) {
                   const src = v.source || 'internal';
                   const isExpanded = expandedId === v._id;
                   const rows = [
-                    <tr key={v._id} className="border-t border-slate-100 hover:bg-slate-50 text-sm font-bold">
+                    <tr key={v._id} className={cn(
+                      'border-t border-slate-100 hover:bg-slate-50 text-sm font-bold',
+                      v.fulfilledAt && 'bg-emerald-50/40 opacity-70',
+                    )}>
                       <td className="p-3 truncate max-w-[300px]">
                         <button
                           type="button"
@@ -1374,6 +1426,11 @@ function VacanciesTab({ token }: { token: string }) {
                         >
                           {isExpanded ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
                           <span className="truncate">{v.title}</span>
+                          {v.fulfilledAt && (
+                            <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-600 text-white px-1.5 py-0.5 shrink-0">
+                              Vervuld
+                            </span>
+                          )}
                         </button>
                       </td>
                       <td className="p-3 truncate max-w-[200px] text-slate-500">{v.company || '—'}</td>
@@ -1416,11 +1473,23 @@ function VacanciesTab({ token }: { token: string }) {
                           <button
                             type="button"
                             onClick={() => runMatch(v)}
-                            disabled={matchingId === v._id || busy}
-                            title="AI auto-match opnieuw draaien"
+                            disabled={matchingId === v._id || busy || Boolean(v.fulfilledAt)}
+                            title={v.fulfilledAt ? 'Vacature is vervuld — heropen om opnieuw te matchen' : 'AI auto-match opnieuw draaien'}
                             className="text-blue-600 hover:text-black disabled:opacity-50"
                           >
                             {matchingId === v._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleFulfilled(v)}
+                            disabled={fulfillingId === v._id || busy}
+                            title={v.fulfilledAt ? 'Heropen vacature (terug naar matching)' : 'Markeer als vervuld (uit publieke lijst, geen matching)'}
+                            className={cn(
+                              'disabled:opacity-50',
+                              v.fulfilledAt ? 'text-amber-700 hover:text-amber-900' : 'text-emerald-700 hover:text-emerald-900',
+                            )}
+                          >
+                            {fulfillingId === v._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                           </button>
                           <button onClick={() => deleteVacancy(v._id)} disabled={busy} className="text-red-600 hover:text-red-800 disabled:opacity-50">
                             <Trash2 className="w-4 h-4" />
@@ -1433,7 +1502,7 @@ function VacanciesTab({ token }: { token: string }) {
                     rows.push(
                       <tr key={v._id + '-expand'} className="bg-slate-50 border-t border-slate-200">
                         <td colSpan={6} className="p-0">
-                          <InlineMatchesRow vacancyId={v._id} vacancyCountry={v.country} token={token} onChange={reload} />
+                          <InlineMatchesRow vacancyId={v._id} vacancyCountry={v.country} vacancyFulfilled={Boolean(v.fulfilledAt)} token={token} onChange={reload} />
                         </td>
                       </tr>,
                     );
@@ -1625,8 +1694,9 @@ function SuggestionsModal({
                     <div className="flex flex-col gap-2">
                       <button
                         type="button"
-                        disabled={busy === s._id}
+                        disabled={busy === s._id || Boolean(vacancy.fulfilledAt)}
                         onClick={() => promote(s._id)}
+                        title={vacancy.fulfilledAt ? 'Vacature is vervuld — pushen is uitgeschakeld' : 'Push naar werkgever'}
                         className="bg-blue-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
                       >
                         {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
@@ -1727,9 +1797,9 @@ function formatSalary(s?: { min?: number; max?: number; currency?: string; perio
 // Inline match-overzicht onder een vacancy-row in de Vacatures-tab.
 // Toont top-10 AI-suggesties met Push/Negeer-knoppen — geen modal nodig.
 function InlineMatchesRow({
-  vacancyId, vacancyCountry, token, onChange,
+  vacancyId, vacancyCountry, vacancyFulfilled, token, onChange,
 }: {
-  vacancyId: string; vacancyCountry?: 'guyana' | 'netherlands' | 'suriname'; token: string; onChange: () => void;
+  vacancyId: string; vacancyCountry?: 'guyana' | 'netherlands' | 'suriname'; vacancyFulfilled?: boolean; token: string; onChange: () => void;
 }) {
   const [items, setItems] = useState<SuggestionRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -2117,8 +2187,9 @@ function InlineMatchesRow({
                     <>
                       <button
                         type="button"
-                        disabled={busy === s._id}
+                        disabled={busy === s._id || Boolean(vacancyFulfilled)}
                         onClick={() => promote(s._id)}
+                        title={vacancyFulfilled ? 'Vacature is vervuld — pushen is uitgeschakeld' : 'Push naar werkgever'}
                         className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
                       >
                         {busy === s._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}

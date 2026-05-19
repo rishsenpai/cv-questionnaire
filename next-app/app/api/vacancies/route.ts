@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
         const location = url.searchParams.get('location') || '';
         const source = url.searchParams.get('source') || '';
 
-        const query: Record<string, unknown> = { isActive: true };
+        const query: Record<string, unknown> = { isActive: true, fulfilledAt: null };
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
