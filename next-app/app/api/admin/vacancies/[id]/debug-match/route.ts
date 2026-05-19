@@ -70,7 +70,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         threshold: 0.20,
         thresholdPct: 20,
         aboveThreshold: scored.filter(s => s.cosine >= 0.20).length,
-        topRaw: scored.slice(0, 20),
+        topRaw: scored.slice(0, 50),
         bottomRaw: scored.slice(-5),
         meanCosine: scored.length > 0 ? Math.round((scored.reduce((a, b) => a + b.cosine, 0) / scored.length) * 1000) / 1000 : 0,
         existingMatches: existingByStatus,

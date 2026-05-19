@@ -1859,7 +1859,46 @@ function InlineMatchesRow({
           {rematchBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
           Match opnieuw
         </button>
+        <button
+          type="button"
+          onClick={runDebug}
+          disabled={debugBusy}
+          title="Toon de top-50 rauwe cosine-scores zonder threshold/rerank (handig om te zien waar een specifieke CV in de ranking staat)"
+          className="border-2 border-slate-900 text-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white disabled:opacity-50 flex items-center gap-1 ml-2"
+        >
+          {debugBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          Diagnose top-50
+        </button>
       </div>
+      {debug && (
+        <div className="bg-slate-50 border-2 border-slate-300 p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-2">
+            {debug.cvsScanned} CV&apos;s gescand · drempel {Math.round(debug.threshold * 100)}% · {debug.aboveThreshold} boven drempel · gem. cosine {debug.meanCosine}
+          </p>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">
+                <th className="text-left p-1">#</th>
+                <th className="text-left p-1">Naam</th>
+                <th className="text-left p-1">Email</th>
+                <th className="text-right p-1">Cosine</th>
+                <th className="text-right p-1">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {debug.topRaw.map((r, idx) => (
+                <tr key={r.cvId} className={cn('border-b border-slate-100', /robert/i.test(r.fullName) && 'bg-yellow-100 font-black')}>
+                  <td className="p-1 font-mono text-slate-400">{idx + 1}</td>
+                  <td className="p-1 font-bold truncate max-w-[180px]">{r.fullName}</td>
+                  <td className="p-1 text-slate-500 truncate max-w-[180px]">{r.email}</td>
+                  <td className="p-1 text-right font-mono">{r.cosine.toFixed(3)}</td>
+                  <td className={cn('p-1 text-right font-black', r.cosine >= 0.20 ? 'text-emerald-600' : 'text-slate-400')}>{r.pct}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {!items ? (
         <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-blue-600" /></div>
       ) : items.length === 0 ? (
