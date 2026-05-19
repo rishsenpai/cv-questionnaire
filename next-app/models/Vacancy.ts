@@ -69,6 +69,24 @@ const vacancySchema = new Schema<IVacancy>({
     applicationCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
+// BM25 / text-search index voor hybrid matching met CVs.
+vacancySchema.index({
+    title: 'text',
+    description: 'text',
+    requirements: 'text',
+    company: 'text',
+    fullText: 'text',
+}, {
+    name: 'vacancy_text_search',
+    weights: {
+        title: 10,
+        requirements: 5,
+        description: 3,
+        company: 2,
+        fullText: 1,
+    },
+});
+
 vacancySchema.pre('save', async function () {
     if (!this.country) {
         const fallback = [this.title, this.description, this.requirements, this.fullText]

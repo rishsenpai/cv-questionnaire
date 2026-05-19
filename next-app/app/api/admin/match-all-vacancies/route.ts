@@ -16,12 +16,14 @@ import SyncState from '@/models/SyncState';
 import { requireAdmin } from '@/lib/server/auth';
 import { cosineSimilarity, prepareCVText } from '@/lib/server/embeddings';
 import { rerank, isRerankConfigured } from '@/lib/server/rerank';
+import { bm25SearchCVs, hybridFuse, type RankedDoc } from '@/lib/server/hybridMatch';
 
 export const maxDuration = 300;
 
 const EMBEDDING_THRESHOLD = 0.20;
 const TOP_N = 25;
 const RERANK_INPUT_SIZE = 50;
+const RECALL_SIZE = 100;
 const RERANK_THRESHOLD = 0.10;
 
 interface MatchAllProgress {
@@ -130,19 +132,36 @@ export async function POST(req: NextRequest) {
                         continue;
                     }
 
-                    const scored: Array<{ cvId: string; score: number }> = [];
+                    // Fase 1a: cosine over in-memory CV-pool.
+                    const cosineScored: Array<{ cvId: string; score: number }> = [];
                     for (const cv of cvsWithEmb) {
                         const cvEmb = (cv as unknown as { embedding?: number[] }).embedding!;
                         const sim = cosineSimilarity(vEmb, cvEmb);
                         if (sim >= EMBEDDING_THRESHOLD) {
-                            scored.push({ cvId: String(cv._id), score: Math.round(sim * 100) });
+                            cosineScored.push({ cvId: String(cv._id), score: Math.round(sim * 100) });
                         }
                     }
-                    scored.sort((a, b) => b.score - a.score);
+                    cosineScored.sort((a, b) => b.score - a.score);
+                    const cosineRanking: RankedDoc[] = cosineScored.slice(0, RECALL_SIZE).map(s => ({ id: s.cvId, score: s.score }));
 
-                    // Fase 2: rerank top-50 met Cohere; bij fail fallback op cosine top-25.
-                    let top = scored.slice(0, TOP_N);
-                    const rerankPool = scored.slice(0, RERANK_INPUT_SIZE);
+                    // Fase 1b: BM25 keyword search.
+                    const vacancyTextFull = [v.title, (v as { description?: string }).description, (v as { requirements?: string }).requirements]
+                        .filter(Boolean).join(' ');
+                    const bm25Ranking = await bm25SearchCVs(vacancyTextFull, RECALL_SIZE, {
+                        embedding: { $exists: true, $ne: [] },
+                        isInternal: { $ne: true },
+                    });
+
+                    // Fase 2: RRF fusie → top-50.
+                    const fusedPool = hybridFuse(cosineRanking, bm25Ranking, RERANK_INPUT_SIZE);
+                    const cosineMap = new Map(cosineScored.map(s => [s.cvId, s.score]));
+                    const rerankPool: Array<{ cvId: string; score: number }> = fusedPool.map(d => ({
+                        cvId: d.id,
+                        score: cosineMap.get(d.id) ?? 50,
+                    }));
+
+                    // Fase 3: rerank top-50 met Cohere; bij fail fallback op fused volgorde.
+                    let top = rerankPool.slice(0, TOP_N);
                     if (isRerankConfigured() && rerankPool.length > 0) {
                         const cvIds = rerankPool.map(p => new Types.ObjectId(p.cvId));
                         const cvTexts = await CV.find({ _id: { $in: cvIds } })
@@ -153,9 +172,7 @@ export async function POST(req: NextRequest) {
                         const docs = rerankPool
                             .map(p => ({ id: p.cvId, text: textMap.get(p.cvId) || '' }))
                             .filter(d => d.text.length > 0);
-                        const vacancyText = [v.title, (v as { description?: string }).description, (v as { requirements?: string }).requirements]
-                            .filter(Boolean).join('\n\n');
-                        const reranked = await rerank(vacancyText, docs, TOP_N);
+                        const reranked = await rerank(vacancyTextFull, docs, TOP_N);
                         if (reranked) {
                             top = reranked
                                 .filter(r => r.relevanceScore >= RERANK_THRESHOLD)
@@ -163,7 +180,7 @@ export async function POST(req: NextRequest) {
                         }
                     }
 
-                    if (i < 3) console.log(`Match ${i + 1} (${v.title}): ${scored.length} CVs boven cosine-drempel, ${top.length} na rerank`);
+                    if (i < 3) console.log(`Match ${i + 1} (${v.title}): cosine=${cosineScored.length} bm25=${bm25Ranking.length} fused=${fusedPool.length} final=${top.length}`);
 
                     if (top.length > 0) {
                         const vacancyObjectId = v._id as Types.ObjectId;

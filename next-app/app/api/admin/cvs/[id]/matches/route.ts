@@ -12,10 +12,12 @@ import {
     prepareCVText,
 } from '@/lib/server/embeddings';
 import { rerank, isRerankConfigured } from '@/lib/server/rerank';
+import { bm25SearchVacancies, hybridFuse, type RankedDoc } from '@/lib/server/hybridMatch';
 
 export const maxDuration = 60;
 
 const RERANK_INPUT_SIZE = 50;
+const RECALL_SIZE = 100;
 const RERANK_THRESHOLD = 0.10;
 const FINAL_TOP_N = 20;
 
@@ -69,7 +71,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         if (country) vacancyQuery.country = country;
         const vacancies = await Vacancy.find(vacancyQuery).select('+embedding -fileData');
 
-        // Fase 1: cosine-recall over alle vacatures.
+        // Fase 1a: cosine-recall over alle vacatures.
         const scored = vacancies.map(vacancy => {
             const score = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
             const obj = vacancy.toObject() as unknown as Record<string, unknown>;
@@ -82,9 +84,24 @@ export async function GET(req: NextRequest, { params }: Params) {
                 cosineScore: Math.round(score * 100),
             };
         }).sort((a, b) => b.cosineScore - a.cosineScore);
+        const cosineRanking: RankedDoc[] = scored.slice(0, RECALL_SIZE).map(v => ({ id: v._vid, score: v.cosineScore }));
 
-        // Fase 2: rerank top-50 met Cohere. Bij fail fallback op cosine.
-        const rerankPool = scored.slice(0, RERANK_INPUT_SIZE);
+        // Fase 1b: BM25 keyword search met CV-tekst als query.
+        const cvText = prepareCVText(cv);
+        const bm25Filter: Record<string, unknown> = {
+            isActive: true,
+            embedding: { $exists: true, $ne: [] },
+        };
+        if (country) bm25Filter.country = country;
+        const bm25Ranking = await bm25SearchVacancies(cvText, RECALL_SIZE, bm25Filter);
+
+        // Fase 2: RRF fusie → top-RERANK_INPUT_SIZE.
+        const fusedTop = hybridFuse(cosineRanking, bm25Ranking, RERANK_INPUT_SIZE);
+        const fusedIdSet = new Set(fusedTop.map(d => d.id));
+        const fusedOrder = new Map(fusedTop.map((d, idx) => [d.id, idx]));
+        const rerankPool = scored
+            .filter(v => fusedIdSet.has(v._vid))
+            .sort((a, b) => (fusedOrder.get(a._vid) ?? 999) - (fusedOrder.get(b._vid) ?? 999));
         let ranked: Array<typeof scored[number] & { matchScore: number; matchType: string }>;
 
         if (isRerankConfigured() && rerankPool.length > 0) {

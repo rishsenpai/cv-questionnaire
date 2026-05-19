@@ -11,16 +11,18 @@ import Vacancy from '@/models/Vacancy';
 import CuratedMatch from '@/models/CuratedMatch';
 import { cosineSimilarity, generateEmbedding, prepareCVText } from './embeddings';
 import { rerank, isRerankConfigured } from './rerank';
+import { bm25SearchCVs, hybridFuse, type RankedDoc } from './hybridMatch';
 
-// Twee-fase pipeline:
-//   1. Embedding cosine → recall: pak top-RERANK_INPUT_SIZE kandidaten (50)
-//   2. Cohere rerank   → precisie: pak top-TOP_N (25) op relevance-score
-// Drempel 0.20 voor cosine om volledige ruis (cosine < 20%) te skippen.
-// Drempel 0.10 op rerank-score om CVs die het rerank-model als 'totaal
-// irrelevant' bestempelt te dumpen — voorkomt dat we 25 trash-suggesties
-// opslaan als de query weinig goede matches heeft.
+// Drie-fase pipeline:
+//   1a. Embedding cosine → top-100 (semantic recall)
+//   1b. BM25 keyword search → top-100 (lexical recall — vangt jargon
+//       zoals "ANVA", "WFT", "polismutaties" die in een broad CV niet
+//       sterk doorkomen in embedding-space)
+//   2.  RRF fusion → top-RERANK_INPUT_SIZE (50)
+//   3.  Cohere rerank → top-TOP_N (25)
 const TOP_N = 25;
 const RERANK_INPUT_SIZE = 50;
+const RECALL_SIZE = 100; // cosine en BM25 elk
 const EMBEDDING_THRESHOLD = 0.20;
 const RERANK_THRESHOLD = 0.10;
 
@@ -86,7 +88,8 @@ export async function runAutoMatchForVacancy(
     if (scopeCountry) cvQuery.country = scopeCountry;
     const cvs = await CV.find(cvQuery).select({ embedding: 1, _id: 1 }).lean();
 
-    const scored: Array<{ cvId: string; score: number }> = [];
+    // Fase 1a: cosine over ALLE in-scope CVs, met embedding-threshold.
+    const cosineScored: Array<{ cvId: string; score: number }> = [];
     for (const cv of cvs) {
         const cvId = String(cv._id);
         if (excludeSet.has(cvId)) continue;
@@ -94,15 +97,39 @@ export async function runAutoMatchForVacancy(
         if (!cvEmb || cvEmb.length === 0) continue;
         const sim = cosineSimilarity(vacEmbedding, cvEmb);
         if (sim >= EMBEDDING_THRESHOLD) {
-            scored.push({ cvId, score: Math.round(sim * 100) });
+            cosineScored.push({ cvId, score: Math.round(sim * 100) });
         }
     }
-    scored.sort((a, b) => b.score - a.score);
+    cosineScored.sort((a, b) => b.score - a.score);
+    const cosineRanking: RankedDoc[] = cosineScored.slice(0, RECALL_SIZE).map(s => ({ id: s.cvId, score: s.score }));
 
-    // Fase 2: rerank top-RERANK_INPUT_SIZE met Cohere als de key geconfigureerd is.
-    // Bij ontbrekende key of API-fout vallen we terug op de embedding-volgorde.
-    const rerankPool = scored.slice(0, RERANK_INPUT_SIZE);
-    const top = await rerankCandidates(vacancy, rerankPool) ?? scored.slice(0, TOP_N);
+    // Fase 1b: BM25 keyword search met vacature-tekst als query. Vangt
+    // jargon (ANVA, WFT, polismutaties) dat broad-profile CVs zou
+    // missen in embedding-space.
+    const vacancyText = [vacancy.title, vacancy.description, vacancy.requirements].filter(Boolean).join(' ');
+    const bm25Filter: Record<string, unknown> = {
+        embedding: { $exists: true, $ne: [] },
+        isInternal: { $ne: true },
+        _id: { $nin: Array.from(excludeSet).map(id => new Types.ObjectId(id)) },
+    };
+    if (scopeCountry) bm25Filter.country = scopeCountry;
+    const bm25Ranking = await bm25SearchCVs(vacancyText, RECALL_SIZE, bm25Filter);
+
+    // Fase 2: RRF fusie van beide rankings → top-RERANK_INPUT_SIZE.
+    const fusedPool = hybridFuse(cosineRanking, bm25Ranking, RERANK_INPUT_SIZE);
+
+    // Score-map voor de fallback bij ontbrekende rerank: cosine als bron,
+    // anders een neutrale 50%. RRF-score zelf is niet geschikt om aan
+    // werkgever te tonen (klein getal zoals 0.03).
+    const cosineMap = new Map(cosineScored.map(s => [s.cvId, s.score]));
+    const poolForRerank: Array<{ cvId: string; score: number }> = fusedPool.map(d => ({
+        cvId: d.id,
+        score: cosineMap.get(d.id) ?? 50,
+    }));
+
+    // Fase 3: rerank met Cohere als de key geconfigureerd is.
+    // Bij ontbrekende key of API-fout vallen we terug op de gefuseerde volgorde.
+    const top = (await rerankCandidates(vacancy, poolForRerank)) ?? poolForRerank.slice(0, TOP_N);
 
     const created = await persistSuggestions(vacancy as VacancyDoc, top);
     return { method: 'embedding', suggestionsCreated: created, candidatesScanned: cvs.length };

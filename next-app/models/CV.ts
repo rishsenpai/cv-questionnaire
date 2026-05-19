@@ -69,6 +69,32 @@ const cvSchema = new Schema<ICV>({
     },
 }, { timestamps: true });
 
+// BM25 / text-search index voor hybrid matching. Eén text index per
+// collection toegestaan — weights laten jobTitle/skills zwaarder
+// meewegen dan losse experience-zinnen.
+cvSchema.index({
+    fullName: 'text',
+    jobTitle: 'text',
+    skills: 'text',
+    experience: 'text',
+    education: 'text',
+    summary: 'text',
+    achievements: 'text',
+    fullText: 'text',
+}, {
+    name: 'cv_text_search',
+    weights: {
+        jobTitle: 10,
+        skills: 8,
+        experience: 5,
+        summary: 3,
+        education: 2,
+        fullText: 1,
+        fullName: 1,
+        achievements: 1,
+    },
+});
+
 // Auto-fill country uit location bij create/save als die nog niet expliciet is gezet.
 // Fallback naar experience/education/skills/fullText voor CVs zonder duidelijke
 // location maar wel met NL-signalen (WFT, AOW, Nederlandse steden, etc).
