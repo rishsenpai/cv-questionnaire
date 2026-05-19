@@ -1538,14 +1538,14 @@ function SuggestionsModal({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white border-4 border-black w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+        className="bg-white border-4 border-black w-full max-w-3xl max-h-[95vh] sm:max-h-[85vh] overflow-y-auto shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] sm:shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
       >
-        <div className="bg-black text-white p-6 flex items-center justify-between sticky top-0 z-10">
-          <div>
+        <div className="bg-black text-white p-4 sm:p-6 flex items-center justify-between gap-3 sticky top-0 z-10">
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Curated matches</p>
-            <h3 className="text-xl font-black uppercase tracking-tighter italic">{vacancy.title}</h3>
+            <h3 className="text-lg sm:text-xl font-black uppercase tracking-tighter italic truncate">{vacancy.title}</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 shrink-0"><X className="w-5 h-5" /></button>
         </div>
         <div className="border-b-2 border-slate-200 flex">
           <button
@@ -1837,7 +1837,7 @@ function InlineMatchesRow({
 
   return (
     <div className="p-4 border-l-4 border-blue-600 space-y-3">
-      <div className="flex items-stretch gap-0 justify-end">
+      <div className="flex flex-wrap items-stretch gap-2 sm:gap-0 justify-end">
         <select
           value={rematchCountry}
           onChange={(e) => setRematchCountry(e.target.value as typeof rematchCountry)}
@@ -1864,7 +1864,7 @@ function InlineMatchesRow({
           onClick={runDebug}
           disabled={debugBusy}
           title="Toon de top-50 rauwe cosine-scores zonder threshold/rerank (handig om te zien waar een specifieke CV in de ranking staat)"
-          className="border-2 border-slate-900 text-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white disabled:opacity-50 flex items-center gap-1 ml-2"
+          className="border-2 border-slate-900 text-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white disabled:opacity-50 flex items-center gap-1 sm:ml-2"
         >
           {debugBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
           Diagnose top-50
@@ -1967,7 +1967,7 @@ function InlineMatchesRow({
                 'border-2 p-3 space-y-2',
                 isPushed ? 'bg-slate-50 border-slate-200 opacity-80' : 'bg-white border-slate-200',
               )}>
-                <div className="flex items-start gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex items-baseline gap-2">
                     <p className="font-black text-sm truncate">{cv?.fullName || '—'}</p>
@@ -2003,7 +2003,7 @@ function InlineMatchesRow({
                     )}>{s.matchScore}%</div>
                   </div>
                 )}
-                <div className="flex gap-2 shrink-0 items-start">
+                <div className="flex flex-wrap gap-2 shrink-0 items-start">
                   <button
                     type="button"
                     disabled={reasonBusy === s._id}
@@ -2447,41 +2447,41 @@ function TopMatchesPanel({ token }: { token: string }) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="bg-white border-2 border-black p-4 flex flex-wrap gap-3 items-end">
-        <div>
+      <div className="bg-white border-2 border-black p-4 grid grid-cols-2 sm:flex sm:flex-wrap gap-3 items-end">
+        <div className="min-w-0">
           <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Status</label>
-          <select value={status} onChange={e => setStatus(e.target.value as typeof status)} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
+          <select value={status} onChange={e => setStatus(e.target.value as typeof status)} className="w-full sm:w-auto border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
             <option value="suggested">Open suggesties</option>
             <option value="pushed">Al gepushed</option>
             <option value="">Alle</option>
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Land</label>
-          <select value={country} onChange={e => setCountry(e.target.value as typeof country)} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
+          <select value={country} onChange={e => setCountry(e.target.value as typeof country)} className="w-full sm:w-auto border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
             <option value="">Alle landen</option>
             <option value="guyana">Guyana</option>
             <option value="netherlands">Nederland</option>
             <option value="suriname">Suriname</option>
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Min. score (%)</label>
-          <input type="number" min={0} max={100} value={minScore} onChange={e => setMinScore(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black w-24 outline-none" />
+          <input type="number" min={0} max={100} value={minScore} onChange={e => setMinScore(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} className="w-full sm:w-24 border-2 border-slate-200 px-3 py-2 text-[10px] font-black outline-none" />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">Limiet</label>
-          <select value={limit} onChange={e => setLimit(Number(e.target.value))} className="border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
+          <select value={limit} onChange={e => setLimit(Number(e.target.value))} className="w-full sm:w-auto border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
             <option value={25}>Top 25</option>
             <option value={50}>Top 50</option>
             <option value={100}>Top 100</option>
             <option value={200}>Top 200</option>
           </select>
         </div>
-        <button onClick={reload} disabled={loading} className="border-2 border-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white disabled:opacity-50">
+        <button onClick={reload} disabled={loading} className="col-span-2 sm:col-auto border-2 border-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white disabled:opacity-50 flex items-center justify-center">
           {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
         </button>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-auto self-center">{items.length} matches</p>
+        <p className="col-span-2 sm:col-auto text-[10px] font-black uppercase tracking-widest text-slate-400 sm:ml-auto sm:self-center">{items.length} matches</p>
       </div>
 
       {/* Lijst */}
@@ -2504,7 +2504,7 @@ function TopMatchesPanel({ token }: { token: string }) {
                 'bg-white border-2 p-3 space-y-2',
                 isPushed ? 'border-slate-200 opacity-80' : 'border-slate-200',
               )}>
-                <div className="flex items-start gap-3">
+                <div className="flex flex-col md:flex-row md:items-start gap-3">
                   {/* CV info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Kandidaat</p>
@@ -2515,7 +2515,7 @@ function TopMatchesPanel({ token }: { token: string }) {
                     <p className="text-xs font-bold text-slate-500 truncate">{cv?.jobTitle || '—'}{cv?.location ? ` · ${cv.location}` : ''}</p>
                   </div>
 
-                  <div className="text-slate-300 text-2xl font-black self-center px-2">×</div>
+                  <div className="hidden md:block text-slate-300 text-2xl font-black self-center px-2">×</div>
 
                   {/* Vacature info */}
                   <div className="flex-1 min-w-0">
@@ -2528,7 +2528,8 @@ function TopMatchesPanel({ token }: { token: string }) {
                   </div>
 
                   {/* Score */}
-                  <div className="shrink-0 self-center">
+                  <div className="shrink-0 md:self-center flex items-baseline gap-2 md:block">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 md:hidden">Match</p>
                     <div className={cn(
                       'text-2xl font-black italic leading-none',
                       score >= 70 ? 'text-blue-600' : score >= 50 ? 'text-emerald-600' : 'text-slate-700',
@@ -2536,7 +2537,7 @@ function TopMatchesPanel({ token }: { token: string }) {
                   </div>
 
                   {/* Acties */}
-                  <div className="shrink-0 flex gap-2">
+                  <div className="shrink-0 flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => loadReason(m._id)}
@@ -3103,7 +3104,7 @@ function VacancyMatchesList({
         const canShowReason = Boolean(cvId && token);
         return (
           <div key={id || `${m.title}-${i}`} className="bg-white border-2 border-slate-200 p-3 space-y-2">
-            <div className="flex items-start gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
                   <p className="font-black text-sm truncate">{m.title}</p>
@@ -3119,7 +3120,7 @@ function VacancyMatchesList({
                   m.matchScore >= 70 ? 'text-blue-600' : m.matchScore >= 50 ? 'text-emerald-600' : 'text-slate-700',
                 )}>{m.matchScore}%</div>
               </div>
-              <div className="shrink-0 flex gap-2">
+              <div className="shrink-0 flex flex-wrap gap-2">
                 {canShowReason && id && (
                   <button
                     type="button"
@@ -3265,19 +3266,19 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white border-4 border-black w-full max-w-5xl max-h-[85vh] overflow-y-auto shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+        className="bg-white border-4 border-black w-full max-w-5xl max-h-[95vh] sm:max-h-[85vh] overflow-y-auto shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] sm:shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
       >
-        <div className="bg-black text-white p-6 flex justify-between items-center sticky top-0 z-10">
-          <div>
+        <div className="bg-black text-white p-4 sm:p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sticky top-0 z-10">
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Matches voor</p>
-            <h3 className="text-2xl font-black tracking-tighter italic">{cv.fullName}</h3>
-            {cv.jobTitle && <p className="text-[11px] font-bold text-slate-300">{cv.jobTitle}</p>}
+            <h3 className="text-lg sm:text-2xl font-black tracking-tighter italic truncate">{cv.fullName}</h3>
+            {cv.jobTitle && <p className="text-[11px] font-bold text-slate-300 truncate">{cv.jobTitle}</p>}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value as typeof country)}
-              className="bg-white text-black px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none border-2 border-blue-400"
+              className="flex-1 sm:flex-none bg-white text-black px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none border-2 border-blue-400"
               title="Beperk matches tot één land"
             >
               <option value="">Alle landen</option>
