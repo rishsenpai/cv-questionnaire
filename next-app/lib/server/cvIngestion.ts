@@ -73,7 +73,7 @@ export async function ingestCvFromBuffer({
     fileType,
     fileSize,
     driveFileId,
-    isInternal = true,
+    isInternal = false,
     lang = 'nl',
 }: IngestOptions): Promise<IngestResult> {
     if (driveFileId) {

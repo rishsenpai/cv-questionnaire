@@ -618,6 +618,7 @@ function VacanciesTab({ token }: { token: string }) {
   const [embeddingBatch, setEmbeddingBatch] = useState(false);
   const [matchCountry, setMatchCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>('');
   const [backfillBusy, setBackfillBusy] = useState(false);
+  const [flipBusy, setFlipBusy] = useState(false);
   const [vacancyEmbedProgress, setVacancyEmbedProgress] = useState<{
     active: boolean;
     current: number;
@@ -772,6 +773,22 @@ function VacanciesTab({ token }: { token: string }) {
       }
     } finally {
       setBackfillBusy(false);
+    }
+  };
+
+  const runFlipInternal = async () => {
+    if (!confirm('Weet je het zeker?\n\nDit zet alle CVs met isInternal=true op false zodat ze meedoen in matching. Niet terugdraaibaar zonder DB-restore.')) return;
+    setFlipBusy(true);
+    try {
+      const res = await fetch('/api/admin/flip-internal', { method: 'POST', headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Flip klaar:\n${data.modifiedCount} CV's gewijzigd van internal → extern\n${data.remainingTrue} blijven internal`);
+      } else {
+        alert(data.message || 'Flip mislukt');
+      }
+    } finally {
+      setFlipBusy(false);
     }
   };
 
@@ -980,6 +997,15 @@ function VacanciesTab({ token }: { token: string }) {
             >
               {backfillBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
               Backfill land
+            </button>
+            <button
+              onClick={runFlipInternal}
+              disabled={busy || flipBusy}
+              title="Eenmalig: zet alle isInternal=true CVs op false zodat ze meedoen in matching"
+              className="border-2 border-amber-500 text-amber-700 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {flipBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              Flip internal → extern
             </button>
             <button onClick={deleteAllAdzuna} disabled={busy} className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors">
               Verwijder Adzuna
