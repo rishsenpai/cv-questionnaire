@@ -62,6 +62,40 @@ export async function GET(req: NextRequest, { params }: Params) {
     const existingByStatus: Record<string, number> = {};
     for (const e of existing) existingByStatus[e._id] = e.count;
 
+    // Optioneel: zoek specifieke CV op (naam of email) en geef diens
+    // cosine + rank in het geheel terug. Helpt bij debug 'waarom staat
+    // X niet in de matches?'
+    const cvSearch = req.nextUrl.searchParams.get('cvSearch')?.trim();
+    let specificCv: Array<{ cvId: string; fullName: string; email: string; cosine: number; pct: number; rank: number; isInternal?: boolean; hasEmbedding?: boolean }> | null = null;
+    if (cvSearch) {
+        const re = new RegExp(cvSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        const matches = await CV.find({
+            $or: [{ fullName: re }, { email: re }],
+        }).select('+embedding _id fullName email isInternal').lean();
+        specificCv = matches.map(cv => {
+            const name = (cv as { fullName?: string }).fullName || '—';
+            const email = (cv as { email?: string }).email || '—';
+            const cvEmb = (cv as unknown as { embedding?: number[] }).embedding;
+            const internal = (cv as { isInternal?: boolean }).isInternal === true;
+            if (!cvEmb || cvEmb.length === 0) {
+                return { cvId: String(cv._id), fullName: name, email, cosine: 0, pct: 0, rank: -1, isInternal: internal, hasEmbedding: false };
+            }
+            const sim = cosineSimilarity(vacancy.embedding!, cvEmb);
+            // Rank: hoeveel CVs hebben strikt hogere cosine? +1 = 1-indexed
+            const rank = scored.filter(s => s.cosine > sim).length + 1;
+            return {
+                cvId: String(cv._id),
+                fullName: name,
+                email,
+                cosine: sim,
+                pct: Math.round(sim * 100),
+                rank,
+                isInternal: internal,
+                hasEmbedding: true,
+            };
+        });
+    }
+
     return NextResponse.json({
         success: true,
         vacancyTitle: vacancy.title,
@@ -74,5 +108,6 @@ export async function GET(req: NextRequest, { params }: Params) {
         bottomRaw: scored.slice(-5),
         meanCosine: scored.length > 0 ? Math.round((scored.reduce((a, b) => a + b.cosine, 0) / scored.length) * 1000) / 1000 : 0,
         existingMatches: existingByStatus,
+        specificCv,
     });
 }
