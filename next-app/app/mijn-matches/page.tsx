@@ -141,7 +141,7 @@ function MatchesContent() {
           </div>
           {cv ? (
             <>
-              <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-4">
+              <h1 className="text-2xl sm:text-4xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-4">
                 Matches voor <span className="text-blue-600 italic">{cv.fullName.split(' ')[0]}</span>
               </h1>
               <p className="text-base md:text-lg font-bold text-slate-400 uppercase tracking-tight italic">
@@ -269,7 +269,7 @@ function MatchCard({ match, index, cvId }: { match: MatchVacancy; index: number;
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+      <div className="flex flex-col lg:flex-row gap-3 lg:gap-6 items-start lg:items-center justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-3 text-[10px] font-black uppercase tracking-widest">
             <span className="flex items-center gap-2 text-slate-500">

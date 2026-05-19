@@ -386,10 +386,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   </div>
                 )}
               </div>
-              <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-8 italic">
+              <h1 className="text-3xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-8 italic">
                 {job.title}
               </h1>
-              <div className="flex flex-wrap gap-8 text-xs font-black uppercase tracking-widest text-slate-400">
+              <div className="flex flex-wrap gap-3 sm:gap-4 md:gap-8 text-xs font-black uppercase tracking-widest text-slate-400">
                  <span className="flex items-center gap-3">
                     <Building2 className="w-5 h-5 text-blue-600" /> {job.company}
                  </span>
@@ -442,9 +442,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
       {/* Content Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-20">
-        <div className="grid grid-cols-12 gap-12">
-           <div className="col-span-12 lg:col-span-8 space-y-12">
-              <div className="bg-white border-4 border-black p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,0.05)]">
+        <div className="grid grid-cols-12 gap-6 sm:gap-12">
+           <div className="col-span-12 lg:col-span-8 space-y-8 sm:space-y-12">
+              <div className="bg-white border-4 border-black p-6 sm:p-12 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] sm:shadow-[16px_16px_0px_0px_rgba(0,0,0,0.05)]">
                  <h2 className="text-3xl font-black uppercase tracking-tighter italic mb-8 border-b-4 border-slate-100 pb-4">Functieomschrijving</h2>
                  <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:italic prose-p:font-bold prose-p:text-slate-600 prose-li:font-bold prose-li:text-slate-600 mb-12">
                     <ReactMarkdown>
@@ -559,7 +559,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               ref={modalRef}
-              className="bg-white w-full max-w-2xl relative z-10 border-4 border-black p-12 shadow-[32px_32px_0px_0px_rgba(59,130,246,1)]"
+              className="bg-white w-full max-w-2xl max-h-[95vh] overflow-y-auto relative z-10 border-4 border-black p-6 sm:p-12 shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] sm:shadow-[32px_32px_0px_0px_rgba(59,130,246,1)]"
             >
               <button 
                 onClick={closeApplyModal}
@@ -618,7 +618,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       <p className="text-xl font-black uppercase tracking-tight italic">{job.title}</p>
                    </div>
 
-                    <div className="grid grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                        <div className="space-y-4">
                          <label className="text-[10px] font-black uppercase tracking-widest">Naam</label>
                          <input 

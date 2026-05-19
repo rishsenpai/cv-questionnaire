@@ -277,7 +277,7 @@ function VacaturesContent() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid grid-cols-12 gap-12">
+        <div className="grid grid-cols-12 gap-6 sm:gap-12">
           {/* Filters Sidebar */}
           <aside className="col-span-12 lg:col-span-3 space-y-12">
             <div>

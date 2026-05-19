@@ -30,7 +30,7 @@ export default function OverOnsPage() {
             <div className="text-blue-600 font-black uppercase tracking-[0.4em] text-[10px] mb-8 italic flex items-center gap-2">
               <Globe className="w-4 h-4" /> Gebouwd in Suriname voor Suriname
             </div>
-            <h1 className="text-7xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] mb-12">
+            <h1 className="text-4xl sm:text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] mb-12">
               Onze Missie: <br/><span className="text-blue-600 italic underline decoration-blue-100 decoration-8 underline-offset-8">Transparantie</span>
             </h1>
             <p className="text-2xl md:text-3xl font-bold uppercase tracking-tight italic text-slate-500 leading-tight max-w-3xl">
@@ -44,9 +44,9 @@ export default function OverOnsPage() {
       {/* The Origin Story */}
       <section className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-24 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 lg:gap-24 items-center">
             <div className="space-y-12">
-              <h2 className="text-5xl font-black uppercase tracking-tighter italic leading-none underline decoration-blue-600 decoration-8 underline-offset-8">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter italic leading-none underline decoration-blue-600 decoration-8 underline-offset-8">
                 Waarom Jobparsing+?
               </h2>
               <div className="space-y-8 text-lg font-bold text-slate-600 leading-relaxed italic">
@@ -95,7 +95,7 @@ export default function OverOnsPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white border-4 border-black p-10 hover:-translate-y-2 transition-transform">
+            <div className="bg-white border-4 border-black p-6 md:p-10 hover:-translate-y-2 transition-transform">
               <Sparkles className="w-12 h-12 text-blue-600 mb-8" />
               <h5 className="text-2xl font-black uppercase tracking-tight mb-4 italic">Radicale Transparantie</h5>
               <p className="text-sm font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
@@ -109,7 +109,7 @@ export default function OverOnsPage() {
                 Onze CV-parsers en match-algoritmes zijn getraind op de lokale context, inclusief Surinaamse diploma&apos;s en bedrijfsculturen.
               </p>
             </div>
-            <div className="bg-white border-4 border-black p-10 hover:-translate-y-2 transition-transform">
+            <div className="bg-white border-4 border-black p-6 md:p-10 hover:-translate-y-2 transition-transform">
               <Target className="w-12 h-12 text-blue-600 mb-8" />
               <h5 className="text-2xl font-black uppercase tracking-tight mb-4 italic">Focus op Impact</h5>
               <p className="text-sm font-bold text-slate-500 leading-relaxed uppercase tracking-widest">

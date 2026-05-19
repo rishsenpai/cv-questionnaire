@@ -107,7 +107,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-5xl xs:text-6xl sm:text-7xl lg:text-7xl xl:text-8xl font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-10"
+                className="text-4xl xs:text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black font-display tracking-tighter text-slate-900 leading-[0.85] uppercase mb-10"
               >
                 Vind je nieuwe <span className="inline-block text-blue-600 italic underline decoration-black decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8">Uitdaging</span>
               </motion.h1>
@@ -224,7 +224,7 @@ export default function Home() {
         <div className="flex flex-col lg:flex-row gap-12">
           
           {/* Sidebar Filters */}
-          <aside className="lg:w-80 flex-shrink-0 border-r border-slate-200 pr-12 pb-12">
+          <aside className="lg:w-80 flex-shrink-0 border-r-0 lg:border-r border-slate-200 pr-0 lg:pr-12 pb-12">
             <div className="sticky top-24 space-y-12">
               <div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Districten</h3>
@@ -342,9 +342,9 @@ export default function Home() {
       {/* Why Jobparsing? */}
       <section className="bg-slate-900 py-24 text-white overflow-hidden relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div>
-              <h2 className="text-5xl font-black font-display mb-12 leading-[0.9] uppercase tracking-tighter">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-display mb-12 leading-[0.9] uppercase tracking-tighter">
                 Waarom de traditionele vacaturebanken <span className="text-blue-500 italic">falen</span>.
               </h2>
               <div className="space-y-12">
@@ -405,12 +405,12 @@ export default function Home() {
       {/* Salary Comparison Section */}
       <section className="bg-blue-50 py-24 overflow-hidden border-t-4 border-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
+          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             <div className="lg:col-span-5">
               <div className="inline-flex items-center gap-2 bg-black text-white px-3 py-1 text-[10px] font-black tracking-widest uppercase mb-6">
                 <TrendingUp className="w-3 h-3" /> Marktdata
               </div>
-              <h2 className="text-6xl font-black font-display uppercase leading-[0.85] tracking-tighter mb-8">
+              <h2 className="text-3xl sm:text-4xl lg:text-6xl font-black font-display uppercase leading-[0.85] tracking-tighter mb-8">
                 Is je salaris <br/><span className="text-blue-600 italic">Eerlijk?</span>
               </h2>
               <p className="text-slate-600 font-bold text-lg leading-relaxed mb-8">

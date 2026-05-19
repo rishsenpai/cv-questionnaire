@@ -180,7 +180,7 @@ export default function CvUploadPage() {
           <div className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 text-[10px] font-black tracking-[0.2em] uppercase mb-6">
             <Sparkles className="w-3 h-3" /> AI-Powered Parser
           </div>
-          <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-6">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-6">
             Upload je <span className="text-blue-600 italic">CV</span>
           </h1>
           <p className="text-lg md:text-xl font-bold text-slate-400 uppercase tracking-tight italic max-w-2xl">
@@ -198,7 +198,7 @@ export default function CvUploadPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-white border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+              className="bg-white border-4 border-black p-4 sm:p-8 md:p-12 shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] md:shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
             >
               <input
                 ref={fileInputRef}
@@ -212,7 +212,7 @@ export default function CvUploadPage() {
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={onDrop}
-                className={`border-4 border-dashed p-12 md:p-20 text-center cursor-pointer transition-all ${
+                className={`border-4 border-dashed p-6 sm:p-12 md:p-20 text-center cursor-pointer transition-all ${
                   isDragging ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-blue-600 hover:bg-blue-50/30'
                 }`}
               >
@@ -238,7 +238,7 @@ export default function CvUploadPage() {
                 </div>
               )}
 
-              <div className="mt-12 grid md:grid-cols-3 gap-6">
+              <div className="mt-12 grid md:grid-cols-3 gap-3 md:gap-6">
                 {[
                   { icon: Sparkles, title: 'AI Extractie', desc: 'Naam, ervaring, skills automatisch herkend' },
                   { icon: Code2, title: 'Smart Matching', desc: 'Direct gekoppeld aan onze vacaturedatabase' },
@@ -312,7 +312,7 @@ export default function CvUploadPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-white border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+              className="bg-white border-4 border-black p-4 sm:p-8 md:p-12 shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] md:shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
             >
               <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-slate-100">
                 <div>
