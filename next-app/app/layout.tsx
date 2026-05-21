@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 import { Navbar } from '@/components/Navbar';
 import { AICareerScout } from '@/components/AICareerScout';
+import { AnalyticsTracker } from '@/components/AnalyticsTracker';
 import { AuthProvider } from '@/lib/auth-context';
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
@@ -26,6 +27,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
     <html lang="nl" className={`${inter.variable} ${outfit.variable}`}>
       <body suppressHydrationWarning className="font-sans antialiased text-slate-900 bg-slate-50">
         <AuthProvider>
+          <AnalyticsTracker />
           <Navbar />
           {children}
           <AICareerScout />

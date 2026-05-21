@@ -29,10 +29,14 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend,
+} from 'recharts';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 
-type Tab = 'overview' | 'cvs' | 'vacancies' | 'matching' | 'employers' | 'system';
+type Tab = 'overview' | 'cvs' | 'vacancies' | 'matching' | 'employers' | 'analytics' | 'system';
 
 const TABS: Array<{ id: Tab; label: string; icon: typeof Users }> = [
   { id: 'overview', label: 'Overview', icon: Database },
@@ -40,6 +44,7 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Users }> = [
   { id: 'vacancies', label: 'Vacatures', icon: Briefcase },
   { id: 'matching', label: 'Matching', icon: Target },
   { id: 'employers', label: 'Werkgevers', icon: Users },
+  { id: 'analytics', label: 'Analytics', icon: Activity },
   { id: 'system', label: 'Systeem', icon: Settings },
 ];
 
@@ -87,6 +92,7 @@ export default function AdminPage() {
         {tab === 'vacancies' && <VacanciesTab token={adminToken} />}
         {tab === 'matching' && <MatchingTab token={adminToken} />}
         {tab === 'employers' && <EmployersTab token={adminToken} />}
+        {tab === 'analytics' && <AnalyticsTab token={adminToken} />}
         {tab === 'system' && <SystemTab token={adminToken} />}
       </main>
     </div>
@@ -2472,6 +2478,292 @@ interface EmbeddingProgress {
   currentName: string;
   failed: number;
   percentage: number;
+}
+
+// ============================ ANALYTICS ============================
+
+interface AnalyticsSummary {
+  totalPageviews: number;
+  uniqueVisitors: number;
+  cvSubmissions: number;
+  cvUploads: number;
+  cvManual: number;
+  highMatchEvents: number;
+  highMatchStats: { totalHighMatches: number; avgTopScore: number };
+  pageviewsByPage: Array<{ _id: string; count: number }>;
+  visitorsByCountry: Array<{ _id: { country?: string; code?: string }; count: number }>;
+  visitorsByCity: Array<{ _id: string; count: number }>;
+  languageUsage: Array<{ _id: string; count: number }>;
+  dailyPageviews: Array<{ _id: string; count: number }>;
+  dailyCVs: Array<{ _id: string; count: number }>;
+  deviceTypes: Array<{ _id: string; count: number }>;
+  browsers: Array<{ _id: string; count: number }>;
+  operatingSystems: Array<{ _id: string; count: number }>;
+  screenSizes: Array<{ _id: string; count: number }>;
+}
+
+const ANALYTICS_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#64748b'];
+
+function AnalyticsTab({ token }: { token: string }) {
+  const [data, setData] = useState<AnalyticsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(30);
+  const [error, setError] = useState<string | null>(null);
+
+  const reload = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/analytics/summary?days=${days}`, {
+        headers: { 'x-admin-token': token },
+      });
+      const json = await res.json();
+      if (json.success) setData(json.data);
+      else setError(json.error || json.message || 'Kon analytics niet ophalen');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verbinding mislukt');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, days]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  if (loading) {
+    return <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>;
+  }
+  if (error) {
+    return <p className="text-center py-16 text-[11px] font-black uppercase tracking-widest text-red-600">{error}</p>;
+  }
+  if (!data) return null;
+
+  // CV-funnel: upload → submission. cv_upload telt parse-CV successen,
+  // cv_submission telt opgeslagen CVs. cvManual zit binnen cv_submission
+  // via cv-builder. Conversion = submissions / (uploads + manual) ruwweg.
+  const totalCvEvents = data.cvUploads + data.cvManual;
+  const conversionPct = totalCvEvents > 0 ? Math.round((data.cvSubmissions / totalCvEvents) * 100) : 0;
+
+  const dailyMerged = mergeDaily(data.dailyPageviews, data.dailyCVs);
+  const countryRows = data.visitorsByCountry.map(c => ({
+    name: c._id?.country || c._id?.code || 'Onbekend',
+    count: c.count,
+  }));
+  const deviceRows = data.deviceTypes.map(d => ({ name: d._id || 'onbekend', count: d.count }));
+  const browserRows = data.browsers.map(b => ({ name: b._id || 'onbekend', count: b.count }));
+
+  return (
+    <div className="space-y-6">
+      {/* Header + range filter */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Bezoekers & gedrag</p>
+          <h2 className="text-3xl font-black uppercase tracking-tighter italic">Analytics</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {[7, 30, 90].map(d => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className={cn(
+                'px-4 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-colors',
+                days === d ? 'bg-black text-white border-black' : 'border-slate-200 hover:border-black',
+              )}
+            >
+              {d} dagen
+            </button>
+          ))}
+          <button
+            onClick={reload}
+            className="px-4 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-slate-200 hover:border-black"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Top stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard icon={Eye} label="Pageviews" value={data.totalPageviews} accent="blue" />
+        <StatCard icon={Users} label="Unieke bezoekers" value={data.uniqueVisitors} accent="emerald" />
+        <StatCard icon={FileText} label="CV submissions" value={data.cvSubmissions} accent="black" />
+        <StatCard icon={Sparkles} label="High matches ≥70%" value={data.highMatchEvents} accent="blue" />
+      </div>
+
+      {/* CV funnel */}
+      <div className="bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(59,130,246,0.4)]">
+        <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">CV funnel</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <FunnelStep label="Uploads (parse)" value={data.cvUploads} />
+          <FunnelStep label="Manual (builder)" value={data.cvManual} />
+          <FunnelStep label="Submitted (DB)" value={data.cvSubmissions} accent />
+          <FunnelStep label="Conversion" value={`${conversionPct}%`} accent />
+        </div>
+      </div>
+
+      {/* Daily pageviews + CVs */}
+      <div className="bg-white border-4 border-black p-6">
+        <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">Dagelijks verkeer</p>
+        {dailyMerged.length === 0 ? (
+          <p className="text-[11px] font-bold text-slate-400 py-8 text-center">Nog geen data — wacht tot er pageviews zijn binnengekomen.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={dailyMerged}>
+              <defs>
+                <linearGradient id="pvFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2563eb" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="cvFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#f1f5f9" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 700 }} />
+              <YAxis tick={{ fontSize: 10, fontWeight: 700 }} />
+              <Tooltip />
+              <Area type="monotone" dataKey="pageviews" stroke="#2563eb" strokeWidth={2} fill="url(#pvFill)" name="Pageviews" />
+              <Area type="monotone" dataKey="cvs" stroke="#10b981" strokeWidth={2} fill="url(#cvFill)" name="CV submissions" />
+              <Legend wrapperStyle={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Top pages */}
+        <div className="bg-white border-4 border-black p-6">
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">Top pagina&apos;s</p>
+          <RankedList rows={data.pageviewsByPage.map(p => ({ name: p._id || '/', count: p.count }))} />
+        </div>
+
+        {/* Countries */}
+        <div className="bg-white border-4 border-black p-6">
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">Bezoekers per land</p>
+          {countryRows.length === 0 ? (
+            <p className="text-[11px] font-bold text-slate-400 py-8 text-center">Geen geo-data beschikbaar.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={countryRows} layout="vertical">
+                <CartesianGrid stroke="#f1f5f9" />
+                <XAxis type="number" tick={{ fontSize: 10, fontWeight: 700 }} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fontWeight: 700 }} width={100} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#2563eb" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Devices */}
+        <div className="bg-white border-4 border-black p-6">
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">Devices</p>
+          {deviceRows.length === 0 ? (
+            <p className="text-[11px] font-bold text-slate-400 py-8 text-center">Geen device-data.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={deviceRows} dataKey="count" nameKey="name" outerRadius={80} label>
+                  {deviceRows.map((_, i) => (
+                    <Cell key={i} fill={ANALYTICS_COLORS[i % ANALYTICS_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Browsers */}
+        <div className="bg-white border-4 border-black p-6">
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">Browsers</p>
+          {browserRows.length === 0 ? (
+            <p className="text-[11px] font-bold text-slate-400 py-8 text-center">Geen browser-data.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={browserRows}>
+                <CartesianGrid stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700 }} />
+                <YAxis tick={{ fontSize: 10, fontWeight: 700 }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* OS */}
+        <div className="bg-white border-4 border-black p-6">
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">Besturingssystemen</p>
+          <RankedList rows={data.operatingSystems.map(o => ({ name: o._id || 'onbekend', count: o.count }))} />
+        </div>
+
+        {/* Cities */}
+        <div className="bg-white border-4 border-black p-6">
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">Top steden</p>
+          <RankedList rows={data.visitorsByCity.map(c => ({ name: c._id || '—', count: c.count }))} />
+        </div>
+      </div>
+
+      <p className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+        Localhost en bots gefilterd. Data per {days}-daagse window.
+      </p>
+    </div>
+  );
+}
+
+function FunnelStep({ label, value, accent }: { label: string; value: number | string; accent?: boolean }) {
+  return (
+    <div className={cn(
+      'border-2 p-4 flex flex-col gap-1',
+      accent ? 'border-blue-600 bg-blue-50' : 'border-slate-200',
+    )}>
+      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+      <span className={cn('text-3xl font-black italic leading-none', accent ? 'text-blue-600' : 'text-slate-700')}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function RankedList({ rows }: { rows: Array<{ name: string; count: number }> }) {
+  if (rows.length === 0) {
+    return <p className="text-[11px] font-bold text-slate-400 py-8 text-center">Geen data.</p>;
+  }
+  const max = Math.max(...rows.map(r => r.count));
+  return (
+    <div className="space-y-2">
+      {rows.slice(0, 10).map((r) => (
+        <div key={r.name} className="flex items-center gap-3">
+          <span className="text-[11px] font-bold text-slate-600 truncate flex-1 min-w-0">{r.name}</span>
+          <div className="flex-1 bg-slate-100 h-2 relative">
+            <div
+              className="absolute inset-y-0 left-0 bg-blue-600"
+              style={{ width: `${(r.count / max) * 100}%` }}
+            />
+          </div>
+          <span className="text-[11px] font-black text-slate-900 tabular-nums w-12 text-right">{r.count}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function mergeDaily(
+  pv: Array<{ _id: string; count: number }>,
+  cvs: Array<{ _id: string; count: number }>,
+): Array<{ date: string; pageviews: number; cvs: number }> {
+  const map = new Map<string, { pageviews: number; cvs: number }>();
+  for (const p of pv) map.set(p._id, { pageviews: p.count, cvs: 0 });
+  for (const c of cvs) {
+    const ex = map.get(c._id) || { pageviews: 0, cvs: 0 };
+    ex.cvs = c.count;
+    map.set(c._id, ex);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, v]) => ({ date: date.slice(5), ...v }));
 }
 
 function SystemTab({ token }: { token: string }) {

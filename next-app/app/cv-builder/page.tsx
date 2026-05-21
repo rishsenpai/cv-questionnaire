@@ -27,6 +27,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isValidEmail } from '@/lib/validation';
+import { trackEvent } from '@/lib/analytics-client';
 
 interface FormData {
   fullName: string;
@@ -195,6 +196,8 @@ export default function CvBuilderPage() {
         setSubmitting(false);
         return;
       }
+      trackEvent('cv_manual', { metadata: { source: 'builder' } });
+      trackEvent('cv_submission', { metadata: { source: 'builder' } });
       router.push(`/mijn-matches?cvId=${encodeURIComponent(result.cvId)}`);
     } catch {
       setSubmitError('Verbinding mislukt. Probeer het opnieuw.');

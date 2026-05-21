@@ -22,6 +22,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isValidEmail, isValidNLOrSRPhone } from '@/lib/contactExtract';
+import { trackEvent } from '@/lib/analytics-client';
 
 interface ParsedCV {
   fullName: string;
@@ -104,6 +105,7 @@ export default function CvUploadPage() {
       setParsed(data.data as ParsedCV);
       setExtractedText(`${data.extractedTextLength} tekens`);
       setStage('review');
+      trackEvent('cv_upload', { metadata: { fileType: file.type, fileSize: file.size } });
     } catch (err) {
       console.error(err);
       setStage('error');
@@ -138,6 +140,7 @@ export default function CvUploadPage() {
           email: parsed.email || '',
         }));
       } catch { /* ignore quota errors */ }
+      trackEvent('cv_submission', { metadata: { source: 'upload' } });
       router.push(`/mijn-matches?cvId=${encodeURIComponent(data.cvId)}`);
     } catch (err) {
       console.error(err);

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Analytics from '@/models/Analytics';
+import { requireAdmin } from '@/lib/server/auth';
 
 export async function GET(req: NextRequest) {
+    const unauth = await requireAdmin(req);
+    if (unauth) return unauth;
     try {
         await connectDB();
         const url = new URL(req.url);

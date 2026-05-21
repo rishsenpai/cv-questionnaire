@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { writeJson } from '@/lib/storage';
+import { trackEvent } from '@/lib/analytics-client';
 
 interface ApiCvSummary {
   _id: string;
@@ -104,6 +105,11 @@ function MatchesContent() {
         setMatches(data.matches);
         if (data.cv?._id) {
           writeJson('jobparsing_last_cv', { _id: data.cv._id, fullName: data.cv.fullName });
+        }
+        const highMatches = (data.matches || []).filter(m => (m.matchScore ?? 0) >= 70);
+        if (highMatches.length > 0) {
+          const topScore = Math.max(...highMatches.map(m => m.matchScore));
+          trackEvent('high_match', { metadata: { highMatches: highMatches.length, topScore, total: data.matches?.length || 0 } });
         }
       })
       .catch(() => {
