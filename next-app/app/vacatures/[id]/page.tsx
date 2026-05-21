@@ -453,17 +453,21 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   </div>
 
 
-                 <h3 className="text-xl font-black uppercase tracking-widest mb-6 flex items-center gap-3">
-                    <Zap className="w-6 h-6 text-blue-600" /> Vereisten
-                 </h3>
-                 <ul className="space-y-4 mb-12">
-                   {(job.requirements || ['Ervaring in een relevante sector', 'Sterke communicatieve vaardigheden', 'Woonachtig in Suriname']).map((req: string, i: number) => (
-                     <li key={i} className="flex items-start gap-4 text-sm font-bold text-slate-500 bg-slate-50 p-4 border-l-4 border-blue-600">
-                        <ArrowRight className="w-5 h-5 shrink-0 text-blue-600" />
-                        {req}
-                     </li>
-                   ))}
-                 </ul>
+                 {job.requirements && job.requirements.length > 0 && (
+                   <>
+                     <h3 className="text-xl font-black uppercase tracking-widest mb-6 flex items-center gap-3">
+                        <Zap className="w-6 h-6 text-blue-600" /> Vereisten
+                     </h3>
+                     <ul className="space-y-4 mb-12">
+                       {job.requirements.map((req: string, i: number) => (
+                         <li key={i} className="flex items-start gap-4 text-sm font-bold text-slate-500 bg-slate-50 p-4 border-l-4 border-blue-600">
+                            <ArrowRight className="w-5 h-5 shrink-0 text-blue-600" />
+                            {req}
+                         </li>
+                       ))}
+                     </ul>
+                   </>
+                 )}
 
                  <div className="grid md:grid-cols-2 gap-8 pt-8 border-t-4 border-slate-100">
                     <div className="flex items-center gap-6">
