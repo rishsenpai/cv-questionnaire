@@ -1,4 +1,4 @@
-import pdfParse from 'pdf-parse';
+import { extractText as unpdfExtract } from 'unpdf';
 import AdmZip from 'adm-zip';
 
 export const PDF_MIME = 'application/pdf';
@@ -33,9 +33,11 @@ export async function extractText({ buffer, fileName, fileType }: ExtractInput):
     let text = '';
 
     if (isPdf(fileName, fileType)) {
+        // unpdf werkt op Uint8Array, niet Buffer. Veel ruimer met slecht-
+        // geformatteerde PDFs dan pdf-parse (geen 'bad XRef entry' faal).
         try {
-            const data = await pdfParse(buffer, { max: 0 });
-            text = data.text || '';
+            const data = await unpdfExtract(new Uint8Array(buffer), { mergePages: true });
+            text = (Array.isArray(data.text) ? data.text.join('\n') : data.text) || '';
         } catch (err) {
             console.error('PDF extract failed:', err instanceof Error ? err.message : err);
             return { text: '', error: 'parseFailed' };
