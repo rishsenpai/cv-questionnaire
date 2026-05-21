@@ -28,6 +28,7 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
+  Pencil,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -622,6 +623,7 @@ function VacanciesTab({ token }: { token: string }) {
   });
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [embeddingBatch, setEmbeddingBatch] = useState(false);
   const [matchCountry, setMatchCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>('');
@@ -1497,6 +1499,15 @@ function VacanciesTab({ token }: { token: string }) {
                           >
                             {fulfillingId === v._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(v._id)}
+                            disabled={busy}
+                            title="Vacature bewerken"
+                            className="text-slate-600 hover:text-black disabled:opacity-50"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
                           <button onClick={() => deleteVacancy(v._id)} disabled={busy} className="text-red-600 hover:text-red-800 disabled:opacity-50">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1528,6 +1539,14 @@ function VacanciesTab({ token }: { token: string }) {
             token={token}
             onClose={() => setSuggestionsFor(null)}
             onChange={reload}
+          />
+        )}
+        {editingId && (
+          <EditVacancyModal
+            vacancyId={editingId}
+            token={token}
+            onClose={() => setEditingId(null)}
+            onSaved={() => { setEditingId(null); reload(); }}
           />
         )}
       </AnimatePresence>
@@ -1634,6 +1653,207 @@ function PushNoteDialog({
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+// Edit-modal voor admin om vacatures inhoudelijk te wijzigen. Bij wijziging
+// van title/description/requirements draait backend automatisch embedding
+// + autoMatch opnieuw, zodat suggesties up-to-date blijven.
+interface EditableVacancy {
+  _id: string;
+  title?: string;
+  description?: string;
+  requirements?: string;
+  location?: string;
+  company?: string;
+  employmentType?: string;
+  isRemote?: boolean;
+  applyLink?: string;
+  isActive?: boolean;
+  salary?: { min?: number; max?: number; currency?: string; period?: string };
+}
+
+function EditVacancyModal({
+  vacancyId, token, onClose, onSaved,
+}: {
+  vacancyId: string; token: string; onClose: () => void; onSaved: () => void;
+}) {
+  const [data, setData] = useState<EditableVacancy | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/vacancies/${vacancyId}`, { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        if (d.success) setData(d.data);
+        else setError(d.message || 'Laden mislukt');
+      })
+      .catch(err => !cancelled && setError(err instanceof Error ? err.message : 'Verbinding mislukt'))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [vacancyId, token]);
+
+  const save = async () => {
+    if (!data) return;
+    setSaving(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/admin/vacancies/${vacancyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          requirements: data.requirements,
+          location: data.location,
+          company: data.company,
+          employmentType: data.employmentType,
+          isRemote: data.isRemote,
+          applyLink: data.applyLink,
+          salary: data.salary,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setError(json.message || 'Opslaan mislukt');
+        return;
+      }
+      if (json.contentChanged) {
+        setInfo('Opgeslagen. Embedding + matches worden op de achtergrond opnieuw berekend.');
+      }
+      setTimeout(() => onSaved(), 600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verbinding mislukt');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const update = <K extends keyof EditableVacancy>(key: K, value: EditableVacancy[K]) => {
+    setData(d => d ? { ...d, [key]: value } : d);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white border-4 border-black w-full max-w-3xl max-h-[95vh] overflow-y-auto shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] sm:shadow-[16px_16px_0px_0px_rgba(59,130,246,1)]"
+      >
+        <div className="bg-black text-white p-4 sm:p-6 flex justify-between items-center sticky top-0 z-10">
+          <div>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Vacature bewerken</p>
+            <h3 className="text-lg sm:text-2xl font-black tracking-tighter italic truncate">{data?.title || '—'}</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 sm:p-8 space-y-4">
+          {loading ? (
+            <div className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" /></div>
+          ) : !data ? (
+            <p className="text-center text-[11px] font-black uppercase tracking-widest text-red-600">{error || 'Vacature niet gevonden'}</p>
+          ) : (
+            <>
+              <EditField label="Titel *" value={data.title || ''} onChange={v => update('title', v)} />
+              <EditField label="Bedrijf" value={data.company || ''} onChange={v => update('company', v)} />
+              <EditField label="Locatie" value={data.location || ''} onChange={v => update('location', v)} />
+              <EditField label="Dienstverband" value={data.employmentType || ''} onChange={v => update('employmentType', v)} placeholder="Full-time, Part-time, Stage" />
+              <EditField label="Apply link" value={data.applyLink || ''} onChange={v => update('applyLink', v)} placeholder="https://..." />
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={Boolean(data.isRemote)}
+                  onChange={e => update('isRemote', e.target.checked)}
+                  className="w-4 h-4 accent-blue-600"
+                />
+                <span className="text-[10px] font-black uppercase tracking-widest">Remote / Hybride</span>
+              </label>
+              <EditTextarea label="Omschrijving" value={data.description || ''} onChange={v => update('description', v)} rows={8} />
+              <EditTextarea label="Vereisten" value={data.requirements || ''} onChange={v => update('requirements', v)} rows={6} />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <EditField label="Min salaris" value={data.salary?.min?.toString() || ''} onChange={v => update('salary', { ...data.salary, min: v ? Number(v) : undefined })} placeholder="0" />
+                <EditField label="Max salaris" value={data.salary?.max?.toString() || ''} onChange={v => update('salary', { ...data.salary, max: v ? Number(v) : undefined })} placeholder="0" />
+                <EditField label="Valuta" value={data.salary?.currency || ''} onChange={v => update('salary', { ...data.salary, currency: v })} placeholder="SRD/EUR/USD" />
+                <EditField label="Periode" value={data.salary?.period || ''} onChange={v => update('salary', { ...data.salary, period: v })} placeholder="month/year" />
+              </div>
+
+              {error && (
+                <p className="text-[10px] font-black uppercase tracking-widest text-red-600 flex items-center gap-2">
+                  <AlertCircle className="w-3 h-3" /> {error}
+                </p>
+              )}
+              {info && (
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-2">
+                  <Sparkles className="w-3 h-3" /> {info}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-3 border-t-2 border-slate-100">
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={saving || !data.title?.trim()}
+                  className="flex-1 bg-blue-600 text-white py-3 font-black uppercase tracking-widest text-[11px] hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Opslaan'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={saving}
+                  className="border-2 border-black px-4 py-3 font-black uppercase tracking-widest text-[11px] hover:bg-black hover:text-white transition-colors disabled:opacity-50"
+                >
+                  Annuleer
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function EditField({ label, value, onChange, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full border-2 border-slate-200 px-3 py-2 text-sm font-bold outline-none focus:border-black"
+      />
+    </div>
+  );
+}
+
+function EditTextarea({ label, value, onChange, rows = 4 }: {
+  label: string; value: string; onChange: (v: string) => void; rows?: number;
+}) {
+  return (
+    <div>
+      <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">{label}</label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={rows}
+        className="w-full border-2 border-slate-200 px-3 py-2 text-sm font-bold outline-none focus:border-black resize-y"
+      />
+    </div>
   );
 }
 
@@ -2386,6 +2606,20 @@ function EmployersTab({ token }: { token: string }) {
     } finally { setBusy(false); }
   };
 
+  const changePlan = async (id: string, plan: string) => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/employers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (!data.success) alert(data.message || 'Plan wijzigen mislukt');
+      await reload();
+    } finally { setBusy(false); }
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -2448,7 +2682,24 @@ function EmployersTab({ token }: { token: string }) {
                   <td className="p-3">{e.username}</td>
                   <td className="p-3 truncate max-w-[200px]">{e.companyName}</td>
                   <td className="p-3 truncate max-w-[200px] text-slate-500">{e.contactEmail || '—'}</td>
-                  <td className="p-3"><span className="text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 px-2 py-0.5">{e.plan}</span></td>
+                  <td className="p-3">
+                    <select
+                      value={e.plan}
+                      onChange={(ev) => changePlan(e._id, ev.target.value)}
+                      disabled={busy}
+                      title="Wijzig pakket — bepaalt match-toegang"
+                      className={cn(
+                        'text-[9px] font-black uppercase tracking-widest px-2 py-1 border-2 cursor-pointer outline-none disabled:opacity-50',
+                        e.plan === 'premium' ? 'bg-blue-50 text-blue-700 border-blue-600'
+                          : e.plan === 'advanced' ? 'bg-emerald-50 text-emerald-700 border-emerald-600'
+                            : 'bg-slate-50 text-slate-700 border-slate-300',
+                      )}
+                    >
+                      <option value="basic">Basic</option>
+                      <option value="advanced">Advanced</option>
+                      <option value="premium">Premium</option>
+                    </select>
+                  </td>
                   <td className="p-3">
                     {e.isActive
                       ? <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 px-2 py-0.5">Active</span>
