@@ -1555,6 +1555,82 @@ interface SuggestionRow {
   } | null;
 }
 
+// Klein modaltje dat opent vóór elke admin-push. Optionele textarea voor
+// notitie. Leeg laten = push zonder notitie. De notitie wordt opgeslagen op
+// het CuratedMatch record + meegestuurd in zowel werkgever- als admin-mail.
+function PushNoteDialog({
+  open, onConfirm, onCancel, candidateLabel, vacancyLabel, busy,
+}: {
+  open: boolean;
+  onConfirm: (note: string) => void;
+  onCancel: () => void;
+  candidateLabel?: string;
+  vacancyLabel?: string;
+  busy?: boolean;
+}) {
+  const [note, setNote] = useState('');
+  useEffect(() => { if (open) setNote(''); }, [open]);
+  if (!open) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onCancel}
+      className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white border-4 border-black w-full max-w-md shadow-[8px_8px_0px_0px_rgba(59,130,246,1)]"
+      >
+        <div className="bg-black text-white p-4 flex justify-between items-center">
+          <div>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Push naar werkgever</p>
+            <h3 className="text-lg font-black tracking-tighter italic truncate">
+              {candidateLabel || 'Kandidaat'}{vacancyLabel ? ` → ${vacancyLabel}` : ''}
+            </h3>
+          </div>
+          <button onClick={onCancel} className="p-2 hover:bg-white/10" type="button" aria-label="Annuleer">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest mb-1">Optionele notitie</label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Bv. 'Past goed bij junior-rol' of 'Beschikbaar vanaf 1 juni'"
+              rows={4}
+              maxLength={500}
+              className="w-full border-2 border-slate-200 p-3 font-bold text-sm outline-none focus:border-black"
+              autoFocus
+            />
+            <p className="text-[10px] font-bold text-slate-400 mt-1">{note.length}/500 — zichtbaar in werkgever-portaal én mail</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onConfirm(note.trim())}
+              disabled={busy}
+              className="flex-1 bg-blue-600 text-white py-3 font-black uppercase tracking-widest text-[11px] hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verstuur push'}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={busy}
+              className="border-2 border-black px-4 py-3 font-black uppercase tracking-widest text-[11px] hover:bg-black hover:text-white transition-colors disabled:opacity-50"
+            >
+              Annuleer
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function SuggestionsModal({
   vacancy, token, onClose, onChange,
 }: {
@@ -1564,6 +1640,7 @@ function SuggestionsModal({
   const [items, setItems] = useState<SuggestionRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [shareNote, setShareNote] = useState<Record<string, string>>({});
+  const [pushPrompt, setPushPrompt] = useState<{ id: string; candidateLabel: string } | null>(null);
 
   const load = React.useCallback(async () => {
     setItems(null);
@@ -1576,14 +1653,15 @@ function SuggestionsModal({
 
   useEffect(() => { load(); }, [load]);
 
-  const promote = async (id: string) => {
+  const promote = async (id: string, adminNote: string) => {
     setBusy(id);
     try {
       await fetch(`/api/admin/curated-matches/${id}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({}),
+        body: JSON.stringify(adminNote ? { adminNote } : {}),
       });
+      setPushPrompt(null);
       await load();
       onChange();
     } finally { setBusy(null); }
@@ -1695,7 +1773,7 @@ function SuggestionsModal({
                       <button
                         type="button"
                         disabled={busy === s._id || Boolean(vacancy.fulfilledAt)}
-                        onClick={() => promote(s._id)}
+                        onClick={() => setPushPrompt({ id: s._id, candidateLabel: s.cv?.fullName || 'Kandidaat' })}
                         title={vacancy.fulfilledAt ? 'Vacature is vervuld — pushen is uitgeschakeld' : 'Push naar werkgever'}
                         className="bg-blue-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
                       >
@@ -1737,6 +1815,14 @@ function SuggestionsModal({
             ))
           )}
         </div>
+        <PushNoteDialog
+          open={pushPrompt !== null}
+          candidateLabel={pushPrompt?.candidateLabel}
+          vacancyLabel={vacancy.title}
+          busy={busy === pushPrompt?.id}
+          onCancel={() => setPushPrompt(null)}
+          onConfirm={(note) => pushPrompt && promote(pushPrompt.id, note)}
+        />
       </motion.div>
     </motion.div>
   );
@@ -1834,6 +1920,7 @@ function InlineMatchesRow({
   // Per-suggestie LLM-toelichting: id → reason. null = nog niet geladen.
   const [reasons, setReasons] = useState<Record<string, string | null>>({});
   const [reasonBusy, setReasonBusy] = useState<string | null>(null);
+  const [pushPrompt, setPushPrompt] = useState<{ id: string; candidateLabel: string } | null>(null);
 
   const loadReason = async (matchId: string) => {
     setReasonBusy(matchId);
@@ -1895,14 +1982,15 @@ function InlineMatchesRow({
 
   useEffect(() => { load(); }, [load]);
 
-  const promote = async (id: string) => {
+  const promote = async (id: string, adminNote: string) => {
     setBusy(id);
     try {
       await fetch(`/api/admin/curated-matches/${id}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({}),
+        body: JSON.stringify(adminNote ? { adminNote } : {}),
       });
+      setPushPrompt(null);
       await load();
       onChange();
     } finally { setBusy(null); }
@@ -2188,7 +2276,7 @@ function InlineMatchesRow({
                       <button
                         type="button"
                         disabled={busy === s._id || Boolean(vacancyFulfilled)}
-                        onClick={() => promote(s._id)}
+                        onClick={() => setPushPrompt({ id: s._id, candidateLabel: s.cv?.fullName || 'Kandidaat' })}
                         title={vacancyFulfilled ? 'Vacature is vervuld — pushen is uitgeschakeld' : 'Push naar werkgever'}
                         className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
                       >
@@ -2220,6 +2308,13 @@ function InlineMatchesRow({
           })}
         </div>
       )}
+      <PushNoteDialog
+        open={pushPrompt !== null}
+        candidateLabel={pushPrompt?.candidateLabel}
+        busy={busy === pushPrompt?.id}
+        onCancel={() => setPushPrompt(null)}
+        onConfirm={(note) => pushPrompt && promote(pushPrompt.id, note)}
+      />
     </div>
   );
 }
@@ -2555,6 +2650,7 @@ function TopMatchesPanel({ token }: { token: string }) {
   const [pushedSet, setPushedSet] = useState<Set<string>>(new Set());
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [reasonBusy, setReasonBusy] = useState<string | null>(null);
+  const [pushPrompt, setPushPrompt] = useState<{ id: string; candidateLabel: string; vacancyLabel?: string } | null>(null);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -2572,14 +2668,15 @@ function TopMatchesPanel({ token }: { token: string }) {
 
   useEffect(() => { reload(); }, [reload]);
 
-  const promote = async (matchId: string) => {
+  const promote = async (matchId: string, adminNote: string) => {
     setBusy(matchId);
     try {
       await fetch(`/api/admin/curated-matches/${matchId}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({}),
+        body: JSON.stringify(adminNote ? { adminNote } : {}),
       });
+      setPushPrompt(null);
       setPushedSet(prev => new Set([...prev, matchId]));
     } finally { setBusy(null); }
   };
@@ -2718,7 +2815,7 @@ function TopMatchesPanel({ token }: { token: string }) {
                       <>
                         <button
                           type="button"
-                          onClick={() => promote(m._id)}
+                          onClick={() => setPushPrompt({ id: m._id, candidateLabel: m.cv?.fullName || 'Kandidaat', vacancyLabel: m.vacancy?.title })}
                           disabled={busy === m._id}
                           className="bg-blue-600 text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-black disabled:opacity-50 flex items-center gap-1"
                         >
@@ -2750,6 +2847,14 @@ function TopMatchesPanel({ token }: { token: string }) {
           })}
         </div>
       )}
+      <PushNoteDialog
+        open={pushPrompt !== null}
+        candidateLabel={pushPrompt?.candidateLabel}
+        vacancyLabel={pushPrompt?.vacancyLabel}
+        busy={busy === pushPrompt?.id}
+        onCancel={() => setPushPrompt(null)}
+        onConfirm={(note) => pushPrompt && promote(pushPrompt.id, note)}
+      />
     </div>
   );
 }
@@ -3366,6 +3471,7 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
   // Default naar CV's eigen land — voor een Rotterdam-CV hoef je zelden
   // tegen Guyana-vacatures te matchen. Lege string = alle landen.
   const [country, setCountry] = useState<'' | 'guyana' | 'netherlands' | 'suriname'>(cv.country || '');
+  const [pushPrompt, setPushPrompt] = useState<MatchVacancyResult | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -3390,7 +3496,7 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
     return () => { cancelled = true; };
   }, [cv._id, token, country]);
 
-  const pushToVacancy = async (vacancy: MatchVacancyResult) => {
+  const confirmPush = async (vacancy: MatchVacancyResult, adminNote: string) => {
     if (!vacancy._id) return;
     setPushingId(vacancy._id);
     setPushMessage(null);
@@ -3402,6 +3508,7 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
           vacancyId: vacancy._id,
           cvId: cv._id,
           matchScore: vacancy.matchScore,
+          ...(adminNote ? { adminNote } : {}),
         }),
       });
       const data = await res.json();
@@ -3418,6 +3525,7 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
       setPushMessage({ kind: 'err', text: err instanceof Error ? err.message : 'Push mislukt' });
     } finally {
       setPushingId(null);
+      setPushPrompt(null);
     }
   };
 
@@ -3474,7 +3582,7 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
           ) : matches && matches.length > 0 ? (
             <VacancyMatchesList
               matches={matches}
-              onPush={pushToVacancy}
+              onPush={(v) => setPushPrompt(v)}
               pushingId={pushingId}
               pushedIds={pushedIds}
               cvId={cv._id}
@@ -3491,6 +3599,14 @@ function CvMatchModal({ token, cv, onClose }: { token: string; cv: CvRow; onClos
             </div>
           )}
         </div>
+        <PushNoteDialog
+          open={pushPrompt !== null}
+          candidateLabel={cv.fullName}
+          vacancyLabel={pushPrompt?.title}
+          busy={pushingId === pushPrompt?._id}
+          onCancel={() => setPushPrompt(null)}
+          onConfirm={(note) => pushPrompt && confirmPush(pushPrompt, note)}
+        />
       </motion.div>
     </motion.div>
   );

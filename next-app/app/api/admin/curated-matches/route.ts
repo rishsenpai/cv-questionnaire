@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
   <div style="background: #ebf8ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb; margin: 20px 0;">
     <p style="margin: 0;"><strong>${vacancy.title}</strong></p>
   </div>
+  ${adminNote ? `<div style="background: #fef3c7; padding: 12px; border-left: 4px solid #f59e0b; margin: 20px 0;"><p style="margin: 0 0 4px 0; font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.05em;"><strong>Notitie van Jobparsing+</strong></p><p style="margin: 0; color: #475569;">${adminNote}</p></div>` : ''}
   <p>Bekijk de match in je portaal:</p>
   <p>
     <a href="${baseUrl}/dashboard/company" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
