@@ -11,12 +11,14 @@ import {
   Zap,
   Lock,
   Mail,
+  Phone,
+  FileCheck,
   ChevronLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { isValidEmail } from '@/lib/validation';
+import { isValidEmail, isValidPhone } from '@/lib/validation';
 import { useAuth } from '@/lib/auth-context';
 
 type Role = 'candidate' | 'employer';
@@ -33,7 +35,7 @@ function AuthInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formValues, setFormValues] = useState({
-    email: emailParam, password: '', fullName: nameParam, username: '', companyName: '',
+    email: emailParam, password: '', confirmPassword: '', fullName: nameParam, username: '', companyName: '', phone: '', kkfNumber: '',
   });
 
   useEffect(() => {
@@ -42,8 +44,8 @@ function AuthInner() {
     }
   }, [emailParam, nameParam]);
   const [formErrors, setFormErrors] = useState<{
-    email?: string; password?: string; fullName?: string;
-    username?: string; companyName?: string; form?: string;
+    email?: string; password?: string; confirmPassword?: string; fullName?: string;
+    username?: string; companyName?: string; phone?: string; kkfNumber?: string; form?: string;
   }>({});
   const router = useRouter();
   const { loginCandidate, registerCandidate, loginEmployer, registerEmployer } = useAuth();
@@ -58,16 +60,28 @@ function AuthInner() {
       if (!isValidEmail(email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
       if (!isLogin && !formValues.fullName.trim()) nextErrors.fullName = 'Voer je volledige naam in.';
       if (password.length < 8) nextErrors.password = 'Gebruik minimaal 8 tekens.';
+      if (!isLogin && password !== formValues.confirmPassword) {
+        nextErrors.confirmPassword = 'Wachtwoorden komen niet overeen.';
+      }
     } else {
       // employer
       if (!formValues.username.trim()) nextErrors.username = 'Voer een gebruikersnaam in.';
       if (!isLogin) {
         if (!formValues.companyName.trim()) nextErrors.companyName = 'Voer een bedrijfsnaam in.';
-        if (formValues.email.trim() && !isValidEmail(formValues.email.trim().toLowerCase())) {
-          nextErrors.email = 'Ongeldig contact-e-mailadres.';
+        if (!formValues.email.trim() || !isValidEmail(formValues.email.trim().toLowerCase())) {
+          nextErrors.email = 'Voer een geldig e-mailadres in.';
+        }
+        if (!isValidPhone(formValues.phone)) {
+          nextErrors.phone = 'Voer een geldig telefoonnummer in.';
+        }
+        if (formValues.kkfNumber.trim() && !/^\d{4,8}[A-Za-z]?$/.test(formValues.kkfNumber.trim())) {
+          nextErrors.kkfNumber = 'Formaat: 4-8 cijfers, optioneel met letter-suffix.';
         }
         if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)) {
           nextErrors.password = 'Min. 8 tekens, met letter én cijfer.';
+        }
+        if (password !== formValues.confirmPassword) {
+          nextErrors.confirmPassword = 'Wachtwoorden komen niet overeen.';
         }
       } else if (password.length < 8) {
         nextErrors.password = 'Gebruik minimaal 8 tekens.';
@@ -96,7 +110,9 @@ function AuthInner() {
             username,
             password,
             companyName: formValues.companyName.trim(),
-            contactEmail: formValues.email.trim() || undefined,
+            contactEmail: formValues.email.trim().toLowerCase(),
+            phone: formValues.phone.trim(),
+            kkfNumber: formValues.kkfNumber.trim() || undefined,
           });
     }
 
@@ -123,14 +139,14 @@ function AuthInner() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-5xl grid lg:grid-cols-2 bg-white border-4 border-black shadow-[32px_32px_0px_0px_rgba(59,130,246,1)] relative z-10"
       >
-        <div className="bg-black text-white p-12 flex flex-col justify-between relative overflow-hidden">
-          <div className="relative z-10">
+        <div className="bg-black text-white p-8 sm:p-10 lg:p-12 flex flex-col justify-between relative overflow-hidden min-w-0">
+          <div className="relative z-10 min-w-0">
             <Link href="/" className="inline-flex items-center gap-2 mb-12 hover:text-blue-400 transition-colors">
               <ChevronLeft className="w-5 h-5" />
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">Terug naar Home</span>
             </Link>
 
-            <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-8">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-8 break-words">
               Jobparsing<span className="text-blue-600 italic">+</span>
             </h1>
             <p className="text-xl font-bold text-slate-400 uppercase tracking-tight italic max-w-sm mb-12">
@@ -237,13 +253,20 @@ function AuthInner() {
                   <>
                     <FormField icon={User} placeholder="GEBRUIKERSNAAM" value={formValues.username} onChange={(v) => setFormValues((p) => ({ ...p, username: v }))} error={formErrors.username} />
                     {!isLogin && (
-                      <FormField icon={Mail} type="email" placeholder="CONTACT E-MAIL (OPTIONEEL)" value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
+                      <>
+                        <FormField icon={Mail} type="email" placeholder="CONTACT E-MAIL" value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
+                        <FormField icon={Phone} type="tel" placeholder="TELEFOONNUMMER" value={formValues.phone} onChange={(v) => setFormValues((p) => ({ ...p, phone: v }))} error={formErrors.phone} />
+                        <FormField icon={FileCheck} placeholder="KKF-NUMMER (OPTIONEEL)" value={formValues.kkfNumber} onChange={(v) => setFormValues((p) => ({ ...p, kkfNumber: v }))} error={formErrors.kkfNumber} />
+                      </>
                     )}
                   </>
                 ) : (
                   <FormField icon={Mail} type="email" placeholder="E-MAILADRES" value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
                 )}
                 <FormField icon={Lock} type="password" placeholder="WACHTWOORD" value={formValues.password} onChange={(v) => setFormValues((p) => ({ ...p, password: v }))} error={formErrors.password} />
+                {!isLogin && (
+                  <FormField icon={Lock} type="password" placeholder="BEVESTIG WACHTWOORD" value={formValues.confirmPassword} onChange={(v) => setFormValues((p) => ({ ...p, confirmPassword: v }))} error={formErrors.confirmPassword} />
+                )}
 
                 {formErrors.form && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.form}</p>}
 

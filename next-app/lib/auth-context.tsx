@@ -56,7 +56,7 @@ interface AuthContextValue {
     logoutCandidate: () => void;
 
     loginEmployer: (username: string, password: string) => Promise<{ ok: true } | { ok: false; message: string }>;
-    registerEmployer: (data: { username: string; password: string; companyName: string; contactEmail?: string }) => Promise<{ ok: true } | { ok: false; message: string }>;
+    registerEmployer: (data: { username: string; password: string; companyName: string; contactEmail: string; phone: string; kkfNumber?: string }) => Promise<{ ok: true } | { ok: false; message: string }>;
     logoutEmployer: () => void;
 
     loginAdmin: (password: string) => Promise<{ ok: true } | { ok: false; message: string }>;

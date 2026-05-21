@@ -4,16 +4,17 @@ import { connectDB } from '@/lib/db';
 import Employer from '@/models/Employer';
 import EmployerToken from '@/models/EmployerToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
+import { isValidPhone } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
     try {
         await connectDB();
         const body = await req.json();
-        const { username, password, companyName, contactEmail } = body || {};
+        const { username, password, companyName, contactEmail, phone, kkfNumber } = body || {};
 
-        if (!username || !password || !companyName) {
+        if (!username || !password || !companyName || !contactEmail || !phone) {
             return NextResponse.json(
-                { success: false, message: 'Username, wachtwoord en bedrijfsnaam zijn verplicht' },
+                { success: false, message: 'Gebruikersnaam, wachtwoord, bedrijfsnaam, e-mail en telefoonnummer zijn verplicht' },
                 { status: 400 },
             );
         }
@@ -26,9 +27,26 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (contactEmail && !validator.isEmail(String(contactEmail))) {
+        if (!validator.isEmail(String(contactEmail))) {
             return NextResponse.json(
                 { success: false, message: 'Ongeldig contact-e-mailadres' },
+                { status: 400 },
+            );
+        }
+
+        if (!isValidPhone(phone)) {
+            return NextResponse.json(
+                { success: false, message: 'Ongeldig telefoonnummer' },
+                { status: 400 },
+            );
+        }
+
+        // KKF-nummer is optioneel. Als opgegeven: cijfers, optioneel letter-suffix
+        // (bv. "12345" of "12345A"). Geen live API-lookup beschikbaar bij KKF.sr.
+        const trimmedKkf = kkfNumber ? String(kkfNumber).trim() : '';
+        if (trimmedKkf && !/^\d{4,8}[A-Za-z]?$/.test(trimmedKkf)) {
+            return NextResponse.json(
+                { success: false, message: 'Ongeldig KKF-nummer (4-8 cijfers, optioneel met letter-suffix)' },
                 { status: 400 },
             );
         }
@@ -46,7 +64,9 @@ export async function POST(req: NextRequest) {
             username: normalizedUsername,
             password,
             companyName: String(companyName).trim(),
-            contactEmail: contactEmail ? String(contactEmail).toLowerCase().trim() : undefined,
+            contactEmail: String(contactEmail).toLowerCase().trim(),
+            phone: String(phone).trim(),
+            kkfNumber: trimmedKkf || undefined,
             plan: 'basic',
             isActive: true,
         });

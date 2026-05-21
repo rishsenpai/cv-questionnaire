@@ -463,6 +463,7 @@ export default function Home() {
               <ul className="space-y-2 text-[10px] font-black uppercase tracking-widest">
                 <li><Link href="/over-ons" className="hover:text-blue-600 transition-colors">FAQ</Link></li>
                 <li><Link href="/over-ons" className="hover:text-blue-600 transition-colors">Contact</Link></li>
+                <li><Link href="/algemene-voorwaarden" className="hover:text-blue-600 transition-colors">Algemene Voorwaarden</Link></li>
                 <li><span className="text-blue-400">Status: Online</span></li>
               </ul>
             </div>

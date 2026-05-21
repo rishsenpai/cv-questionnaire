@@ -128,12 +128,20 @@ export function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link
-                href="/auth"
-                className="bg-black text-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)]"
-              >
-                Inloggen
-              </Link>
+              <>
+                <Link
+                  href="/auth"
+                  className="hidden sm:inline-block border-2 border-black text-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all active:scale-95"
+                >
+                  Inloggen
+                </Link>
+                <Link
+                  href="/auth?signup=1"
+                  className="bg-blue-600 text-white px-4 sm:px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  Aanmelden
+                </Link>
+              </>
             )}
 
             <button
@@ -171,6 +179,15 @@ export function Navbar() {
                   {link.name}
                 </Link>
               ))}
+              {!user && (
+                <Link
+                  href="/auth"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-xs font-black uppercase tracking-[0.2em] py-2 text-slate-700 border-t border-slate-100 pt-4"
+                >
+                  Inloggen
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

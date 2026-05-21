@@ -18,6 +18,8 @@ export interface IEmployer extends Document {
     password: string;
     companyName: string;
     contactEmail?: string;
+    phone?: string;
+    kkfNumber?: string;
     plan: 'basic' | 'advanced' | 'premium';
     isActive: boolean;
     failedLoginAttempts: number;
@@ -43,6 +45,10 @@ const employerSchema = new Schema<IEmployer>({
     password: { type: String, required: true },
     companyName: { type: String, required: true, trim: true },
     contactEmail: { type: String, trim: true, lowercase: true },
+    phone: { type: String, trim: true },
+    // KKF = Kamer van Koophandel en Fabrieken Suriname. Dossiernummer; geen
+    // live API beschikbaar — we slaan 'm ruw op voor handmatige verificatie.
+    kkfNumber: { type: String, trim: true },
     plan: { type: String, enum: ['basic', 'advanced', 'premium'], default: 'basic' },
     isActive: { type: Boolean, default: true },
     failedLoginAttempts: { type: Number, default: 0 },
