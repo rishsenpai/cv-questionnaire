@@ -12,6 +12,7 @@ import CuratedMatch from '@/models/CuratedMatch';
 import { cosineSimilarity, generateEmbedding, prepareCVText } from './embeddings';
 import { rerank, isRerankConfigured } from './rerank';
 import { bm25SearchCVs, hybridFuse, type RankedDoc } from './hybridMatch';
+import { compareLocations, applyLocationBonus } from './locationMatch';
 
 // Drie-fase pipeline:
 //   1a. Embedding cosine → top-100 (semantic recall)
@@ -41,6 +42,8 @@ interface VacancyDoc {
     requirements?: string;
     fullText?: string;
     embedding?: number[];
+    location?: string;
+    isRemote?: boolean;
 }
 
 interface RunAutoMatchOptions {
@@ -54,7 +57,7 @@ export async function runAutoMatchForVacancy(
     vacancyId: string,
     options: RunAutoMatchOptions = {},
 ): Promise<AutoMatchResult> {
-    const vacancy = await Vacancy.findById(vacancyId).select('+embedding country fulfilledAt');
+    const vacancy = await Vacancy.findById(vacancyId).select('+embedding country fulfilledAt location isRemote');
     if (!vacancy) {
         return { method: 'skipped', suggestionsCreated: 0, candidatesScanned: 0, reason: 'vacancy not found' };
     }
@@ -132,10 +135,40 @@ export async function runAutoMatchForVacancy(
 
     // Fase 3: rerank met Cohere als de key geconfigureerd is.
     // Bij ontbrekende key of API-fout vallen we terug op de gefuseerde volgorde.
-    const top = (await rerankCandidates(vacancy, poolForRerank)) ?? poolForRerank.slice(0, TOP_N);
+    const rerankedTop = (await rerankCandidates(vacancy, poolForRerank)) ?? poolForRerank.slice(0, TOP_N);
+
+    // Fase 4: locatie-signal als soft bonus/penalty op final score.
+    // CV-locaties ophalen voor de top-N en bonus toepassen — herrangschikt
+    // de lijst zodat fysiek dichter-bij kandidaten hoger uitkomen.
+    const top = await applyLocationSignal(vacancy as VacancyDoc, rerankedTop);
 
     const created = await persistSuggestions(vacancy as VacancyDoc, top);
     return { method: 'embedding', suggestionsCreated: created, candidatesScanned: cvs.length };
+}
+
+// Past de locatie-bonus toe op een gerankte pool en sorteert opnieuw.
+async function applyLocationSignal(
+    vacancy: VacancyDoc,
+    pool: Array<{ cvId: string; score: number }>,
+): Promise<Array<{ cvId: string; score: number }>> {
+    if (pool.length === 0) return pool;
+    if (vacancy.isRemote) return pool; // remote = locatie irrelevant
+    if (!vacancy.location) return pool;
+
+    const cvIds = pool.map(p => new Types.ObjectId(p.cvId));
+    const cvLocs = await CV.find({ _id: { $in: cvIds } }).select('_id location').lean();
+    const locMap = new Map<string, string | undefined>();
+    for (const cv of cvLocs) {
+        locMap.set(String(cv._id), cv.location);
+    }
+
+    return pool
+        .map(p => {
+            const cvLoc = locMap.get(p.cvId);
+            const { bonus } = compareLocations(vacancy.location, cvLoc, false);
+            return { cvId: p.cvId, score: applyLocationBonus(p.score, bonus) };
+        })
+        .sort((a, b) => b.score - a.score);
 }
 
 // Tweede-fase reranking: query = vacancy-tekst, docs = CV-tekst.

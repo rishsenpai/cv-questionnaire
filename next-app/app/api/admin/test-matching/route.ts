@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import natural from 'natural';
+// Alleen de TfIdf-submodule — niet de 'natural' barrel (die require't
+// afinn-165, ESM-only → ERR_REQUIRE_ESM crash op Vercel). Zie match-vacancy.
+import { TfIdf } from 'natural/lib/natural/tfidf';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import MatchEvent from '@/models/MatchEvent';
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
         const cvs = await CV.find().select('-fileData');
         console.log('Test Matching - Processing', cvs.length, 'CVs');
 
-        const tfidf = new natural.TfIdf();
+        const tfidf = new TfIdf();
         tfidf.addDocument(tokenize(vacancyText, true));
 
         cvs.forEach(cv => {

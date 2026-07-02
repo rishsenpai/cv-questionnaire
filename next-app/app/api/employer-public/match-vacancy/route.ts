@@ -1,5 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import natural from 'natural';
+import { NextRequest, NextResponse, after } from 'next/server';
+// Alleen de TfIdf-submodule importeren — niet de 'natural' barrel. Die barrel
+// laadt SentimentAnalyzer → require('afinn-165'), en afinn-165 is ESM-only,
+// wat op Vercel een ERR_REQUIRE_ESM geeft waardoor de hele route crasht (500
+// HTML-pagina → client zag "Unexpected token '<'"). De submodule is pure CJS.
+import { TfIdf } from 'natural/lib/natural/tfidf';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import EmployerLead from '@/models/EmployerLead';
@@ -81,7 +85,7 @@ export async function POST(req: NextRequest) {
 
         const cvs = await CV.find({ isInternal: { $ne: true } }).select('-fileData -embedding');
 
-        const tfidf = new natural.TfIdf();
+        const tfidf = new TfIdf();
         tfidf.addDocument(tokenize(vacancyText, true));
 
         cvs.forEach(cv => {
@@ -174,6 +178,11 @@ export async function POST(req: NextRequest) {
             console.error('MatchEvent log (employer-public) failed:', err instanceof Error ? err.message : err);
         }
 
+        // De notificatie-mail draait ná de response (next/server `after`). Zo kan
+        // een trage/hangende SMTP-verbinding de functie nooit over maxDuration
+        // duwen — wat op Vercel een HTML 504-pagina zou opleveren en de client
+        // met "Unexpected token '<'" liet crashen.
+        after(async () => {
         try {
             const matchSummary = matches.slice(0, 5)
                 .map((m, i) => `${i + 1}. ${m.jobTitle} - ${m.location} (${m.matchScore}%)`)
@@ -214,6 +223,7 @@ export async function POST(req: NextRequest) {
         } catch (err) {
             console.error('Employer lead email failed:', err instanceof Error ? err.message : err);
         }
+        });
 
         return NextResponse.json({
             success: true,

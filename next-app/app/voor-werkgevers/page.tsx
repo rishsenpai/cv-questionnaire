@@ -70,6 +70,27 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
+// Leest een API-antwoord veilig als JSON. Bij een niet-JSON body (bv. een
+// HTML-foutpagina die Vercel teruggeeft als de functie time-out of crasht)
+// geven we een leesbare melding i.p.v. de rauwe "Unexpected token '<'"-fout.
+async function readJsonSafe<T>(
+  res: Response,
+): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
+  const text = await res.text();
+  try {
+    if (text) return { ok: true, data: JSON.parse(text) as T };
+  } catch {
+    // valt door naar de foutmelding hieronder
+  }
+  if (res.status === 504 || res.status === 408 || res.status === 524) {
+    return { ok: false, message: 'De matching duurde te lang — de server is nu te druk. Probeer het over een moment opnieuw.' };
+  }
+  if (res.status === 413) {
+    return { ok: false, message: 'Het bestand is te groot om te verwerken. Plak de tekst of gebruik een kleiner bestand.' };
+  }
+  return { ok: false, message: `Er ging iets mis op de server (foutcode ${res.status}). Probeer het later opnieuw.` };
+}
+
 function VoorWerkgeversInner() {
   const params = useSearchParams();
   const initialQuery = params.get('q') || '';
@@ -101,11 +122,13 @@ function VoorWerkgeversInner() {
     setQuickError(null);
     try {
       const res = await fetch(`/api/employer-public/search-cvs?q=${encodeURIComponent(q.trim())}`);
-      const data: QuickSearchResponse = await res.json();
-      if (!data.success) {
-        setQuickError(data.message || 'Zoeken mislukt');
+      const parsed = await readJsonSafe<QuickSearchResponse>(res);
+      if (!parsed.ok) {
+        setQuickError(parsed.message);
+      } else if (!parsed.data.success) {
+        setQuickError(parsed.data.message || 'Zoeken mislukt');
       } else {
-        setQuickResults(data);
+        setQuickResults(parsed.data);
       }
     } catch (err) {
       setQuickError(err instanceof Error ? err.message : 'Verbinding mislukt');
@@ -160,7 +183,13 @@ function VoorWerkgeversInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data: MatchResponse = await res.json();
+      const parsed = await readJsonSafe<MatchResponse>(res);
+      if (!parsed.ok) {
+        setError(parsed.message);
+        setLoading(false);
+        return;
+      }
+      const data = parsed.data;
       if (!data.success) {
         setError(data.message || 'Matching mislukt');
         setLoading(false);

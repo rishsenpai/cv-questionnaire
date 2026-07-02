@@ -58,14 +58,21 @@ export async function POST(req: NextRequest) {
         const existingCVs = await CV.find({
             fullName: { $regex: new RegExp(`^${escapedName}$`, 'i') },
         });
-        const isDuplicate = existingCVs.some(
+        const duplicateCv = existingCVs.find(
             cv => extractFirstExperience(cv.experience) === firstExp,
         );
 
-        if (isDuplicate) {
+        if (duplicateCv) {
+            // Terugkerende kandidaat: geen nieuw CV aanmaken, maar direct naar
+            // de matches van het bestaande CV sturen i.p.v. blokkeren.
             return NextResponse.json(
-                { success: false, message: t.duplicateCV, duplicate: true },
-                { status: 409 },
+                {
+                    success: true,
+                    duplicate: true,
+                    message: t.duplicateCV,
+                    cvId: String(duplicateCv._id),
+                },
+                { status: 200 },
             );
         }
 

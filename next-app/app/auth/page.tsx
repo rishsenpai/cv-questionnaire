@@ -268,6 +268,17 @@ function AuthInner() {
                   <FormField icon={Lock} type="password" placeholder="BEVESTIG WACHTWOORD" value={formValues.confirmPassword} onChange={(v) => setFormValues((p) => ({ ...p, confirmPassword: v }))} error={formErrors.confirmPassword} />
                 )}
 
+                {isLogin && (
+                  <div className="text-right">
+                    <Link
+                      href={`/wachtwoord-vergeten?role=${role}`}
+                      className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline decoration-2 underline-offset-4"
+                    >
+                      Wachtwoord vergeten?
+                    </Link>
+                  </div>
+                )}
+
                 {formErrors.form && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formErrors.form}</p>}
 
                 <button

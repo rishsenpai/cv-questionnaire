@@ -12,6 +12,7 @@ import {
 } from '@/lib/server/embeddings';
 import { errorMessages, type Language } from '@/lib/server/i18n';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
+import { compareLocations, applyLocationBonus } from '@/lib/server/locationMatch';
 
 export const maxDuration = 60;
 
@@ -72,7 +73,12 @@ export async function GET(req: NextRequest, { params }: Params) {
         }
 
         const scored = vacancies.map(vacancy => {
-            const score = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
+            const cosineScore = cosineSimilarity(cvEmbedding!, vacancy.embedding!);
+            // Locatie-bonus: +12 zelfde stad, +6 zelfde provincie, -8 verschillend.
+            // Skipt bij remote vacatures.
+            const { bonus } = compareLocations(vacancy.location, cv.location, vacancy.isRemote);
+            const finalScore = applyLocationBonus(Math.round(cosineScore * 100), bonus);
+
             const obj = vacancy.toObject() as unknown as Record<string, unknown>;
             delete obj.embedding;
             obj.description = sanitizeJobText(vacancy.description, vacancy.company);
@@ -89,7 +95,7 @@ export async function GET(req: NextRequest, { params }: Params) {
                 _vacancyId: vacancy._id,
                 _vacancyTitle: vacancy.title,
                 ...obj,
-                matchScore: Math.round(score * 100),
+                matchScore: finalScore,
                 matchType: 'AI Semantic' as const,
             };
         })

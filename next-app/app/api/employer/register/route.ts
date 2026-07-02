@@ -10,11 +10,11 @@ export async function POST(req: NextRequest) {
     try {
         await connectDB();
         const body = await req.json();
-        const { username, password, companyName, contactEmail, phone, kkfNumber } = body || {};
+        const { password, companyName, contactEmail, phone, kkfNumber } = body || {};
 
-        if (!username || !password || !companyName || !contactEmail || !phone) {
+        if (!password || !companyName || !contactEmail || !phone) {
             return NextResponse.json(
-                { success: false, message: 'Gebruikersnaam, wachtwoord, bedrijfsnaam, e-mail en telefoonnummer zijn verplicht' },
+                { success: false, message: 'Wachtwoord, bedrijfsnaam, e-mail en telefoonnummer zijn verplicht' },
                 { status: 400 },
             );
         }
@@ -51,20 +51,25 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const normalizedUsername = String(username).toLowerCase().trim();
-        const existing = await Employer.findOne({ username: normalizedUsername });
+        // Email = username. We slaan 'm in beide velden op zodat de unique-index
+        // op username intact blijft én legacy login-flow (username) ongewijzigd
+        // werkt. Bestaande accounts met een handgekozen username blijven werken.
+        const normalizedEmail = String(contactEmail).toLowerCase().trim();
+        const existing = await Employer.findOne({
+            $or: [{ username: normalizedEmail }, { contactEmail: normalizedEmail }],
+        });
         if (existing) {
             return NextResponse.json(
-                { success: false, message: 'Deze gebruikersnaam is al in gebruik' },
+                { success: false, message: 'Dit e-mailadres is al geregistreerd' },
                 { status: 409 },
             );
         }
 
         const employer = await Employer.create({
-            username: normalizedUsername,
+            username: normalizedEmail,
             password,
             companyName: String(companyName).trim(),
-            contactEmail: String(contactEmail).toLowerCase().trim(),
+            contactEmail: normalizedEmail,
             phone: String(phone).trim(),
             kkfNumber: trimmedKkf || undefined,
             plan: 'basic',
@@ -94,7 +99,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                message: e.code === 11000 ? 'Deze gebruikersnaam is al in gebruik' : 'Registratie mislukt',
+                message: e.code === 11000 ? 'Dit e-mailadres is al geregistreerd' : 'Registratie mislukt',
             },
             { status: 500 },
         );
