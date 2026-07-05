@@ -30,7 +30,13 @@ test.describe('User journeys', () => {
     await page.getByPlaceholder(/functie, trefwoord/i).press('Enter');
     await expect(page).toHaveURL(/vacatures\?q=Sales/);
     await expect.soft(page.getByPlaceholder(/functie of bedrijf/i)).toHaveValue('Sales');
+    // De match moet zichtbaar zijn...
     await expect.soft(page.getByRole('link', { name: 'Sales Manager' })).toBeVisible();
+    // ...én een niet-matchende vacature moet WEG zijn. Zonder deze regel zou een
+    // kapot filter dat alles toont ook slagen (Sales Manager staat er dan ook) —
+    // precies de holle-assertie-val van de sectorbug.
+    await expect.soft(page.getByRole('link', { name: 'Warehouse Coordinator' })).toHaveCount(0);
+    await expect.soft(page.getByRole('link', { name: 'Vacature 3', exact: true })).toHaveCount(0);
   });
 
   test('J2 vacatures: salaris-slider filtert, suggesties werken, sorteren werkt', async ({ page }) => {
@@ -60,6 +66,9 @@ test.describe('User journeys', () => {
     await expect(page.getByRole('link', { name: 'Sales Manager' })).toBeVisible();
     await page.getByRole('button', { name: /bewaar vacature sales manager/i }).click();
     await expect.soft(page).toHaveURL(/\/auth/);
+    // Niet alleen de URL: de auth-pagina moet ook echt gerenderd zijn (een
+    // wachtwoordveld). Een redirect naar een lege/kapotte /auth zou anders slagen.
+    await expect.soft(page.locator('input[type=password]').first()).toBeVisible();
   });
 
   test('J4 detail: apply-modal validatie + escape sluit', async ({ page }) => {
@@ -76,13 +85,19 @@ test.describe('User journeys', () => {
     await expect.soft(page.getByRole('heading', { name: /solliciteren via/i })).toHaveCount(0);
   });
 
-  test('J5 sectoren -> klik sector -> gefilterde vacatures', async ({ page }) => {
+  test('J5 sectoren -> klik sector -> zoekterm belandt in het filter', async ({ page }) => {
     await mockAll(page);
     await page.goto('/sectoren');
-    const links = page.locator('a[href*="/vacatures?q="]');
-    await expect(links.first()).toBeVisible();
-    await links.first().click();
+    // Pak een concrete sectorkaart i.p.v. "de eerste link", zodat we het label
+    // dat wordt doorgegeven ook kunnen verifiëren in het zoekveld (echt eindresultaat,
+    // niet alleen dat de URL veranderde).
+    const card = page.locator('a[href*="/vacatures?q="]', { hasText: 'Finance & Legal' });
+    await expect(card).toBeVisible();
+    await card.click();
     await expect.soft(page).toHaveURL(/vacatures\?q=/);
+    // Kernoutcome: het label staat voorgevuld in het zoekveld (de bug was dat dit
+    // label vervolgens nooit matchte — J13 borgt de resultaten zelf).
+    await expect.soft(page.getByPlaceholder(/functie of bedrijf/i)).toHaveValue(/Finance & Legal/);
   });
 
   test('J6 auth: signup werkgever toont bedrijfsvelden + validatie', async ({ page }) => {
@@ -91,7 +106,11 @@ test.describe('User journeys', () => {
     await page.getByRole('button', { name: /werkgever|employer/i }).first().click();
     await expect.soft(page.getByPlaceholder(/bedrijfsnaam|company/i).first()).toBeVisible();
     await page.getByRole('button', { name: /account creëren|create account/i }).click();
-    await expect.soft(page.locator('text=/verplicht|required|voer|vul/i').first()).toBeVisible();
+    // Scherp anker i.p.v. losse woorden (die ook op labels matchen): de validatie
+    // markeert minstens één veld semantisch als ongeldig (aria-invalid=true)...
+    await expect.soft(page.locator('[aria-invalid="true"]').first()).toBeVisible();
+    // ...en het formulier is NIET verzonden — we staan nog op het signup-formulier.
+    await expect.soft(page.getByPlaceholder(/bedrijfsnaam|company/i).first()).toBeVisible();
   });
 
   test('J7 wachtwoord-vergeten: leeg -> fout, gevuld -> succes', async ({ page }) => {
@@ -99,23 +118,36 @@ test.describe('User journeys', () => {
     await page.route('**/forgot-password', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
     await page.goto('/wachtwoord-vergeten');
     await page.locator('button[type=submit], form button').last().click();
-    await expect.soft(page.locator('text=/verplicht|vul|voer/i').first()).toBeVisible();
+    // Exacte validatiemelding i.p.v. een losse-woorden-regex.
+    await expect.soft(page.getByText(/voer je e-mailadres in/i)).toBeVisible();
     await page.locator('input').first().fill('test@example.com');
     await page.locator('button[type=submit], form button').last().click();
-    await expect.soft(page.locator('text=/verstuurd|inbox|check/i').first()).toBeVisible();
+    // Echt eindresultaat: het succes-scherm ("Check je inbox") is gerenderd,
+    // niet enkel een tekstfragment ergens op de pagina.
+    await expect.soft(page.getByRole('heading', { name: /check je inbox/i })).toBeVisible();
   });
 
   test('J8 mijn-matches zonder CV -> nette lege staat met upload-CTA', async ({ page }) => {
     await mockAll(page);
     await page.goto('/mijn-matches');
-    await expect.soft(page.getByRole('link', { name: /upload/i }).first()).toBeVisible();
+    // Echt eindresultaat: de "geen CV"-staat is gerenderd met de juiste tekst...
+    await expect.soft(page.getByRole('heading', { name: /nog geen cv gevonden/i })).toBeVisible();
+    // ...en de CTA wijst daadwerkelijk naar /cv-upload (niet zomaar "een upload-link").
+    await expect.soft(page.getByRole('link', { name: /cv uploaden/i })).toHaveAttribute('href', '/cv-upload');
   });
 
   test('J9 cv-builder: stap-validatie', async ({ page }) => {
     await mockAll(page);
     await page.goto('/cv-builder');
-    await page.getByRole('button', { name: /volgende|next/i }).click();
-    await expect.soft(page.locator('text=/verplicht|vul|voer/i').first()).toBeVisible();
+    // Exacte 'Volgende' (NL default): /next/i zou ook de Next.js Dev Tools-knop
+    // matchen in dev-mode (bestaat niet in productie).
+    const nextBtn = page.getByRole('button', { name: 'Volgende', exact: true });
+    await nextBtn.click();
+    // Exacte veld-specifieke fout i.p.v. losse woorden; bewijst dat stap-validatie
+    // echt aansloeg op het verplichte naam-veld.
+    await expect.soft(page.getByText(/naam is verplicht/i)).toBeVisible();
+    // En de stap is NIET voortgezet: de Volgende-knop staat er nog.
+    await expect.soft(nextBtn).toBeVisible();
   });
 
   test('J10 faq: accordion open/dicht', async ({ page }) => {
