@@ -50,7 +50,6 @@ const VACATURES_T = {
     verified: 'Geverifieerd',
     trustFactorHigh: 'Trust Factor: High',
     verifiedDesc: 'Geverifieerde partners ondergaan een identiteitscheck om veiligheid te waarborgen.',
-    matchScore: 'Match Score',
     whatsapp: 'WhatsApp',
     details: 'Details',
     emptyTitle: 'Geen vacatures gevonden voor deze zoekopdracht.',
@@ -95,7 +94,6 @@ const VACATURES_T = {
     verified: 'Verified',
     trustFactorHigh: 'Trust Factor: High',
     verifiedDesc: 'Verified partners undergo an identity check to guarantee safety.',
-    matchScore: 'Match Score',
     whatsapp: 'WhatsApp',
     details: 'Details',
     emptyTitle: 'No vacancies found for this search.',
@@ -140,7 +138,6 @@ const VACATURES_T = {
     verified: 'Verificado',
     trustFactorHigh: 'Trust Factor: High',
     verifiedDesc: 'Los socios verificados pasan una verificación de identidad para garantizar la seguridad.',
-    matchScore: 'Puntuación',
     whatsapp: 'WhatsApp',
     details: 'Detalles',
     emptyTitle: 'No se encontraron vacantes para esta búsqueda.',
@@ -171,7 +168,6 @@ interface JobCard {
   salary: string;
   salaryValue: number | null;
   salaryCurrency: string;
-  match: number;
   verified: boolean;
   viaJobParsing: boolean;
   description?: string;
@@ -216,7 +212,6 @@ function vacancyToCard(v: ApiVacancy): JobCard {
     salary: formatSalary(v.salary),
     salaryValue,
     salaryCurrency: v.salary?.currency || 'SRD',
-    match: 0,
     verified: Boolean(v.company) && !viaJobParsing,
     viaJobParsing,
     description: v.description,
@@ -335,7 +330,6 @@ function VacaturesContent() {
 
     return matchesSearch && matchesPrice && matchesType && matchesLocation;
   }).sort((a, b) => {
-    if (sortBy === 'Match Score') return b.match - a.match;
     if (sortBy === 'Salaris') {
       return (b.salaryValue ?? 0) - (a.salaryValue ?? 0);
     }
@@ -559,7 +553,6 @@ function VacaturesContent() {
                   className="font-black text-black bg-transparent outline-none cursor-pointer hover:text-blue-600 transition-colors"
                 >
                   <option>Nieuwste</option>
-                  <option>Match Score</option>
                   <option>Salaris</option>
                 </select>
               </div>
@@ -572,16 +565,8 @@ function VacaturesContent() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   key={job.id} 
-                  className={cn(
-                    "bg-white border-2 p-8 transition-all relative group shadow-[8px_8px_0px_0px_rgba(241,245,249,1)] hover:shadow-[12px_12px_0px_0px_rgba(59,130,246,0.1)] hover:border-blue-600",
-                    job.match >= 90 ? "border-blue-600/30 bg-blue-50/10" : "border-slate-100"
-                  )}
+                  className="bg-white border-2 border-slate-100 p-8 transition-all relative group shadow-[8px_8px_0px_0px_rgba(241,245,249,1)] hover:shadow-[12px_12px_0px_0px_rgba(59,130,246,0.1)] hover:border-blue-600"
                 >
-                  {job.match >= 90 && (
-                    <div className="absolute -top-3 -left-3 bg-blue-600 text-white px-3 py-1 font-black text-[9px] uppercase tracking-widest -rotate-3 border-2 border-black shadow-lg z-10 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> High Match
-                    </div>
-                  )}
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-4">
@@ -651,13 +636,6 @@ function VacaturesContent() {
                         >
                           <Bookmark className={cn("w-5 h-5", savedJobs.includes(job.id) && "fill-current")} />
                         </button>
-                        <div className="flex flex-col items-end">
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">{t.matchScore}</div>
-                          <div className={cn(
-                            "text-4xl font-black leading-none italic",
-                            job.match >= 90 ? "text-blue-600" : job.match >= 80 ? "text-emerald-600" : "text-slate-900"
-                          )}>{job.match}%</div>
-                        </div>
                       </div>
                       <div className="flex gap-3 w-full">
                         {buildWhatsAppUrl(`Ik heb interesse in de vacature voor ${job.title}`) && (

@@ -39,7 +39,6 @@ const DETAIL_T = {
     backOverview: 'Terug naar overzicht',
     backVacancies: 'Terug naar vacatures',
     verifiedEmployer: 'Verified Employer',
-    matchScore: 'Match Score',
     applyNow: 'Direct Solliciteren',
     notFoundTitle: 'Vacature niet gevonden',
     notFoundText: 'Deze vacature bestaat niet meer of kon niet worden geladen.',
@@ -95,7 +94,6 @@ const DETAIL_T = {
     backOverview: 'Back to overview',
     backVacancies: 'Back to vacancies',
     verifiedEmployer: 'Verified Employer',
-    matchScore: 'Match Score',
     applyNow: 'Apply now',
     notFoundTitle: 'Vacancy not found',
     notFoundText: 'This vacancy no longer exists or could not be loaded.',
@@ -151,7 +149,6 @@ const DETAIL_T = {
     backOverview: 'Volver al resumen',
     backVacancies: 'Volver a las vacantes',
     verifiedEmployer: 'Empleador verificado',
-    matchScore: 'Puntuación de coincidencia',
     applyNow: 'Postularse ahora',
     notFoundTitle: 'Vacante no encontrada',
     notFoundText: 'Esta vacante ya no existe o no se pudo cargar.',
@@ -237,7 +234,6 @@ interface JobDetail {
   location: string;
   type: string;
   salary: string;
-  match: number;
   verified: boolean;
   description?: string;
   requirements?: string[];
@@ -260,7 +256,6 @@ function vacancyToJob(v: ApiVacancy): JobDetail {
     location: v.location || 'Locatie onbekend',
     type: normalizeEmploymentType(v.employmentType),
     salary: formatSalary(v.salary),
-    match: 0,
     verified: Boolean(v.company),
     description: v.description,
     requirements: v.requirements ? v.requirements.split('\n').filter(Boolean) : undefined,
@@ -576,10 +571,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
 
             <div className="flex flex-col items-end gap-6 w-full lg:w-auto">
-               <div className="p-6 bg-white/5 border border-white/10 backdrop-blur-md flex flex-col items-end">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{t.matchScore}</span>
-                  <span className="text-6xl font-black text-blue-600 italic leading-none">{job.match}%</span>
-               </div>
                <div className="flex gap-4 w-full lg:w-auto">
                   <button
                     onClick={toggleSave}

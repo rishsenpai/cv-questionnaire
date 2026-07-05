@@ -127,4 +127,35 @@ test.describe('User journeys', () => {
     await q.click();
     await expect.soft(page.getByText(/volledig gratis/i)).toHaveCount(0);
   });
+
+  test('J11 vacatures: geen nep match-percentage (matching gebeurt pas op /mijn-matches)', async ({ page }) => {
+    await mockAll(page);
+    await page.goto('/vacatures');
+    await expect(page.getByRole('link', { name: 'Sales Manager' })).toBeVisible();
+    await expect.soft(page.getByText(/match score/i)).toHaveCount(0);
+    await expect.soft(page.locator('select option', { hasText: 'Match Score' })).toHaveCount(0);
+    await page.goto('/vacatures/aaaaaaaaaaaaaaaaaaaaaa00');
+    await expect(page.getByRole('heading', { name: 'Sales Manager' })).toBeVisible();
+    await expect.soft(page.getByText(/match score/i)).toHaveCount(0);
+  });
+});
+
+test.describe('Mobiel menu (touch)', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+  test('J12 mobiel: X-knop sluit het hamburgermenu', async ({ page }) => {
+    await mockAll(page);
+    await page.goto('/');
+    const toggle = page.getByRole('button', { name: /mobiel menu/i });
+    // Scope op <nav>: de footer heeft ook een 'CV Upload'-link die altijd zichtbaar is.
+    // .last(): het mobiele paneel staat na de (verborgen) desktop-nav in de DOM.
+    const navLink = page.locator('nav').getByRole('link', { name: 'CV Upload' }).last();
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(navLink).toBeVisible();
+    // Vóór de fix sloot touchstart het menu en opende de click het meteen weer.
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(navLink).not.toBeVisible();
+  });
 });

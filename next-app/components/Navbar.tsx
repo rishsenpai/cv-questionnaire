@@ -26,7 +26,11 @@ export function Navbar() {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileToggleRef = useRef<HTMLButtonElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
+  // De hamburger/X-knop staat buiten het menu-paneel; zonder deze uitzondering
+  // sluit de outside-tap het menu en opent de click van de knop het direct weer.
+  const mobileMenuRefs = useRef([mobileMenuRef, mobileToggleRef]).current;
   const { lang, setLang } = useLang();
   const t = useT(NAV_T);
 
@@ -39,7 +43,7 @@ export function Navbar() {
     return () => window.removeEventListener('storage', checkUser);
   }, []);
   useDismissibleLayer(showDropdown, dropdownRef, () => setShowDropdown(false));
-  useDismissibleLayer(isMobileMenuOpen, mobileMenuRef, () => setIsMobileMenuOpen(false));
+  useDismissibleLayer(isMobileMenuOpen, mobileMenuRefs, () => setIsMobileMenuOpen(false));
   useDismissibleLayer(showLangMenu, langMenuRef, () => setShowLangMenu(false));
 
   // Admin-console heeft een eigen header — verberg de publieke navigatie daar.
@@ -200,9 +204,10 @@ export function Navbar() {
             )}
 
             <button
+              ref={mobileToggleRef}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-expanded={isMobileMenuOpen}
-              aria-label="Open mobiel menu"
+              aria-label={isMobileMenuOpen ? 'Sluit mobiel menu' : 'Open mobiel menu'}
               className="lg:hidden p-2 hover:bg-slate-100 transition-colors"
             >
               {isMobileMenuOpen ? <CloseIcon className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
