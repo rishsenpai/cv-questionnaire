@@ -140,6 +140,26 @@ test.describe('User journeys', () => {
   });
 });
 
+test.describe('Sector-zoekfilter (woord-matching)', () => {
+  const SECTOR_VACS = [
+    { _id: 'bbbbbbbbbbbbbbbbbbbbbb01', title: 'Data Analist', location: 'Paramaribo', employmentType: 'FULL_TIME', salary: { min: 6000, max: 9000, currency: 'SRD' }, viaJobParsing: true, description: 'Werken met dashboards', requirements: 'SQL', postedAt: new Date(2026, 5, 1).toISOString() },
+    { _id: 'bbbbbbbbbbbbbbbbbbbbbb02', title: 'Vrachtwagenchauffeur', location: 'Nickerie', employmentType: 'FULL_TIME', salary: { min: 4000, max: 5000, currency: 'SRD' }, viaJobParsing: true, description: 'Transport van goederen', requirements: 'Rijbewijs', postedAt: new Date(2026, 5, 2).toISOString() },
+  ];
+
+  test('J13 meerwoords-sectorlabel toont de relevante vacature (niet leeg)', async ({ page }) => {
+    await page.route('**/api/analytics/track', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
+    await page.route('**/api/vacancies?**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, vacancies: SECTOR_VACS }) }));
+    await page.route('**/api/candidate/me', r => r.fulfill({ status: 401, contentType: 'application/json', body: '{"success":false}' }));
+
+    // Exact de link die een sectorkaart genereert: label met komma + ampersand.
+    await page.goto('/vacatures?q=' + encodeURIComponent('IT, Data & Digital'));
+    // "Data" uit het label matcht de titel "Data Analist" → zichtbaar.
+    await expect(page.getByRole('link', { name: 'Data Analist' })).toBeVisible();
+    // De niet-gerelateerde vacature valt weg.
+    await expect.soft(page.getByRole('link', { name: 'Vrachtwagenchauffeur' })).toHaveCount(0);
+  });
+});
+
 test.describe('Mobiel menu (touch)', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 

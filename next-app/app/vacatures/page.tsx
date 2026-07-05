@@ -314,8 +314,16 @@ function VacaturesContent() {
     refreshVacaturesState();
   };
 
+  // Zoekterm opsplitsen in losse woorden. Sector-links sturen meerwoords-labels
+  // mee ("IT, Data & Digital") die nooit als één letterlijke substring in een
+  // vacaturetitel staan — vandaar dat elke sector eerder 0 resultaten gaf. We
+  // matchen nu op elk afzonderlijk woord (komma's/&/spaties zijn scheidingstekens)
+  // over titel + omschrijving, zodat een sectorklik de relevante vacatures toont.
+  const searchTerms = searchQuery.toLowerCase().split(/[^a-z0-9]+/i).filter(Boolean);
+
   const filteredJobs = jobs.filter(job => {
-    const matchesSearch = (job.title || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const haystack = `${job.title || ''} ${job.description || ''}`.toLowerCase();
+    const matchesSearch = searchTerms.length === 0 || searchTerms.some(term => haystack.includes(term));
     const matchesLocation = selectedLocation === 'Heel Suriname' || String(job.location || '').toLowerCase().includes(selectedLocation.toLowerCase());
     const matchesType = activeType === 'Alle' || job.type === activeType;
 
