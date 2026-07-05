@@ -26,6 +26,9 @@ export default defineConfig({
         env: {
             NODE_ENV: 'test',
             PORT: '3001',
+            // .env.local wordt in NODE_ENV=test niet geladen; geef publieke
+            // client-config expliciet mee zodat tests het echte gedrag zien.
+            NEXT_PUBLIC_WHATSAPP_NUMBER: '31624106252',
         },
     },
 });

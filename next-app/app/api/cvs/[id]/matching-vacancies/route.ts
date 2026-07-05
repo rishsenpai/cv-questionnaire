@@ -13,6 +13,7 @@ import {
 import { errorMessages, type Language } from '@/lib/server/i18n';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
 import { compareLocations, applyLocationBonus } from '@/lib/server/locationMatch';
+import { visibleVacancyCountryQuery, isHiddenVacancy } from '@/lib/country';
 
 export const maxDuration = 60;
 
@@ -57,11 +58,15 @@ export async function GET(req: NextRequest, { params }: Params) {
             console.log(`Generated and cached embedding for CV: ${cv.fullName}`);
         }
 
-        const vacancies = await Vacancy.find({
+        // Sluit verborgen landen (NL) uit: Surinaamse kandidaten mogen niet op
+        // NL-vacatures matchen/solliciteren. isHiddenVacancy() vangt hieronder ook
+        // vacatures af die nog geen gebackfilld country-veld hebben.
+        const vacancies = (await Vacancy.find({
             isActive: true,
             fulfilledAt: null,
             embedding: { $exists: true, $ne: [] },
-        }).select('+embedding -fileData');
+            ...visibleVacancyCountryQuery(),
+        }).select('+embedding -fileData')).filter(v => !isHiddenVacancy(v));
 
         if (vacancies.length === 0) {
             return NextResponse.json({

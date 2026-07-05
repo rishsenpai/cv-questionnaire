@@ -20,8 +20,102 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { isValidEmail, isValidPhone } from '@/lib/validation';
 import { useAuth } from '@/lib/auth-context';
+import { useT } from '@/lib/i18n/LanguageProvider';
 
 type Role = 'candidate' | 'employer';
+
+const AUTH_T = {
+  nl: {
+    backHome: 'Terug naar Home',
+    tagline: 'Toegang tot de meest geavanceerde talent hub van Suriname.',
+    feat1: 'Geverifieerde Profielen & Vacatures',
+    feat2: 'AI-Powered Match Scoring',
+    feat3: 'Veilig & Transparant Proces',
+    privacy: 'PRIVACY', terms: 'TERMS',
+    success: 'Succesvol!',
+    redirecting: 'Je wordt nu doorverwezen',
+    toMatches: ' naar je matches...', toDashboard: ' naar je dashboard...',
+    loginTitle: 'Inloggen', signupTitle: 'Registreren',
+    loginSub: 'Welkom terug bij Jobparsing+', signupSub: 'Creëer je account in minder dan 2 minuten',
+    createAccount: 'Account aanmaken', haveAccount: 'Heb je al een account?',
+    candidate: 'Kandidaat', employer: 'Werkgever',
+    phFullName: 'VOLLEDIGE NAAM', phCompany: 'BEDRIJFSNAAM', phUsername: 'GEBRUIKERSNAAM',
+    phContactEmail: 'CONTACT E-MAIL', phPhone: 'TELEFOONNUMMER', phKkf: 'KKF-NUMMER (OPTIONEEL)',
+    phEmail: 'E-MAILADRES', phPassword: 'WACHTWOORD', phConfirm: 'BEVESTIG WACHTWOORD',
+    forgotPassword: 'Wachtwoord vergeten?',
+    processing: 'Verwerken...', submitLogin: 'Inloggen', submitSignup: 'Account Creëren',
+    employerNote: 'Als werkgever krijg je toegang tot een dashboard waar je vacatures kan plaatsen die direct zichtbaar worden voor kandidaten.',
+    errEmail: 'Voer een geldig e-mailadres in.',
+    errFullName: 'Voer je volledige naam in.',
+    errPassword8: 'Gebruik minimaal 8 tekens.',
+    errConfirm: 'Wachtwoorden komen niet overeen.',
+    errUsername: 'Voer een gebruikersnaam in.',
+    errCompany: 'Voer een bedrijfsnaam in.',
+    errPhone: 'Voer een geldig telefoonnummer in.',
+    errKkf: 'Formaat: 4-8 cijfers, optioneel met letter-suffix.',
+    errPasswordComplex: 'Min. 8 tekens, met letter én cijfer.',
+  },
+  en: {
+    backHome: 'Back to Home',
+    tagline: 'Access to the most advanced talent hub in Suriname.',
+    feat1: 'Verified Profiles & Vacancies',
+    feat2: 'AI-Powered Match Scoring',
+    feat3: 'Safe & Transparent Process',
+    privacy: 'PRIVACY', terms: 'TERMS',
+    success: 'Success!',
+    redirecting: "You're being redirected",
+    toMatches: ' to your matches...', toDashboard: ' to your dashboard...',
+    loginTitle: 'Log In', signupTitle: 'Sign Up',
+    loginSub: 'Welcome back to Jobparsing+', signupSub: 'Create your account in less than 2 minutes',
+    createAccount: 'Create account', haveAccount: 'Already have an account?',
+    candidate: 'Candidate', employer: 'Employer',
+    phFullName: 'FULL NAME', phCompany: 'COMPANY NAME', phUsername: 'USERNAME',
+    phContactEmail: 'CONTACT EMAIL', phPhone: 'PHONE NUMBER', phKkf: 'KKF NUMBER (OPTIONAL)',
+    phEmail: 'EMAIL ADDRESS', phPassword: 'PASSWORD', phConfirm: 'CONFIRM PASSWORD',
+    forgotPassword: 'Forgot password?',
+    processing: 'Processing...', submitLogin: 'Log In', submitSignup: 'Create Account',
+    employerNote: 'As an employer you get access to a dashboard where you can post vacancies that become instantly visible to candidates.',
+    errEmail: 'Enter a valid email address.',
+    errFullName: 'Enter your full name.',
+    errPassword8: 'Use at least 8 characters.',
+    errConfirm: 'Passwords do not match.',
+    errUsername: 'Enter a username.',
+    errCompany: 'Enter a company name.',
+    errPhone: 'Enter a valid phone number.',
+    errKkf: 'Format: 4-8 digits, optionally with a letter suffix.',
+    errPasswordComplex: 'Min. 8 characters, with a letter and a digit.',
+  },
+  es: {
+    backHome: 'Volver al inicio',
+    tagline: 'Acceso al centro de talento más avanzado de Surinam.',
+    feat1: 'Perfiles y Vacantes Verificados',
+    feat2: 'Puntuación de Coincidencias con IA',
+    feat3: 'Proceso Seguro y Transparente',
+    privacy: 'PRIVACIDAD', terms: 'TÉRMINOS',
+    success: '¡Éxito!',
+    redirecting: 'Se te está redirigiendo',
+    toMatches: ' a tus coincidencias...', toDashboard: ' a tu panel...',
+    loginTitle: 'Iniciar sesión', signupTitle: 'Registrarse',
+    loginSub: 'Bienvenido de nuevo a Jobparsing+', signupSub: 'Crea tu cuenta en menos de 2 minutos',
+    createAccount: 'Crear cuenta', haveAccount: '¿Ya tienes una cuenta?',
+    candidate: 'Candidato', employer: 'Empleador',
+    phFullName: 'NOMBRE COMPLETO', phCompany: 'NOMBRE DE LA EMPRESA', phUsername: 'NOMBRE DE USUARIO',
+    phContactEmail: 'CORREO DE CONTACTO', phPhone: 'NÚMERO DE TELÉFONO', phKkf: 'NÚMERO KKF (OPCIONAL)',
+    phEmail: 'CORREO ELECTRÓNICO', phPassword: 'CONTRASEÑA', phConfirm: 'CONFIRMAR CONTRASEÑA',
+    forgotPassword: '¿Olvidaste tu contraseña?',
+    processing: 'Procesando...', submitLogin: 'Iniciar sesión', submitSignup: 'Crear cuenta',
+    employerNote: 'Como empleador obtienes acceso a un panel donde puedes publicar vacantes que se vuelven visibles de inmediato para los candidatos.',
+    errEmail: 'Introduce una dirección de correo válida.',
+    errFullName: 'Introduce tu nombre completo.',
+    errPassword8: 'Usa al menos 8 caracteres.',
+    errConfirm: 'Las contraseñas no coinciden.',
+    errUsername: 'Introduce un nombre de usuario.',
+    errCompany: 'Introduce un nombre de empresa.',
+    errPhone: 'Introduce un número de teléfono válido.',
+    errKkf: 'Formato: 4-8 dígitos, opcionalmente con un sufijo de letra.',
+    errPasswordComplex: 'Mín. 8 caracteres, con una letra y un dígito.',
+  },
+};
 
 function AuthInner() {
   const searchParams = useSearchParams();
@@ -49,6 +143,7 @@ function AuthInner() {
   }>({});
   const router = useRouter();
   const { loginCandidate, registerCandidate, loginEmployer, registerEmployer } = useAuth();
+  const t = useT(AUTH_T);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,34 +152,34 @@ function AuthInner() {
 
     if (role === 'candidate') {
       const email = formValues.email.trim().toLowerCase();
-      if (!isValidEmail(email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
-      if (!isLogin && !formValues.fullName.trim()) nextErrors.fullName = 'Voer je volledige naam in.';
-      if (password.length < 8) nextErrors.password = 'Gebruik minimaal 8 tekens.';
+      if (!isValidEmail(email)) nextErrors.email = t.errEmail;
+      if (!isLogin && !formValues.fullName.trim()) nextErrors.fullName = t.errFullName;
+      if (password.length < 8) nextErrors.password = t.errPassword8;
       if (!isLogin && password !== formValues.confirmPassword) {
-        nextErrors.confirmPassword = 'Wachtwoorden komen niet overeen.';
+        nextErrors.confirmPassword = t.errConfirm;
       }
     } else {
       // employer
-      if (!formValues.username.trim()) nextErrors.username = 'Voer een gebruikersnaam in.';
+      if (!formValues.username.trim()) nextErrors.username = t.errUsername;
       if (!isLogin) {
-        if (!formValues.companyName.trim()) nextErrors.companyName = 'Voer een bedrijfsnaam in.';
+        if (!formValues.companyName.trim()) nextErrors.companyName = t.errCompany;
         if (!formValues.email.trim() || !isValidEmail(formValues.email.trim().toLowerCase())) {
-          nextErrors.email = 'Voer een geldig e-mailadres in.';
+          nextErrors.email = t.errEmail;
         }
         if (!isValidPhone(formValues.phone)) {
-          nextErrors.phone = 'Voer een geldig telefoonnummer in.';
+          nextErrors.phone = t.errPhone;
         }
         if (formValues.kkfNumber.trim() && !/^\d{4,8}[A-Za-z]?$/.test(formValues.kkfNumber.trim())) {
-          nextErrors.kkfNumber = 'Formaat: 4-8 cijfers, optioneel met letter-suffix.';
+          nextErrors.kkfNumber = t.errKkf;
         }
         if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)) {
-          nextErrors.password = 'Min. 8 tekens, met letter én cijfer.';
+          nextErrors.password = t.errPasswordComplex;
         }
         if (password !== formValues.confirmPassword) {
-          nextErrors.confirmPassword = 'Wachtwoorden komen niet overeen.';
+          nextErrors.confirmPassword = t.errConfirm;
         }
       } else if (password.length < 8) {
-        nextErrors.password = 'Gebruik minimaal 8 tekens.';
+        nextErrors.password = t.errPassword8;
       }
     }
 
@@ -143,21 +238,21 @@ function AuthInner() {
           <div className="relative z-10 min-w-0">
             <Link href="/" className="inline-flex items-center gap-2 mb-12 hover:text-blue-400 transition-colors">
               <ChevronLeft className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">Terug naar Home</span>
+              <span className="text-xs font-black uppercase tracking-widest text-slate-400">{t.backHome}</span>
             </Link>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-8 break-words">
               Jobparsing<span className="text-blue-600 italic">+</span>
             </h1>
             <p className="text-xl font-bold text-slate-400 uppercase tracking-tight italic max-w-sm mb-12">
-              Toegang tot de meest geavanceerde talent hub van Suriname.
+              {t.tagline}
             </p>
 
             <div className="space-y-6">
               {[
-                { icon: ShieldCheck, text: 'Geverifieerde Profielen & Vacatures' },
-                { icon: Zap, text: 'AI-Powered Match Scoring' },
-                { icon: Lock, text: 'Veilig & Transparant Proces' },
+                { icon: ShieldCheck, text: t.feat1 },
+                { icon: Zap, text: t.feat2 },
+                { icon: Lock, text: t.feat3 },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-4 text-xs font-black uppercase tracking-widest">
                   <div className="w-8 h-8 bg-blue-600 flex items-center justify-center">
@@ -172,8 +267,8 @@ function AuthInner() {
           <div className="relative z-10 mt-20 pt-10 border-t border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
             <span>© 2026 JOBPARSING+</span>
             <div className="flex gap-4">
-              <span>PRIVACY</span>
-              <span>TERMS</span>
+              <span>{t.privacy}</span>
+              <span>{t.terms}</span>
             </div>
           </div>
 
@@ -190,9 +285,9 @@ function AuthInner() {
               <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-8 border-4 border-emerald-500 shadow-[8px_8px_0px_0px_rgba(16,185,129,0.2)]">
                 <CheckCircle2 className="w-12 h-12" />
               </div>
-              <h2 className="text-4xl font-black uppercase tracking-tighter italic mb-4">Succesvol!</h2>
+              <h2 className="text-4xl font-black uppercase tracking-tighter italic mb-4">{t.success}</h2>
               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                Je wordt nu doorverwezen{role === 'candidate' ? ' naar je matches...' : ' naar je dashboard...'}
+                {t.redirecting}{role === 'candidate' ? t.toMatches : t.toDashboard}
               </p>
             </motion.div>
           ) : (
@@ -200,10 +295,10 @@ function AuthInner() {
               <div className="flex justify-between items-end mb-8">
                 <div>
                   <h2 className="text-4xl font-black uppercase tracking-tighter italic leading-none mb-2">
-                    {isLogin ? 'Inloggen' : 'Registreren'}
+                    {isLogin ? t.loginTitle : t.signupTitle}
                   </h2>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    {isLogin ? 'Welkom terug bij Jobparsing+' : 'Creëer je account in minder dan 2 minuten'}
+                    {isLogin ? t.loginSub : t.signupSub}
                   </p>
                 </div>
                 <button
@@ -213,7 +308,7 @@ function AuthInner() {
                   }}
                   className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline decoration-2 underline-offset-4"
                 >
-                  {isLogin ? 'Account aanmaken' : 'Heb je al een account?'}
+                  {isLogin ? t.createAccount : t.haveAccount}
                 </button>
               </div>
 
@@ -227,7 +322,7 @@ function AuthInner() {
                   )}
                 >
                   <User className={cn('w-5 h-5', role === 'candidate' ? 'text-blue-400' : 'group-hover:text-black')} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Kandidaat</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{t.candidate}</span>
                 </button>
                 <button
                   type="button"
@@ -238,34 +333,34 @@ function AuthInner() {
                   )}
                 >
                   <Building2 className={cn('w-5 h-5', role === 'employer' ? 'text-blue-400' : 'group-hover:text-black')} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Werkgever</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{t.employer}</span>
                 </button>
               </div>
 
               <form onSubmit={handleAuth} className="space-y-4 flex-1">
                 {role === 'candidate' && !isLogin && (
-                  <FormField icon={User} placeholder="VOLLEDIGE NAAM" value={formValues.fullName} onChange={(v) => setFormValues((p) => ({ ...p, fullName: v }))} error={formErrors.fullName} />
+                  <FormField icon={User} placeholder={t.phFullName} value={formValues.fullName} onChange={(v) => setFormValues((p) => ({ ...p, fullName: v }))} error={formErrors.fullName} />
                 )}
                 {role === 'employer' && !isLogin && (
-                  <FormField icon={Building2} placeholder="BEDRIJFSNAAM" value={formValues.companyName} onChange={(v) => setFormValues((p) => ({ ...p, companyName: v }))} error={formErrors.companyName} />
+                  <FormField icon={Building2} placeholder={t.phCompany} value={formValues.companyName} onChange={(v) => setFormValues((p) => ({ ...p, companyName: v }))} error={formErrors.companyName} />
                 )}
                 {role === 'employer' ? (
                   <>
-                    <FormField icon={User} placeholder="GEBRUIKERSNAAM" value={formValues.username} onChange={(v) => setFormValues((p) => ({ ...p, username: v }))} error={formErrors.username} />
+                    <FormField icon={User} placeholder={t.phUsername} value={formValues.username} onChange={(v) => setFormValues((p) => ({ ...p, username: v }))} error={formErrors.username} />
                     {!isLogin && (
                       <>
-                        <FormField icon={Mail} type="email" placeholder="CONTACT E-MAIL" value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
-                        <FormField icon={Phone} type="tel" placeholder="TELEFOONNUMMER" value={formValues.phone} onChange={(v) => setFormValues((p) => ({ ...p, phone: v }))} error={formErrors.phone} />
-                        <FormField icon={FileCheck} placeholder="KKF-NUMMER (OPTIONEEL)" value={formValues.kkfNumber} onChange={(v) => setFormValues((p) => ({ ...p, kkfNumber: v }))} error={formErrors.kkfNumber} />
+                        <FormField icon={Mail} type="email" placeholder={t.phContactEmail} value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
+                        <FormField icon={Phone} type="tel" placeholder={t.phPhone} value={formValues.phone} onChange={(v) => setFormValues((p) => ({ ...p, phone: v }))} error={formErrors.phone} />
+                        <FormField icon={FileCheck} placeholder={t.phKkf} value={formValues.kkfNumber} onChange={(v) => setFormValues((p) => ({ ...p, kkfNumber: v }))} error={formErrors.kkfNumber} />
                       </>
                     )}
                   </>
                 ) : (
-                  <FormField icon={Mail} type="email" placeholder="E-MAILADRES" value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
+                  <FormField icon={Mail} type="email" placeholder={t.phEmail} value={formValues.email} onChange={(v) => setFormValues((p) => ({ ...p, email: v }))} error={formErrors.email} />
                 )}
-                <FormField icon={Lock} type="password" placeholder="WACHTWOORD" value={formValues.password} onChange={(v) => setFormValues((p) => ({ ...p, password: v }))} error={formErrors.password} />
+                <FormField icon={Lock} type="password" placeholder={t.phPassword} value={formValues.password} onChange={(v) => setFormValues((p) => ({ ...p, password: v }))} error={formErrors.password} />
                 {!isLogin && (
-                  <FormField icon={Lock} type="password" placeholder="BEVESTIG WACHTWOORD" value={formValues.confirmPassword} onChange={(v) => setFormValues((p) => ({ ...p, confirmPassword: v }))} error={formErrors.confirmPassword} />
+                  <FormField icon={Lock} type="password" placeholder={t.phConfirm} value={formValues.confirmPassword} onChange={(v) => setFormValues((p) => ({ ...p, confirmPassword: v }))} error={formErrors.confirmPassword} />
                 )}
 
                 {isLogin && (
@@ -274,7 +369,7 @@ function AuthInner() {
                       href={`/wachtwoord-vergeten?role=${role}`}
                       className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline decoration-2 underline-offset-4"
                     >
-                      Wachtwoord vergeten?
+                      {t.forgotPassword}
                     </Link>
                   </div>
                 )}
@@ -289,11 +384,11 @@ function AuthInner() {
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Verwerken...
+                      {t.processing}
                     </>
                   ) : (
                     <>
-                      {isLogin ? 'Inloggen' : 'Account Creëren'}
+                      {isLogin ? t.submitLogin : t.submitSignup}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -301,7 +396,7 @@ function AuthInner() {
 
                 {role === 'employer' && !isLogin && (
                   <p className="text-[10px] font-bold text-slate-400 italic mt-4 text-center">
-                    Als werkgever krijg je toegang tot een dashboard waar je vacatures kan plaatsen die direct zichtbaar worden voor kandidaten.
+                    {t.employerNote}
                   </p>
                 )}
               </form>

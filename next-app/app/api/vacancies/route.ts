@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
+import { visibleVacancyCountryQuery, isHiddenVacancy } from '@/lib/country';
 
 export async function GET(req: NextRequest) {
     try {
@@ -14,7 +15,10 @@ export async function GET(req: NextRequest) {
         const location = url.searchParams.get('location') || '';
         const source = url.searchParams.get('source') || '';
 
-        const query: Record<string, unknown> = { isActive: true, fulfilledAt: null };
+        // Sluit verborgen landen (NL) uit — Surinaamse kandidaten mogen niet op
+        // NL-vacatures solliciteren. Backfilld country-veld gaat via de DB-query;
+        // nog niet-gelabelde vacatures vangen we hieronder af met isHiddenVacancy().
+        const query: Record<string, unknown> = { isActive: true, fulfilledAt: null, ...visibleVacancyCountryQuery() };
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
@@ -27,11 +31,14 @@ export async function GET(req: NextRequest) {
 
         const total = await Vacancy.countDocuments(query);
         // Company laden voor sanitization, daarna strippen uit response.
-        const vacancies = await Vacancy.find(query)
+        const vacancies = (await Vacancy.find(query)
             .select('-fileData -embedding -fullText')
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit);
+            .limit(limit))
+            // Safety-net voor vacatures zonder gebackfilld country-veld: leid het land
+            // af uit locatie/omschrijving en filter NL alsnog weg.
+            .filter(v => !isHiddenVacancy(v));
 
         const sanitized = vacancies.map(v => {
             const obj = v.toObject() as unknown as Record<string, unknown>;

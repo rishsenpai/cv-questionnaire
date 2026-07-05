@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -13,11 +13,154 @@ import {
   CheckCircle2,
   Bookmark,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
+import { cn, normalizeEmploymentType } from '@/lib/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { isValidEmail } from '@/lib/validation';
 import { readJson, writeJson } from '@/lib/storage';
+import { buildWhatsAppUrl, SUPPORT_EMAIL } from '@/lib/config';
+import { useT } from '@/lib/i18n/LanguageProvider';
+
+// Bovengrens van de salaris-slider. "Uit" (= alles tonen) zodra de slider hier staat.
+const SALARY_MAX = 500000;
+
+const VACATURES_T = {
+  nl: {
+    heroA: 'Vind je',
+    heroHighlight: 'Perfecte Match',
+    heroSubtitle: 'Blader door geverifieerde vacatures in de meest invloedrijke sectoren van Suriname.',
+    searchPlaceholder: 'Functie of Bedrijf...',
+    search: 'Zoeken',
+    typeHeading: 'Type Dienstverband',
+    salaryHeading: 'Salaris Filter',
+    salaryHint: 'Filter op maximaal maandsalaris',
+    jobAlert: 'Job Alert',
+    jobAlertDesc: 'Ontvang direct een melding zodra er nieuwe vacatures in jouw sector zijn.',
+    emailPlaceholder: 'E-mailadres...',
+    activateAlert: 'Activeer Alert',
+    invalidEmail: 'Voer eerst een geldig e-mailadres in.',
+    alertActivated: 'Job alert geactiveerd voor',
+    inlineSearchPlaceholder: 'Zoek op titel, bedrijf of trefwoorden...',
+    allWord: 'Alle',
+    vacaturesWord: 'Vacatures',
+    sortByLabel: 'Sorteer op:',
+    viaJobParsing: 'Via JobParsing',
+    mediatedByUs: 'Bemiddeld door ons',
+    viaJobParsingDesc: 'Deze vacature wordt bemiddeld door het JobParsing-team. Wij nemen contact met je op na je sollicitatie.',
+    verified: 'Geverifieerd',
+    trustFactorHigh: 'Trust Factor: High',
+    verifiedDesc: 'Geverifieerde partners ondergaan een identiteitscheck om veiligheid te waarborgen.',
+    matchScore: 'Match Score',
+    whatsapp: 'WhatsApp',
+    details: 'Details',
+    emptyTitle: 'Geen vacatures gevonden voor deze zoekopdracht.',
+    emptyBody: 'No worries — upload je cv, dagelijks worden er nieuwe vacatures geüpload en matchen wij je automatisch zodra er iets past.',
+    uploadCv: 'Upload je CV',
+    previous: 'Vorige',
+    next: 'Volgende',
+    footerTagline: 'De meest geavanceerde talent hub van Suriname. Powered by AI-driven insights.',
+    platform: 'Platform',
+    vacaturesLink: 'Vacatures',
+    cvUploadLink: 'CV Upload',
+    mijnMatchesLink: 'Mijn Matches',
+    help: 'Hulp',
+    faq: 'FAQ',
+    contact: 'Contact',
+    overOns: 'Over Ons',
+    terms: 'Algemene Voorwaarden',
+    rights: '© 2026 Jobparsing. Alle rechten voorbehouden.',
+  },
+  en: {
+    heroA: 'Find your',
+    heroHighlight: 'Perfect Match',
+    heroSubtitle: 'Browse verified vacancies across the most influential sectors in Suriname.',
+    searchPlaceholder: 'Role or Company...',
+    search: 'Search',
+    typeHeading: 'Employment Type',
+    salaryHeading: 'Salary Filter',
+    salaryHint: 'Filter by maximum monthly salary',
+    jobAlert: 'Job Alert',
+    jobAlertDesc: 'Get notified instantly when new vacancies appear in your sector.',
+    emailPlaceholder: 'Email address...',
+    activateAlert: 'Activate Alert',
+    invalidEmail: 'Please enter a valid email address first.',
+    alertActivated: 'Job alert activated for',
+    inlineSearchPlaceholder: 'Search by title, company or keywords...',
+    allWord: 'All',
+    vacaturesWord: 'Vacancies',
+    sortByLabel: 'Sort by:',
+    viaJobParsing: 'Via JobParsing',
+    mediatedByUs: 'Mediated by us',
+    viaJobParsingDesc: 'This vacancy is handled by the JobParsing team. We will contact you after you apply.',
+    verified: 'Verified',
+    trustFactorHigh: 'Trust Factor: High',
+    verifiedDesc: 'Verified partners undergo an identity check to guarantee safety.',
+    matchScore: 'Match Score',
+    whatsapp: 'WhatsApp',
+    details: 'Details',
+    emptyTitle: 'No vacancies found for this search.',
+    emptyBody: 'No worries — upload your CV, new vacancies are uploaded daily and we match you automatically as soon as something fits.',
+    uploadCv: 'Upload your CV',
+    previous: 'Previous',
+    next: 'Next',
+    footerTagline: 'The most advanced talent hub in Suriname. Powered by AI-driven insights.',
+    platform: 'Platform',
+    vacaturesLink: 'Vacancies',
+    cvUploadLink: 'CV Upload',
+    mijnMatchesLink: 'My Matches',
+    help: 'Help',
+    faq: 'FAQ',
+    contact: 'Contact',
+    overOns: 'About',
+    terms: 'Terms & Conditions',
+    rights: '© 2026 Jobparsing. All rights reserved.',
+  },
+  es: {
+    heroA: 'Encuentra tu',
+    heroHighlight: 'Coincidencia Perfecta',
+    heroSubtitle: 'Explora vacantes verificadas en los sectores más influyentes de Surinam.',
+    searchPlaceholder: 'Puesto o Empresa...',
+    search: 'Buscar',
+    typeHeading: 'Tipo de Empleo',
+    salaryHeading: 'Filtro de Salario',
+    salaryHint: 'Filtra por salario mensual máximo',
+    jobAlert: 'Alerta de Empleo',
+    jobAlertDesc: 'Recibe una notificación al instante cuando haya nuevas vacantes en tu sector.',
+    emailPlaceholder: 'Correo electrónico...',
+    activateAlert: 'Activar Alerta',
+    invalidEmail: 'Primero introduce un correo electrónico válido.',
+    alertActivated: 'Alerta de empleo activada para',
+    inlineSearchPlaceholder: 'Busca por título, empresa o palabras clave...',
+    allWord: 'Todas',
+    vacaturesWord: 'Vacantes',
+    sortByLabel: 'Ordenar por:',
+    viaJobParsing: 'Via JobParsing',
+    mediatedByUs: 'Intermediado por nosotros',
+    viaJobParsingDesc: 'Esta vacante es gestionada por el equipo de JobParsing. Te contactaremos después de que apliques.',
+    verified: 'Verificado',
+    trustFactorHigh: 'Trust Factor: High',
+    verifiedDesc: 'Los socios verificados pasan una verificación de identidad para garantizar la seguridad.',
+    matchScore: 'Puntuación',
+    whatsapp: 'WhatsApp',
+    details: 'Detalles',
+    emptyTitle: 'No se encontraron vacantes para esta búsqueda.',
+    emptyBody: 'No te preocupes — sube tu CV, cada día se suben nuevas vacantes y te emparejamos automáticamente en cuanto algo encaje.',
+    uploadCv: 'Sube tu CV',
+    previous: 'Anterior',
+    next: 'Siguiente',
+    footerTagline: 'El centro de talento más avanzado de Surinam. Powered by AI-driven insights.',
+    platform: 'Plataforma',
+    vacaturesLink: 'Vacantes',
+    cvUploadLink: 'Subir CV',
+    mijnMatchesLink: 'Mis Coincidencias',
+    help: 'Ayuda',
+    faq: 'FAQ',
+    contact: 'Contacto',
+    overOns: 'Sobre Nosotros',
+    terms: 'Términos y Condiciones',
+    rights: '© 2026 Jobparsing. Todos los derechos reservados.',
+  },
+};
 
 interface JobCard {
   id: string;
@@ -26,6 +169,8 @@ interface JobCard {
   location: string;
   type: string;
   salary: string;
+  salaryValue: number | null;
+  salaryCurrency: string;
   match: number;
   verified: boolean;
   viaJobParsing: boolean;
@@ -59,14 +204,18 @@ function formatSalary(s?: ApiVacancy['salary']): string {
 
 function vacancyToCard(v: ApiVacancy): JobCard {
   const viaJobParsing = Boolean(v.viaJobParsing);
+  // Numerieke salariswaarde (bovenkant range) voor het filteren, los van de weergavestring.
+  const salaryValue = v.salary?.max ?? v.salary?.min ?? null;
   return {
     id: v._id,
     title: v.title,
     // Company wordt server-side gestript voor anoniem ophalen — toon altijd 'via JobParsing'.
     company: viaJobParsing ? 'Via JobParsing' : (v.company || 'Via JobParsing'),
     location: v.location || 'Locatie onbekend',
-    type: v.employmentType || 'Full-time',
+    type: normalizeEmploymentType(v.employmentType),
     salary: formatSalary(v.salary),
+    salaryValue,
+    salaryCurrency: v.salary?.currency || 'SRD',
     match: 0,
     verified: Boolean(v.company) && !viaJobParsing,
     viaJobParsing,
@@ -78,20 +227,30 @@ function vacancyToCard(v: ApiVacancy): JobCard {
 
 function VacaturesContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const t = useT(VACATURES_T);
 
   const [activeType, setActiveType] = useState('Alle');
-  const [searchQuery, setSearchQuery] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return new URLSearchParams(window.location.search).get('q') || '';
-  });
+  // Zoekterm en locatie komen uit de URL (?q= / ?location=). We lezen ze via
+  // useSearchParams i.p.v. window.location zodat ze óók bij client-side navigatie
+  // vanaf de homepage direct voorgevuld en toegepast zijn (geen 'opnieuw invullen').
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
   const [sortBy, setSortBy] = useState('Nieuwste');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('Heel Suriname');
+  const [selectedLocation, setSelectedLocation] = useState(() => searchParams.get('location') || 'Heel Suriname');
+
+  // Houd de filters in sync als de URL-parameters wijzigen (bv. nieuwe zoekopdracht
+  // vanaf de homepage terwijl de vacaturepagina al gemount is).
+  useEffect(() => {
+    setSearchQuery(searchParams.get('q') || '');
+    setSelectedLocation(searchParams.get('location') || 'Heel Suriname');
+    setCurrentPage(1);
+  }, [searchParams]);
   const [jobAlertEmail, setJobAlertEmail] = useState('');
   const [jobAlertMessage, setJobAlertMessage] = useState('');
-  const [priceRange, setPriceRange] = useState(50000);
+  const [priceRange, setPriceRange] = useState(SALARY_MAX);
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [user, setUser] = useState<{ isLoggedIn?: boolean } | null>(() => readJson('suri_user', null));
   const [savedJobs, setSavedJobs] = useState<string[]>(() => readJson<string[]>('suri_saved_jobs', []));
@@ -163,19 +322,22 @@ function VacaturesContent() {
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = (job.title || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLocation = selectedLocation === 'Heel Suriname' || String(job.location || '').toLowerCase().includes(selectedLocation.toLowerCase());
-    
-    // Parse salary for filtering (handle both SRD and USD mock data)
-    const salaryNum = parseInt(job.salary.replace(/[^0-9]/g, '')) || 0;
     const matchesType = activeType === 'Alle' || job.type === activeType;
-    const matchesPrice = salaryNum >= 0 && salaryNum <= priceRange;
+
+    // Salarisfilter: slider op max = geen bovengrens (alles tonen). Anders filteren op de
+    // numerieke SRD-waarde. Vacatures zonder salaris ('Op aanvraag') of in een andere valuta
+    // (USD/EUR) blijven zichtbaar — die vergelijken we niet tegen een SRD-drempel.
+    const matchesPrice =
+      priceRange >= SALARY_MAX ||
+      job.salaryValue == null ||
+      job.salaryCurrency !== 'SRD' ||
+      job.salaryValue <= priceRange;
 
     return matchesSearch && matchesPrice && matchesType && matchesLocation;
   }).sort((a, b) => {
     if (sortBy === 'Match Score') return b.match - a.match;
     if (sortBy === 'Salaris') {
-      const salA = parseInt(a.salary.replace(/[^0-9]/g, '')) || 0;
-      const salB = parseInt(b.salary.replace(/[^0-9]/g, '')) || 0;
-      return salB - salA;
+      return (b.salaryValue ?? 0) - (a.salaryValue ?? 0);
     }
     // Default: newest first (postedAt desc)
     const tA = a.postedAt ? Date.parse(a.postedAt) : 0;
@@ -190,10 +352,10 @@ function VacaturesContent() {
   const handleJobAlertSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidEmail(jobAlertEmail)) {
-      setJobAlertMessage('Voer eerst een geldig e-mailadres in.');
+      setJobAlertMessage(t.invalidEmail);
       return;
     }
-    setJobAlertMessage(`Job alert geactiveerd voor ${jobAlertEmail}.`);
+    setJobAlertMessage(`${t.alertActivated} ${jobAlertEmail}.`);
     setJobAlertEmail('');
   };
 
@@ -208,10 +370,10 @@ function VacaturesContent() {
             className="text-center mb-12"
           >
             <h1 className="text-4xl xs:text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-6">
-              Vind je <br/><span className="text-blue-600 italic underline decoration-white/20 underline-offset-4 sm:underline-offset-8">Perfecte Match</span>
+              {t.heroA} <br/><span className="text-blue-600 italic underline decoration-white/20 underline-offset-4 sm:underline-offset-8">{t.heroHighlight}</span>
             </h1>
             <p className="text-[10px] md:text-xl font-black uppercase tracking-widest text-slate-400 max-w-2xl mx-auto italic px-4">
-              Blader door geverifieerde vacatures in de meest invloedrijke sectoren van Suriname.
+              {t.heroSubtitle}
             </p>
           </motion.div>
 
@@ -220,7 +382,7 @@ function VacaturesContent() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-600 transition-colors" />
               <input 
                 type="text" 
-                placeholder="Functie of Bedrijf..." 
+                placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
@@ -258,18 +420,25 @@ function VacaturesContent() {
             </div>
             <div className="w-full md:w-auto flex items-center gap-2 border-l-0 md:border-l-2 border-slate-100 pl-0 md:pl-6 bg-white">
               <MapPin className="text-blue-600 w-5 h-5" />
-              <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="bg-transparent text-black font-black uppercase tracking-widest text-xs outline-none cursor-pointer">
+              <select value={selectedLocation} onChange={(e) => { setSelectedLocation(e.target.value); setCurrentPage(1); }} className="bg-transparent text-black font-black uppercase tracking-widest text-xs outline-none cursor-pointer">
                 <option>Heel Suriname</option>
                 <option>Paramaribo</option>
                 <option>Wanica</option>
                 <option>Nickerie</option>
+                <option>Commewijne</option>
+                <option>Saramacca</option>
+                <option>Para</option>
+                <option>Marowijne</option>
+                <option>Coronie</option>
+                <option>Brokopondo</option>
+                <option>Sipaliwini</option>
               </select>
             </div>
             <button 
               onClick={handleSearch}
               className="brutal-button-primary w-full md:w-auto shadow-none"
             >
-              Zoeken
+              {t.search}
             </button>
           </div>
         </div>
@@ -281,7 +450,7 @@ function VacaturesContent() {
           {/* Filters Sidebar */}
           <aside className="col-span-12 lg:col-span-3 space-y-12">
             <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 border-b-2 border-blue-600 pb-2 w-fit">Type Dienstverband</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 border-b-2 border-blue-600 pb-2 w-fit">{t.typeHeading}</h3>
               <div className="flex flex-col gap-2">
                 {types.map(t => (
                   <label key={t} className="flex items-center gap-3 group cursor-pointer">
@@ -312,17 +481,17 @@ function VacaturesContent() {
             </div>
 
             <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 border-b-2 border-blue-600 pb-2 w-fit">Salaris Filter</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 border-b-2 border-blue-600 pb-2 w-fit">{t.salaryHeading}</h3>
               <div className="space-y-4">
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
                   <span>SRD 0</span>
-                  <span>SRD {priceRange.toLocaleString()}</span>
+                  <span>SRD {priceRange.toLocaleString()}{priceRange >= SALARY_MAX ? '+' : ''}</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="50000" 
-                  step="1000"
+                <input
+                  type="range"
+                  min="0"
+                  max={SALARY_MAX}
+                  step="5000"
                   value={priceRange}
                   onChange={(e) => {
                     setPriceRange(parseInt(e.target.value));
@@ -331,20 +500,20 @@ function VacaturesContent() {
                   className="w-full h-2 bg-slate-100 appearance-none cursor-pointer accent-blue-600"
                 />
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">
-                  Filter op maximaal maandsalaris
+                  {t.salaryHint}
                 </p>
               </div>
             </div>
 
             <div className="bg-slate-50 p-8 border-2 border-slate-100">
-              <h3 className="text-xs font-black uppercase tracking-widest mb-6 italic underline decoration-blue-600 decoration-2 underline-offset-4">Job Alert</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest mb-6 italic underline decoration-blue-600 decoration-2 underline-offset-4">{t.jobAlert}</h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
-                Ontvang direct een melding zodra er nieuwe vacatures in jouw sector zijn.
+                {t.jobAlertDesc}
               </p>
               <form onSubmit={handleJobAlertSubmit}>
-                <input value={jobAlertEmail} onChange={(e) => setJobAlertEmail(e.target.value)} required type="email" placeholder="E-mailadres..." className="w-full bg-white p-3 text-[10px] font-bold border-2 border-slate-200 outline-none focus:border-black mb-4 uppercase tracking-widest" />
+                <input value={jobAlertEmail} onChange={(e) => setJobAlertEmail(e.target.value)} required type="email" placeholder={t.emailPlaceholder} className="w-full bg-white p-3 text-[10px] font-bold border-2 border-slate-200 outline-none focus:border-black mb-4 uppercase tracking-widest" />
                 <button type="submit" className="w-full bg-black text-white py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors">
-                  Activeer Alert
+                  {t.activateAlert}
                 </button>
               </form>
               {jobAlertMessage && <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{jobAlertMessage}</p>}
@@ -365,22 +534,22 @@ function VacaturesContent() {
                       setSearchQuery(e.target.value);
                       setCurrentPage(1);
                     }}
-                    placeholder="Zoek op titel, bedrijf of trefwoorden..."
+                    placeholder={t.inlineSearchPlaceholder}
                     className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-100 focus:border-black outline-none font-bold uppercase tracking-widest text-xs"
                   />
                 </div>
                 <button onClick={handleSearch} className="bg-black text-white px-10 py-4 font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all">
-                  Zoeken
+                  {t.search}
                 </button>
               </div>
             </div>
 
             <div className="flex justify-between items-center border-b-2 border-slate-100 pb-6">
               <h2 className="text-2xl font-black uppercase tracking-tighter italic">
-                Alle <span className="text-slate-300">Vacatures</span>
+                {t.allWord} <span className="text-slate-300">{t.vacaturesWord}</span>
               </h2>
               <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <span>Sorteer op:</span>
+                <span>{t.sortByLabel}</span>
                 <select 
                   value={sortBy}
                   onChange={(e) => {
@@ -420,14 +589,14 @@ function VacaturesContent() {
                           <div className="relative group/tooltip">
                             <div className="flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 border-2 border-purple-600 italic cursor-help brutal-shadow">
                               <Sparkles className="w-3 h-3" />
-                              <span className="text-[9px] font-black uppercase tracking-widest">Via JobParsing</span>
+                              <span className="text-[9px] font-black uppercase tracking-widest">{t.viaJobParsing}</span>
                             </div>
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 p-4 bg-black text-white text-[9px] font-bold uppercase tracking-widest leading-relaxed opacity-0 group-hover/tooltip:opacity-100 transition-all z-50 pointer-events-none border-2 border-purple-600 shadow-[8px_8px_0px_0px_rgba(168,85,247,1)] scale-95 group-hover/tooltip:scale-100">
                               <div className="flex items-center gap-2 mb-2 text-purple-400">
                                 <CheckCircle2 className="w-4 h-4" />
-                                <span>Bemiddeld door ons</span>
+                                <span>{t.mediatedByUs}</span>
                               </div>
-                              Deze vacature wordt bemiddeld door het JobParsing-team. Wij nemen contact met je op na je sollicitatie.
+                              {t.viaJobParsingDesc}
                             </div>
                           </div>
                         )}
@@ -435,21 +604,21 @@ function VacaturesContent() {
                           <div className="relative group/tooltip">
                             <div className="flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 border-2 border-blue-600 italic cursor-help brutal-shadow">
                               <Sparkles className="w-3 h-3" />
-                              <span className="text-[9px] font-black uppercase tracking-widest">Geverifieerd</span>
+                              <span className="text-[9px] font-black uppercase tracking-widest">{t.verified}</span>
                             </div>
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 p-4 bg-black text-white text-[9px] font-bold uppercase tracking-widest leading-relaxed opacity-0 group-hover/tooltip:opacity-100 transition-all z-50 pointer-events-none border-2 border-blue-600 shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] scale-95 group-hover/tooltip:scale-100">
                               <div className="flex items-center gap-2 mb-2 text-blue-400">
                                 <CheckCircle2 className="w-4 h-4" />
-                                <span>Trust Factor: High</span>
+                                <span>{t.trustFactorHigh}</span>
                               </div>
-                              Geverifieerde partners ondergaan een identiteitscheck om veiligheid te waarborgen.
+                              {t.verifiedDesc}
                             </div>
                           </div>
                         )}
                       </div>
                       <Link
                         href={`/vacatures/${job.id}`}
-                        className="inline-block text-3xl font-black uppercase tracking-tighter leading-none mb-3 group-hover:text-blue-600 transition-colors italic decoration-slate-100 underline underline-offset-4 decoration-4"
+                        className="inline-block text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none mb-3 group-hover:text-blue-600 transition-colors italic decoration-slate-100 underline underline-offset-4 decoration-4 break-words hyphens-auto max-w-full"
                       >
                         {job.title}
                       </Link>
@@ -481,7 +650,7 @@ function VacaturesContent() {
                           <Bookmark className={cn("w-5 h-5", savedJobs.includes(job.id) && "fill-current")} />
                         </button>
                         <div className="flex flex-col items-end">
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Match Score</div>
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">{t.matchScore}</div>
                           <div className={cn(
                             "text-4xl font-black leading-none italic",
                             job.match >= 90 ? "text-blue-600" : job.match >= 80 ? "text-emerald-600" : "text-slate-900"
@@ -489,22 +658,24 @@ function VacaturesContent() {
                         </div>
                       </div>
                       <div className="flex gap-3 w-full">
-                        <a 
-                          href={`https://wa.me/5971234567?text=Ik heb interesse in de vacature voor ${job.title}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 md:flex-none flex items-center justify-center gap-3 bg-emerald-500 text-white px-6 py-4 font-black uppercase tracking-widest text-[11px] hover:bg-emerald-600 transition-all border-2 border-black brutal-shadow"
-                        >
-                          <MessageCircle className="w-4 h-4" /> WhatsApp
-                        </a>
-                        <button 
+                        {buildWhatsAppUrl(`Ik heb interesse in de vacature voor ${job.title}`) && (
+                          <a
+                            href={buildWhatsAppUrl(`Ik heb interesse in de vacature voor ${job.title}`)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-3 bg-emerald-500 text-white px-6 py-4 font-black uppercase tracking-widest text-[11px] hover:bg-emerald-600 transition-all border-2 border-black brutal-shadow"
+                          >
+                            <MessageCircle className="w-4 h-4" /> {t.whatsapp}
+                          </a>
+                        )}
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             router.push(`/vacatures/${job.id}`);
                           }}
                           className="flex-1 md:flex-none brutal-button-primary px-8 py-4 text-[11px] shadow-none bg-black text-white hover:bg-blue-600"
                         >
-                          Details
+                          {t.details}
                         </button>
                       </div>
                     </div>
@@ -513,9 +684,18 @@ function VacaturesContent() {
               ))}
               
               {filteredJobs.length === 0 && (
-                <div className="py-20 text-center border-2 border-dashed border-slate-200">
+                <div className="py-16 px-6 text-center border-2 border-dashed border-slate-200 bg-slate-50/50">
                   <Search className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Geen vacatures gevonden voor deze zoekopdracht.</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">{t.emptyTitle}</p>
+                  <p className="text-sm font-bold text-slate-600 max-w-md mx-auto mb-8 normal-case tracking-normal">
+                    {t.emptyBody}
+                  </p>
+                  <Link
+                    href="/cv-upload"
+                    className="inline-flex items-center gap-3 bg-blue-600 text-white px-8 py-4 font-black uppercase tracking-widest text-[11px] hover:bg-black transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]"
+                  >
+                    <Sparkles className="w-4 h-4" /> {t.uploadCv}
+                  </Link>
                 </div>
               )}
             </div>
@@ -528,7 +708,7 @@ function VacaturesContent() {
                   disabled={currentPage === 1}
                   className="w-24 border-2 border-black flex items-center justify-center text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                 >
-                  Vorige
+                  {t.previous}
                 </button>
                 
                 {Array.from({ length: totalPages }).map((_, i) => (
@@ -549,7 +729,7 @@ function VacaturesContent() {
                   disabled={currentPage === totalPages}
                   className="w-24 border-2 border-black flex items-center justify-center text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                 >
-                  Volgende
+                  {t.next}
                 </button>
               </div>
             )}
@@ -562,30 +742,31 @@ function VacaturesContent() {
           <div className="col-span-1 md:col-span-1">
             <h2 className="text-2xl font-black uppercase tracking-tighter mb-6">Jobparsing<span className="text-blue-600">+</span></h2>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-loose">
-              De meest geavanceerde talent hub <br/>van Suriname. Powered by <br/>AI-driven insights.
+              {t.footerTagline}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 col-span-3">
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">Platform</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">{t.platform}</h4>
               <ul className="space-y-2 text-[10px] font-black uppercase tracking-widest">
-                <li><Link href="/vacatures" className="hover:text-blue-600">Vacatures</Link></li>
-                <li><Link href="/cv-upload" className="hover:text-blue-600">CV Upload</Link></li>
-                <li><Link href="/mijn-matches" className="hover:text-blue-600">Mijn Matches</Link></li>
+                <li><Link href="/vacatures" className="hover:text-blue-600">{t.vacaturesLink}</Link></li>
+                <li><Link href="/cv-upload" className="hover:text-blue-600">{t.cvUploadLink}</Link></li>
+                <li><Link href="/mijn-matches" className="hover:text-blue-600">{t.mijnMatchesLink}</Link></li>
               </ul>
             </div>
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">Hulp</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">{t.help}</h4>
               <ul className="space-y-2 text-[10px] font-black uppercase tracking-widest">
-                <li><Link href="/over-ons" className="hover:text-blue-600">FAQ</Link></li>
-                <li><Link href="/over-ons" className="hover:text-blue-600">Contact</Link></li>
-                <li><Link href="/over-ons" className="hover:text-blue-600">Privacy Policy</Link></li>
+                <li><Link href="/faq" className="hover:text-blue-600">{t.faq}</Link></li>
+                <li><a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-blue-600">{t.contact}</a></li>
+                <li><Link href="/over-ons" className="hover:text-blue-600">{t.overOns}</Link></li>
+                <li><Link href="/algemene-voorwaarden" className="hover:text-blue-600">{t.terms}</Link></li>
               </ul>
             </div>
           </div>
         </div>
         <div className="max-w-7xl mx-auto pt-12 border-t border-white/10 text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">
-          © 2026 Jobparsing. Alle rechten voorbehouden.
+          {t.rights}
         </div>
       </footer>
     </div>
@@ -593,5 +774,9 @@ function VacaturesContent() {
 }
 
 export default function VacaturesPage() {
-  return <VacaturesContent />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <VacaturesContent />
+    </Suspense>
+  );
 }

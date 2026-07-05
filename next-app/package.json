@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:badge": "playwright test tests/employer-badge.spec.ts"
+    "test:badge": "playwright test tests/employer-badge.spec.ts",
+    "test:flows": "playwright test tests/cv-upload-flow.spec.ts tests/mijn-matches.spec.ts tests/voor-werkgevers-flow.spec.ts tests/employer-match-error.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

@@ -5,10 +5,17 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-import { User, LogOut, ChevronDown, Menu, X as CloseIcon } from 'lucide-react';
+import { User, LogOut, ChevronDown, Menu, X as CloseIcon, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { readJson } from '@/lib/storage';
 import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
+import { useLang, useT, LANGS } from '@/lib/i18n/LanguageProvider';
+
+const NAV_T = {
+  nl: { vacatures: 'Vacatures', sectoren: 'Sectoren', cvUpload: 'CV Upload', mijnMatches: 'Mijn Matches', werkgevers: 'Werkgevers', overOns: 'Over Ons', mijnVacatures: 'Mijn Vacatures', inloggen: 'Inloggen', aanmelden: 'Aanmelden', uitloggen: 'Uitloggen', taal: 'Taal' },
+  en: { vacatures: 'Jobs', sectoren: 'Sectors', cvUpload: 'Upload CV', mijnMatches: 'My Matches', werkgevers: 'Employers', overOns: 'About', mijnVacatures: 'My Vacancies', inloggen: 'Log in', aanmelden: 'Sign up', uitloggen: 'Log out', taal: 'Language' },
+  es: { vacatures: 'Vacantes', sectoren: 'Sectores', cvUpload: 'Subir CV', mijnMatches: 'Mis Coincidencias', werkgevers: 'Empleadores', overOns: 'Nosotros', mijnVacatures: 'Mis Vacantes', inloggen: 'Iniciar sesión', aanmelden: 'Registrarse', uitloggen: 'Cerrar sesión', taal: 'Idioma' },
+};
 
 export function Navbar() {
   const pathname = usePathname();
@@ -16,8 +23,12 @@ export function Navbar() {
   const [user, setUser] = useState<{ name?: string; onboarded?: boolean; role?: 'candidate' | 'employer' } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const langMenuRef = useRef<HTMLDivElement>(null);
+  const { lang, setLang } = useLang();
+  const t = useT(NAV_T);
 
   useEffect(() => {
     const checkUser = () => {
@@ -29,6 +40,7 @@ export function Navbar() {
   }, []);
   useDismissibleLayer(showDropdown, dropdownRef, () => setShowDropdown(false));
   useDismissibleLayer(isMobileMenuOpen, mobileMenuRef, () => setIsMobileMenuOpen(false));
+  useDismissibleLayer(showLangMenu, langMenuRef, () => setShowLangMenu(false));
 
   // Admin-console heeft een eigen header — verberg de publieke navigatie daar.
   if (pathname?.startsWith('/admin')) return null;
@@ -47,18 +59,60 @@ export function Navbar() {
   const isEmployer = user?.role === 'employer';
 
   const links = isEmployer ? [
-    { name: 'Mijn Vacatures', href: '/dashboard/company' },
-    { name: 'Vacatures', href: '/vacatures' },
-    { name: 'Sectoren', href: '/sectoren' },
-    { name: 'Over Ons', href: '/over-ons' },
+    { name: t.mijnVacatures, href: '/dashboard/company' },
+    { name: t.vacatures, href: '/vacatures' },
+    { name: t.sectoren, href: '/sectoren' },
+    { name: t.overOns, href: '/over-ons' },
   ] : [
-    { name: 'Vacatures', href: '/vacatures' },
-    { name: 'Sectoren', href: '/sectoren' },
-    { name: 'CV Upload', href: '/cv-upload' },
-    { name: 'Mijn Matches', href: '/mijn-matches' },
-    { name: 'Werkgevers', href: '/voor-werkgevers' },
-    { name: 'Over Ons', href: '/over-ons' },
+    { name: t.vacatures, href: '/vacatures' },
+    { name: t.sectoren, href: '/sectoren' },
+    { name: t.cvUpload, href: '/cv-upload' },
+    { name: t.mijnMatches, href: '/mijn-matches' },
+    { name: t.werkgevers, href: '/voor-werkgevers' },
+    { name: t.overOns, href: '/over-ons' },
   ];
+
+  const LangSwitcher = (
+    <div ref={langMenuRef} className="relative">
+      <button
+        onClick={() => setShowLangMenu(v => !v)}
+        aria-expanded={showLangMenu}
+        aria-haspopup="menu"
+        aria-label={t.taal}
+        className="flex items-center gap-1.5 px-2 sm:px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-transparent hover:border-black transition-all"
+      >
+        <Globe className="w-4 h-4 text-blue-600" />
+        <span className="hidden xs:inline">{lang.toUpperCase()}</span>
+        <ChevronDown className={cn('w-3 h-3 transition-transform', showLangMenu && 'rotate-180')} />
+      </button>
+      <AnimatePresence>
+        {showLangMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="absolute right-0 mt-2 w-44 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] p-2 z-[60]"
+            role="menu"
+          >
+            {LANGS.map(l => (
+              <button
+                key={l.code}
+                role="menuitemradio"
+                aria-checked={lang === l.code}
+                onClick={() => { setLang(l.code); setShowLangMenu(false); }}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest w-full text-left transition-colors',
+                  lang === l.code ? 'bg-black text-white' : 'hover:bg-slate-50',
+                )}
+              >
+                <span className="text-base leading-none">{l.flag}</span> {l.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 
   return (
     <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
@@ -88,6 +142,7 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {LangSwitcher}
             {user ? (
               <div ref={dropdownRef} className="relative">
                 <button
@@ -121,7 +176,7 @@ export function Navbar() {
                         onClick={handleLogout}
                         className="flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 text-red-600 transition-colors w-full text-left border-t border-slate-100"
                       >
-                        <LogOut className="w-4 h-4" /> Uitloggen
+                        <LogOut className="w-4 h-4" /> {t.uitloggen}
                       </button>
                     </motion.div>
                   )}
@@ -133,13 +188,13 @@ export function Navbar() {
                   href="/auth"
                   className="hidden sm:inline-block border-2 border-black text-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all active:scale-95"
                 >
-                  Inloggen
+                  {t.inloggen}
                 </Link>
                 <Link
                   href="/auth?signup=1"
                   className="bg-blue-600 text-white px-4 sm:px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 >
-                  Aanmelden
+                  {t.aanmelden}
                 </Link>
               </>
             )}
@@ -185,9 +240,26 @@ export function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="text-xs font-black uppercase tracking-[0.2em] py-2 text-slate-700 border-t border-slate-100 pt-4"
                 >
-                  Inloggen
+                  {t.inloggen}
                 </Link>
               )}
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">{t.taal}</p>
+                <div className="flex gap-2">
+                  {LANGS.map(l => (
+                    <button
+                      key={l.code}
+                      onClick={() => { setLang(l.code); setIsMobileMenuOpen(false); }}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-colors',
+                        lang === l.code ? 'bg-black text-white border-black' : 'border-slate-200 text-slate-500',
+                      )}
+                    >
+                      <span className="text-sm leading-none">{l.flag}</span> {l.code.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

@@ -139,7 +139,9 @@ test.describe('Admin → Vacatures → Bulk Upload', () => {
 
         await openBulkPanel(page);
 
-        const dropdown = page.locator('select');
+        // Werkgever-dropdown specifiek targeten: er staat nu ook een
+        // country-scope <select> (title="Beperk de match...") in het paneel.
+        const dropdown = page.locator('select').filter({ has: page.locator('option', { hasText: 'Acme BV' }) });
         // Default = leeg/admin (de option zelf is niet zichtbaar in een
         // gesloten select, dus check de helper-text eronder)
         await expect(dropdown).toHaveValue('');
@@ -162,8 +164,9 @@ test.describe('Admin → Vacatures → Bulk Upload', () => {
         // Default helper-text
         await expect(page.getByText(/Geen auto-match/i)).toBeVisible();
 
-        // Selecteer werkgever → tekst wisselt
-        await page.locator('select').selectOption('emp1');
+        // Selecteer werkgever → tekst wisselt (werkgever-dropdown specifiek,
+        // naast de nieuwe country-scope select)
+        await page.locator('select').filter({ has: page.locator('option[value="emp1"]') }).selectOption('emp1');
         await expect(page.getByText(/auto-match draait per vacature/i)).toBeVisible();
 
         // Voeg 1 file toe en start

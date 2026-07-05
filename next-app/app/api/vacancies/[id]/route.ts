@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
+import { isHiddenVacancy } from '@/lib/country';
 
 interface Params {
     params: Promise<{ id: string }>;
@@ -18,7 +19,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
         // Haal company op voor sanitization, strip 'm uit de response
         const vacancy = await Vacancy.findOne({ _id: id, isActive: true, fulfilledAt: null })
             .select('-fileData -embedding -fullText');
-        if (!vacancy) {
+        if (!vacancy || isHiddenVacancy(vacancy)) {
+            // Verborgen landen (NL) tellen als niet-bestaand op de publieke kant.
             return NextResponse.json({ success: false, message: 'Vacancy not found' }, { status: 404 });
         }
 

@@ -21,17 +21,20 @@ import { Navbar } from '@/components/Navbar';
 import { AICareerScout } from '@/components/AICareerScout';
 import { AnalyticsTracker } from '@/components/AnalyticsTracker';
 import { AuthProvider } from '@/lib/auth-context';
+import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="nl" className={`${inter.variable} ${outfit.variable}`}>
       <body suppressHydrationWarning className="font-sans antialiased text-slate-900 bg-slate-50">
-        <AuthProvider>
-          <AnalyticsTracker />
-          <Navbar />
-          {children}
-          <AICareerScout />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <AnalyticsTracker />
+            <Navbar />
+            {children}
+            <AICareerScout />
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

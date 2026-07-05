@@ -24,7 +24,7 @@ import {
   Sparkles,
   GraduationCap
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, normalizeEmploymentType } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
@@ -32,6 +32,178 @@ import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 import { useFocusTrap } from '@/hooks/use-focus-trap';
 import { dedupeBy, isNonEmpty, isValidEmail } from '@/lib/validation';
 import { readJson, writeJson } from '@/lib/storage';
+import { useT } from '@/lib/i18n/LanguageProvider';
+
+const DETAIL_T = {
+  nl: {
+    backOverview: 'Terug naar overzicht',
+    backVacancies: 'Terug naar vacatures',
+    verifiedEmployer: 'Verified Employer',
+    matchScore: 'Match Score',
+    applyNow: 'Direct Solliciteren',
+    notFoundTitle: 'Vacature niet gevonden',
+    notFoundText: 'Deze vacature bestaat niet meer of kon niet worden geladen.',
+    jobDescription: 'Functieomschrijving',
+    descriptionFallback: 'Geen gedetailleerde omschrijving beschikbaar voor deze positie. Neem contact op met de werkgever voor meer informatie.',
+    requirements: 'Vereisten',
+    status: 'Status',
+    directlyAvailable: 'Direct Beschikbaar',
+    type: 'Type',
+    aboutEmployer: 'Over de Werkgever',
+    verifiedEmployerHeading: 'Geverifieerde Werkgever',
+    employerIdentityText: 'De identiteit van de werkgever wordt na een succesvolle match via Jobparsing+ gedeeld. Solliciteer hier om in contact te komen.',
+    jobHighlights: 'Job Highlights',
+    location: 'Locatie',
+    employmentType: 'Dienstverband',
+    posted: 'Geplaatst',
+    today: 'Vandaag',
+    shareVacancy: 'Deel Vacature',
+    shareText: 'Bekijk deze vacature op Jobparsing+:',
+    shared: 'Vacature gedeeld.',
+    linkCopied: 'Link gekopieerd.',
+    shareUnavailable: 'Delen is hier niet beschikbaar.',
+    shareCancelled: 'Delen geannuleerd.',
+    similarVacancies: 'Vergelijkbare Vacatures',
+    closeAria: 'Sluit sollicitatieformulier',
+    applyViaPrefix: 'Solliciteren via',
+    function: 'Functie',
+    name: 'Naam',
+    email: 'E-mail',
+    errNameRequired: 'Naam is verplicht.',
+    errInvalidEmail: 'Voer een geldig e-mailadres in.',
+    errUploadCv: 'Upload je CV om te kunnen solliciteren.',
+    errCvTooLarge: 'CV is te groot (max 4.5 MB).',
+    errAlreadyApplied: 'Je hebt al op deze vacature gesolliciteerd.',
+    errApplyFailed: 'Sollicitatie mislukt.',
+    errUnexpectedResponse: 'Onverwachte response (HTTP',
+    uploadCv: 'CV uploaden',
+    uploadHint: 'PDF of DOCX, max 4.5 MB',
+    change: 'Wijzig',
+    autoSent: 'Wordt automatisch meegestuurd',
+    yourUploadedCv: 'Je geüploade CV',
+    applyButton: 'NU SOLLICITEREN',
+    successTitle: 'Sollicitatie verzonden!',
+    successTextPrefix: 'Je sollicitatie voor',
+    successTextSuffix: 'is doorgestuurd naar de werkgever.',
+    tip: 'Tip',
+    createAccountHeading: 'Maak een account aan',
+    createAccountText: 'Dan kun je je matches blijven bekijken, je sollicitaties volgen en sneller solliciteren op andere vacatures.',
+    createAccount: 'Account aanmaken',
+    close: 'Sluiten',
+  },
+  en: {
+    backOverview: 'Back to overview',
+    backVacancies: 'Back to vacancies',
+    verifiedEmployer: 'Verified Employer',
+    matchScore: 'Match Score',
+    applyNow: 'Apply now',
+    notFoundTitle: 'Vacancy not found',
+    notFoundText: 'This vacancy no longer exists or could not be loaded.',
+    jobDescription: 'Job description',
+    descriptionFallback: 'No detailed description available for this position. Contact the employer for more information.',
+    requirements: 'Requirements',
+    status: 'Status',
+    directlyAvailable: 'Immediately Available',
+    type: 'Type',
+    aboutEmployer: 'About the Employer',
+    verifiedEmployerHeading: 'Verified Employer',
+    employerIdentityText: "The employer's identity is shared after a successful match via Jobparsing+. Apply here to get in touch.",
+    jobHighlights: 'Job Highlights',
+    location: 'Location',
+    employmentType: 'Employment type',
+    posted: 'Posted',
+    today: 'Today',
+    shareVacancy: 'Share Vacancy',
+    shareText: 'Check out this vacancy on Jobparsing+:',
+    shared: 'Vacancy shared.',
+    linkCopied: 'Link copied.',
+    shareUnavailable: 'Sharing is not available here.',
+    shareCancelled: 'Sharing cancelled.',
+    similarVacancies: 'Similar Vacancies',
+    closeAria: 'Close application form',
+    applyViaPrefix: 'Apply via',
+    function: 'Position',
+    name: 'Name',
+    email: 'Email',
+    errNameRequired: 'Name is required.',
+    errInvalidEmail: 'Enter a valid email address.',
+    errUploadCv: 'Upload your CV to apply.',
+    errCvTooLarge: 'CV is too large (max 4.5 MB).',
+    errAlreadyApplied: 'You have already applied to this vacancy.',
+    errApplyFailed: 'Application failed.',
+    errUnexpectedResponse: 'Unexpected response (HTTP',
+    uploadCv: 'Upload CV',
+    uploadHint: 'PDF or DOCX, max 4.5 MB',
+    change: 'Change',
+    autoSent: 'Will be sent automatically',
+    yourUploadedCv: 'Your uploaded CV',
+    applyButton: 'APPLY NOW',
+    successTitle: 'Application sent!',
+    successTextPrefix: 'Your application for',
+    successTextSuffix: 'has been forwarded to the employer.',
+    tip: 'Tip',
+    createAccountHeading: 'Create an account',
+    createAccountText: 'Then you can keep viewing your matches, track your applications and apply faster to other vacancies.',
+    createAccount: 'Create account',
+    close: 'Close',
+  },
+  es: {
+    backOverview: 'Volver al resumen',
+    backVacancies: 'Volver a las vacantes',
+    verifiedEmployer: 'Empleador verificado',
+    matchScore: 'Puntuación de coincidencia',
+    applyNow: 'Postularse ahora',
+    notFoundTitle: 'Vacante no encontrada',
+    notFoundText: 'Esta vacante ya no existe o no se pudo cargar.',
+    jobDescription: 'Descripción del puesto',
+    descriptionFallback: 'No hay una descripción detallada disponible para este puesto. Póngase en contacto con el empleador para más información.',
+    requirements: 'Requisitos',
+    status: 'Estado',
+    directlyAvailable: 'Disponible de inmediato',
+    type: 'Tipo',
+    aboutEmployer: 'Sobre el empleador',
+    verifiedEmployerHeading: 'Empleador verificado',
+    employerIdentityText: 'La identidad del empleador se comparte tras una coincidencia exitosa a través de Jobparsing+. Postúlese aquí para ponerse en contacto.',
+    jobHighlights: 'Aspectos destacados',
+    location: 'Ubicación',
+    employmentType: 'Tipo de empleo',
+    posted: 'Publicado',
+    today: 'Hoy',
+    shareVacancy: 'Compartir vacante',
+    shareText: 'Mira esta vacante en Jobparsing+:',
+    shared: 'Vacante compartida.',
+    linkCopied: 'Enlace copiado.',
+    shareUnavailable: 'Compartir no está disponible aquí.',
+    shareCancelled: 'Compartir cancelado.',
+    similarVacancies: 'Vacantes similares',
+    closeAria: 'Cerrar formulario de postulación',
+    applyViaPrefix: 'Postularse a través de',
+    function: 'Puesto',
+    name: 'Nombre',
+    email: 'Correo electrónico',
+    errNameRequired: 'El nombre es obligatorio.',
+    errInvalidEmail: 'Introduce una dirección de correo electrónico válida.',
+    errUploadCv: 'Sube tu CV para poder postularte.',
+    errCvTooLarge: 'El CV es demasiado grande (máx. 4.5 MB).',
+    errAlreadyApplied: 'Ya te has postulado a esta vacante.',
+    errApplyFailed: 'La postulación falló.',
+    errUnexpectedResponse: 'Respuesta inesperada (HTTP',
+    uploadCv: 'Subir CV',
+    uploadHint: 'PDF o DOCX, máx. 4.5 MB',
+    change: 'Cambiar',
+    autoSent: 'Se enviará automáticamente',
+    yourUploadedCv: 'Tu CV subido',
+    applyButton: 'POSTULARSE AHORA',
+    successTitle: '¡Postulación enviada!',
+    successTextPrefix: 'Tu postulación para',
+    successTextSuffix: 'ha sido enviada al empleador.',
+    tip: 'Consejo',
+    createAccountHeading: 'Crea una cuenta',
+    createAccountText: 'Así podrás seguir viendo tus coincidencias, hacer seguimiento de tus postulaciones y postularte más rápido a otras vacantes.',
+    createAccount: 'Crear cuenta',
+    close: 'Cerrar',
+  },
+};
 
 function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -86,7 +258,7 @@ function vacancyToJob(v: ApiVacancy): JobDetail {
     title: v.title,
     company: v.company || 'Onbekend bedrijf',
     location: v.location || 'Locatie onbekend',
-    type: v.employmentType || 'Full-time',
+    type: normalizeEmploymentType(v.employmentType),
     salary: formatSalary(v.salary),
     match: 0,
     verified: Boolean(v.company),
@@ -107,6 +279,7 @@ function getNextLocalApplicationId(existingApplications: Array<{ id?: number | s
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const jobId = resolvedParams.id;
+  const t = useT(DETAIL_T);
   const router = useRouter();
   const searchParams = useSearchParams();
   const cvIdFromUrl = searchParams.get('cvId');
@@ -178,7 +351,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         setLinkedCvName(stored.fullName || null);
         setLinkedCvEmail(stored.email || null);
       } else {
-        setLinkedCvName('Je geüploade CV');
+        setLinkedCvName(t.yourUploadedCv);
       }
     }
 
@@ -244,22 +417,22 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const shareUrl = typeof window !== 'undefined' ? window.location.href : `/vacatures/${jobId}`;
     const sharePayload = {
       title: job.title,
-      text: `Bekijk deze vacature op Jobparsing+: ${job.title}`,
+      text: `${t.shareText} ${job.title}`,
       url: shareUrl,
     };
 
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share(sharePayload);
-        setShareFeedback('Vacature gedeeld.');
+        setShareFeedback(t.shared);
       } else if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
-        setShareFeedback('Link gekopieerd.');
+        setShareFeedback(t.linkCopied);
       } else {
-        setShareFeedback('Delen is hier niet beschikbaar.');
+        setShareFeedback(t.shareUnavailable);
       }
     } catch {
-      setShareFeedback('Delen geannuleerd.');
+      setShareFeedback(t.shareCancelled);
     }
 
     window.setTimeout(() => setShareFeedback(''), 2400);
@@ -269,18 +442,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     e.preventDefault();
     if (!job) return;
     const nextErrors: Record<string, string> = {};
-    if (!isNonEmpty(applyData.name)) nextErrors.name = 'Naam is verplicht.';
-    if (!isValidEmail(applyData.email)) nextErrors.email = 'Voer een geldig e-mailadres in.';
+    if (!isNonEmpty(applyData.name)) nextErrors.name = t.errNameRequired;
+    if (!isValidEmail(applyData.email)) nextErrors.email = t.errInvalidEmail;
     if (!cvIdFromUrl && !applyFile) {
-      nextErrors.file = 'Upload je CV om te kunnen solliciteren.';
+      nextErrors.file = t.errUploadCv;
     }
     if (applyFile && applyFile.size > APPLY_MAX_FILE_BYTES) {
-      nextErrors.file = 'CV is te groot (max 4.5 MB).';
+      nextErrors.file = t.errCvTooLarge;
     }
     const existingApplications = readJson<any[]>('suri_applications', []);
     const normalizedEmail = applyData.email.trim().toLowerCase();
     if (existingApplications.some((application) => application.jobId === job.id && String(application.email || '').trim().toLowerCase() === normalizedEmail)) {
-      nextErrors.form = 'Je hebt al op deze vacature gesolliciteerd.';
+      nextErrors.form = t.errAlreadyApplied;
     }
     if (Object.keys(nextErrors).length > 0) {
       setApplyErrors(nextErrors);
@@ -312,12 +485,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       try {
         data = await res.json();
       } catch {
-        setApplyErrors({ form: `Onverwachte response (HTTP ${res.status})` });
+        setApplyErrors({ form: `${t.errUnexpectedResponse} ${res.status})` });
         setIsApplying(false);
         return;
       }
       if (!data.success) {
-        setApplyErrors({ form: data.message || 'Sollicitatie mislukt.' });
+        setApplyErrors({ form: data.message || t.errApplyFailed });
         setIsApplying(false);
         return;
       }
@@ -342,7 +515,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       setIsApplying(false);
       setIsSuccess(true);
     } catch (err) {
-      setApplyErrors({ form: err instanceof Error ? err.message : 'Sollicitatie mislukt.' });
+      setApplyErrors({ form: err instanceof Error ? err.message : t.errApplyFailed });
       setIsApplying(false);
     }
   };
@@ -356,12 +529,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   if (!job) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="max-w-xl w-full bg-white border-4 border-black p-10 text-center shadow-[12px_12px_0px_0px_rgba(59,130,246,1)]">
-        <h1 className="text-3xl font-black uppercase tracking-tighter italic mb-4">Vacature niet gevonden</h1>
+        <h1 className="text-3xl font-black uppercase tracking-tighter italic mb-4">{t.notFoundTitle}</h1>
         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-8">
-          Deze vacature bestaat niet meer of kon niet worden geladen.
+          {t.notFoundText}
         </p>
         <Link href="/vacatures" className="inline-flex items-center gap-2 bg-black text-white px-6 py-4 font-black uppercase tracking-widest hover:bg-blue-600 transition-all">
-          <ChevronLeft className="w-4 h-4" /> Terug naar vacatures
+          <ChevronLeft className="w-4 h-4" /> {t.backVacancies}
         </Link>
       </div>
     </div>
@@ -373,7 +546,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       <div className="bg-black text-white pt-16 pb-32 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <Link href="/vacatures" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-12 text-xs font-black uppercase tracking-widest">
-            <ChevronLeft className="w-4 h-4" /> Terug naar overzicht
+            <ChevronLeft className="w-4 h-4" /> {t.backOverview}
           </Link>
 
           <div className="flex flex-col lg:flex-row justify-between items-start gap-12">
@@ -382,11 +555,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {job.verified && (
                   <div className="flex items-center gap-2 text-blue-400 italic">
                     <ShieldCheck className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Verified Employer</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t.verifiedEmployer}</span>
                   </div>
                 )}
               </div>
-              <h1 className="text-3xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-8 italic">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-8 italic break-words hyphens-auto">
                 {job.title}
               </h1>
               <div className="flex flex-wrap gap-3 sm:gap-4 md:gap-8 text-xs font-black uppercase tracking-widest text-slate-400">
@@ -404,7 +577,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
             <div className="flex flex-col items-end gap-6 w-full lg:w-auto">
                <div className="p-6 bg-white/5 border border-white/10 backdrop-blur-md flex flex-col items-end">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Match Score</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{t.matchScore}</span>
                   <span className="text-6xl font-black text-blue-600 italic leading-none">{job.match}%</span>
                </div>
                <div className="flex gap-4 w-full lg:w-auto">
@@ -431,7 +604,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     className="flex-1 px-12 py-5 font-black uppercase tracking-widest text-sm transition-all shadow-[12px_12px_0px_0px_rgba(59,130,246,0.5)] flex items-center justify-center gap-3 bg-blue-600 text-white hover:bg-black border-2 border-transparent"
                   >
                     <Sparkles className="w-4 h-4" />
-                    Direct Solliciteren
+                    {t.applyNow}
                   </button>
                </div>
             </div>
@@ -445,10 +618,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         <div className="grid grid-cols-12 gap-6 sm:gap-12">
            <div className="col-span-12 lg:col-span-8 space-y-8 sm:space-y-12">
               <div className="bg-white border-4 border-black p-6 sm:p-12 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] sm:shadow-[16px_16px_0px_0px_rgba(0,0,0,0.05)]">
-                 <h2 className="text-3xl font-black uppercase tracking-tighter italic mb-8 border-b-4 border-slate-100 pb-4">Functieomschrijving</h2>
+                 <h2 className="text-3xl font-black uppercase tracking-tighter italic mb-8 border-b-4 border-slate-100 pb-4">{t.jobDescription}</h2>
                  <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:italic prose-p:font-bold prose-p:text-slate-600 prose-li:font-bold prose-li:text-slate-600 mb-12">
                     <ReactMarkdown>
-                      {job.description || "Geen gedetailleerde omschrijving beschikbaar voor deze positie. Neem contact op met de werkgever voor meer informatie."}
+                      {job.description || t.descriptionFallback}
                     </ReactMarkdown>
                   </div>
 
@@ -456,7 +629,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                  {job.requirements && job.requirements.length > 0 && (
                    <>
                      <h3 className="text-xl font-black uppercase tracking-widest mb-6 flex items-center gap-3">
-                        <Zap className="w-6 h-6 text-blue-600" /> Vereisten
+                        <Zap className="w-6 h-6 text-blue-600" /> {t.requirements}
                      </h3>
                      <ul className="space-y-4 mb-12">
                        {job.requirements.map((req: string, i: number) => (
@@ -473,14 +646,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     <div className="flex items-center gap-6">
                        <div className="w-16 h-16 bg-slate-50 flex items-center justify-center text-blue-600 border-2 border-slate-100"><Clock className="w-8 h-8" /></div>
                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</p>
-                          <p className="text-sm font-black uppercase tracking-widest">Direct Beschikbaar</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.status}</p>
+                          <p className="text-sm font-black uppercase tracking-widest">{t.directlyAvailable}</p>
                        </div>
                     </div>
                     <div className="flex items-center gap-6">
                        <div className="w-16 h-16 bg-slate-50 flex items-center justify-center text-emerald-600 border-2 border-slate-100"><DollarSign className="w-8 h-8" /></div>
                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Type</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.type}</p>
                           <p className="text-sm font-black uppercase tracking-widest">{job.type}</p>
                        </div>
                     </div>
@@ -490,11 +663,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               {/* Company Preview Card — generiek (identiteit geheim) */}
               <div className="bg-slate-900 text-white p-12 border-b-8 border-blue-600 flex flex-col md:flex-row justify-between items-center gap-12">
                  <div>
-                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-blue-400 mb-4 italic">Over de Werkgever</h3>
-                    <h4 className="text-4xl font-black uppercase tracking-tighter italic mb-4">Geverifieerde Werkgever</h4>
+                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-blue-400 mb-4 italic">{t.aboutEmployer}</h3>
+                    <h4 className="text-4xl font-black uppercase tracking-tighter italic mb-4">{t.verifiedEmployerHeading}</h4>
                     <p className="text-slate-400 font-bold text-sm max-w-sm">
-                       De identiteit van de werkgever wordt na een succesvolle match via Jobparsing+ gedeeld.
-                       Solliciteer hier om in contact te komen.
+                       {t.employerIdentityText}
                     </p>
                  </div>
                  <div className="w-32 h-32 bg-white border-8 border-blue-600 flex items-center justify-center text-black -rotate-6 shadow-[16px_16px_0px_0px_rgba(59,130,246,0.2)]">
@@ -506,12 +678,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
            <div className="col-span-12 lg:col-span-4 space-y-12">
               {/* Highlights Box */}
               <div className="bg-white border-2 border-black p-8">
-                 <h3 className="text-xs font-black uppercase tracking-widest mb-8 italic underline decoration-blue-600 decoration-4 underline-offset-8">Job Highlights</h3>
+                 <h3 className="text-xs font-black uppercase tracking-widest mb-8 italic underline decoration-blue-600 decoration-4 underline-offset-8">{t.jobHighlights}</h3>
                  <div className="space-y-6">
                     {[
-                      { icon: Globe, label: 'Locatie', val: job.location },
-                      { icon: Briefcase, label: 'Dienstverband', val: job.type },
-                      { icon: Calendar, label: 'Geplaatst', val: job.postedAt || 'Vandaag' },
+                      { icon: Globe, label: t.location, val: job.location },
+                      { icon: Briefcase, label: t.employmentType, val: job.type },
+                      { icon: Calendar, label: t.posted, val: job.postedAt || t.today },
                     ].map((item, i) => (
                       <div key={i} className="flex items-center gap-4">
                          <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-blue-600 rounded-sm">
@@ -530,7 +702,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     onClick={handleShareJob}
                     className="w-full mt-12 bg-black text-white py-4 font-black uppercase tracking-widest text-[10px] hover:bg-blue-600 transition-all flex items-center justify-center gap-3"
                  >
-                    <Share2 className="w-4 h-4" /> Deel Vacature
+                    <Share2 className="w-4 h-4" /> {t.shareVacancy}
                  </button>
                  {shareFeedback && (
                    <p className="mt-3 text-center text-[10px] font-black uppercase tracking-widest text-blue-600">
@@ -541,7 +713,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
               {/* Similar Jobs Simulation */}
               <div className="space-y-6">
-                 <h3 className="text-xs font-black uppercase tracking-widest mb-6 italic">Vergelijkbare Vacatures</h3>
+                 <h3 className="text-xs font-black uppercase tracking-widest mb-6 italic">{t.similarVacancies}</h3>
                  {similarJobs.map(j => (
                    <Link key={j.id} href={`/vacatures/${j.id}`} className="block bg-white border-2 border-slate-100 p-6 hover:border-black transition-all group">
                       <h4 className="text-lg font-black uppercase tracking-tighter italic group-hover:text-blue-600 transition-colors mb-3">{j.title}</h4>
@@ -567,7 +739,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             >
               <button 
                 onClick={closeApplyModal}
-                aria-label="Sluit sollicitatieformulier"
+                aria-label={t.closeAria}
                 className="absolute top-8 right-8 p-2 hover:bg-slate-100 transition-colors"
                 disabled={isApplying}
               >
@@ -579,9 +751,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-emerald-500 shadow-[8px_8px_0px_0px_rgba(16,185,129,0.1)]">
                     <CheckCircle2 className="w-10 h-10" />
                   </div>
-                  <h3 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic mb-3">Sollicitatie verzonden!</h3>
+                  <h3 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic mb-3">{t.successTitle}</h3>
                   <p className="text-sm font-bold text-slate-500 mb-8 max-w-md mx-auto">
-                    Je sollicitatie voor <strong>{job.title}</strong> is doorgestuurd naar de werkgever.
+                    {t.successTextPrefix} <strong>{job.title}</strong> {t.successTextSuffix}
                   </p>
 
                   {!user && (
@@ -591,10 +763,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                           <Sparkles className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">Tip</p>
-                          <p className="text-base font-black uppercase tracking-tight italic mb-1">Maak een account aan</p>
+                          <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">{t.tip}</p>
+                          <p className="text-base font-black uppercase tracking-tight italic mb-1">{t.createAccountHeading}</p>
                           <p className="text-[11px] font-bold text-slate-600">
-                            Dan kun je je matches blijven bekijken, je sollicitaties volgen en sneller solliciteren op andere vacatures.
+                            {t.createAccountText}
                           </p>
                         </div>
                       </div>
@@ -602,29 +774,29 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         href={`/auth?signup=1&role=candidate&email=${encodeURIComponent(applyData.email)}&name=${encodeURIComponent(applyData.name)}`}
                         className="block w-full bg-blue-600 text-white text-center py-4 font-black uppercase tracking-widest text-[11px] hover:bg-black transition-all"
                       >
-                        Account aanmaken
+                        {t.createAccount}
                       </Link>
                     </div>
                   )}
 
                   <button onClick={closeApplyModal} className="border-2 border-black text-black px-10 py-4 font-black uppercase tracking-widest text-[11px] hover:bg-black hover:text-white transition-all">
-                    Sluiten
+                    {t.close}
                   </button>
                 </div>
               ) : (
                 <form onSubmit={handleApply} className="space-y-8">
                    <h2 className="text-4xl font-black uppercase tracking-tighter italic leading-none border-b-4 border-slate-100 pb-6 mb-8">
-                     Solliciteren via <span className="text-blue-600">Jobparsing+</span>
+                     {t.applyViaPrefix} <span className="text-blue-600">Jobparsing+</span>
                    </h2>
 
                    <div className="bg-slate-50 p-8 border-l-8 border-blue-600">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Functie</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">{t.function}</p>
                       <p className="text-xl font-black uppercase tracking-tight italic">{job.title}</p>
                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                        <div className="space-y-4">
-                         <label className="text-[10px] font-black uppercase tracking-widest">Naam</label>
+                         <label className="text-[10px] font-black uppercase tracking-widest">{t.name}</label>
                          <input 
                            required 
                            type="text"
@@ -635,7 +807,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                          {applyErrors.name && <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{applyErrors.name}</p>}
                        </div>
                        <div className="space-y-4">
-                         <label className="text-[10px] font-black uppercase tracking-widest">E-mail</label>
+                         <label className="text-[10px] font-black uppercase tracking-widest">{t.email}</label>
                          <input 
                            required 
                            type="email"
@@ -671,8 +843,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                             <CheckCircle2 className="w-6 h-6" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-[11px] font-black uppercase tracking-widest">{linkedCvName || 'Je geüploade CV'}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Wordt automatisch meegestuurd</p>
+                            <p className="text-[11px] font-black uppercase tracking-widest">{linkedCvName || t.yourUploadedCv}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t.autoSent}</p>
                           </div>
                         </div>
                       ) : applyFile ? (
@@ -689,7 +861,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                             onClick={() => cvInputRef.current?.click()}
                             className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:underline"
                           >
-                            Wijzig
+                            {t.change}
                           </button>
                         </div>
                       ) : (
@@ -702,8 +874,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                             <Upload className="w-6 h-6" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-[11px] font-black uppercase tracking-widest">CV uploaden</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">PDF of DOCX, max 4.5 MB</p>
+                            <p className="text-[11px] font-black uppercase tracking-widest">{t.uploadCv}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t.uploadHint}</p>
                           </div>
                         </button>
                       )}
@@ -717,7 +889,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                      type="submit"
                      className="w-full bg-blue-600 text-white py-6 font-black uppercase tracking-[0.2em] text-sm hover:bg-black transition-all shadow-[12px_12px_0px_0px_rgba(59,130,246,0.3)] flex items-center justify-center gap-4 disabled:opacity-50"
                    >
-                     {isApplying ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "NU SOLLICITEREN"}
+                     {isApplying ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : t.applyButton}
                    </button>
                 </form>
               )}

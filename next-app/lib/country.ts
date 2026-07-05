@@ -66,3 +66,27 @@ export function inferCountry(location?: string | null, fallbackText?: string | n
     }
     return undefined;
 }
+
+// Landen die momenteel NIET publiek getoond of gematcht worden. Nederland staat
+// tijdelijk uit zodat Surinaamse kandidaten niet op NL-vacatures solliciteren
+// (besluit Ricky, 4-7-2026). Leegmaken = alle landen weer tonen.
+export const HIDDEN_VACANCY_COUNTRIES: Country[] = ['netherlands'];
+
+/**
+ * Mongo-filterfragment dat verborgen landen uitsluit. Vacatures zonder ingevuld
+ * country-veld blijven zichtbaar ($nin matcht ook ontbrekende velden) — die
+ * vangen we alsnog af met isHiddenVacancy() op basis van afgeleid land.
+ */
+export function visibleVacancyCountryQuery(): Record<string, unknown> {
+    return HIDDEN_VACANCY_COUNTRIES.length ? { country: { $nin: HIDDEN_VACANCY_COUNTRIES } } : {};
+}
+
+/**
+ * True als een vacature verborgen moet worden. Gebruikt het opgeslagen country-veld
+ * en valt terug op inferCountry() zodat ook nog niet-gebackfillde vacatures correct
+ * worden uitgesloten (geen operationele backfill-stap nodig).
+ */
+export function isHiddenVacancy(v: { country?: Country | null; location?: string | null; description?: string | null }): boolean {
+    const country = v.country || inferCountry(v.location, v.description);
+    return country ? HIDDEN_VACANCY_COUNTRIES.includes(country) : false;
+}
