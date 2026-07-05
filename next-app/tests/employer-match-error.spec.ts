@@ -61,7 +61,11 @@ test.describe('voor-werkgevers — niet-JSON foutafhandeling', () => {
         await page.getByPlaceholder(/software developer/i).fill('data engineer');
         await page.getByRole('button', { name: /^zoeken$/i }).click();
 
+        // De rauwe parse-fout mag NIET zichtbaar zijn...
         await expect(page.getByText(/unexpected token/i)).toHaveCount(0);
         await expect(page.getByText(/is not valid json/i)).toHaveCount(0);
+        // ...en er moet POSITIEF een leesbare foutmelding staan. Zonder deze regel
+        // zou een stil, leeg zoekscherm ook slagen (de asymmetrie die we hier dichten).
+        await expect(page.getByText(/foutcode 500|probeer het later opnieuw/i)).toBeVisible();
     });
 });
