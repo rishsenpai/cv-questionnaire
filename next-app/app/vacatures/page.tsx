@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   Bookmark,
 } from 'lucide-react';
-import { cn, normalizeEmploymentType } from '@/lib/utils';
+import { cn, formatNumber, normalizeEmploymentType } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { isValidEmail } from '@/lib/validation';
@@ -197,9 +197,9 @@ interface ApiVacancy {
 function formatSalary(s?: ApiVacancy['salary']): string {
   if (!s || (!s.min && !s.max)) return 'Op aanvraag';
   const cur = s.currency || 'SRD';
-  if (s.min && s.max) return `${cur} ${s.min.toLocaleString()}-${s.max.toLocaleString()}`;
-  if (s.min) return `${cur} ${s.min.toLocaleString()}+`;
-  return `${cur} tot ${s.max!.toLocaleString()}`;
+  if (s.min && s.max) return `${cur} ${formatNumber(s.min)}-${formatNumber(s.max)}`;
+  if (s.min) return `${cur} ${formatNumber(s.min)}+`;
+  return `${cur} tot ${formatNumber(s.max!)}`;
 }
 
 function vacancyToCard(v: ApiVacancy): JobCard {
@@ -485,7 +485,7 @@ function VacaturesContent() {
               <div className="space-y-4">
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
                   <span>SRD 0</span>
-                  <span>SRD {priceRange.toLocaleString()}{priceRange >= SALARY_MAX ? '+' : ''}</span>
+                  <span>SRD {formatNumber(priceRange)}{priceRange >= SALARY_MAX ? '+' : ''}</span>
                 </div>
                 <input
                   type="range"
@@ -640,8 +640,10 @@ function VacaturesContent() {
                     
                     <div className="flex flex-col items-end gap-6 w-full md:w-auto">
                       <div className="flex items-center gap-6">
-                        <button 
+                        <button
                           onClick={() => toggleSaveJob(job.id)}
+                          aria-label={`Bewaar vacature ${job.title}`}
+                          aria-pressed={savedJobs.includes(job.id)}
                           className={cn(
                             "p-3 border-2 transition-all brutal-shadow",
                             savedJobs.includes(job.id) ? "bg-red-50 border-red-200 text-red-500" : "bg-white border-black text-slate-300 hover:text-black"

@@ -16,7 +16,7 @@ import {
   UploadCloud,
   FileText,
 } from 'lucide-react';
-import { cn, normalizeEmploymentType } from '@/lib/utils';
+import { cn, formatNumber, normalizeEmploymentType } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { buildWhatsAppUrl, SUPPORT_EMAIL } from '@/lib/config';
@@ -113,9 +113,9 @@ interface ApiVacancy {
 function formatSalary(salary?: ApiVacancy['salary']): string {
   if (!salary || (!salary.min && !salary.max)) return 'Op aanvraag';
   const cur = salary.currency || 'SRD';
-  if (salary.min && salary.max) return `${cur} ${salary.min.toLocaleString()}-${salary.max.toLocaleString()}`;
-  if (salary.min) return `${cur} ${salary.min.toLocaleString()}+`;
-  return `${cur} tot ${salary.max!.toLocaleString()}`;
+  if (salary.min && salary.max) return `${cur} ${formatNumber(salary.min)}-${formatNumber(salary.max)}`;
+  if (salary.min) return `${cur} ${formatNumber(salary.min)}+`;
+  return `${cur} tot ${formatNumber(salary.max!)}`;
 }
 
 function vacancyToCard(v: ApiVacancy): VacancyCard {

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { cn, formatNumber } from '@/lib/utils';
 import { writeJson } from '@/lib/storage';
 import { trackEvent } from '@/lib/analytics-client';
 import { useT } from '@/lib/i18n/LanguageProvider';
@@ -148,9 +148,9 @@ interface MatchResponse {
 function formatSalary(s: MatchVacancy['salary'], labels: { onRequest: string; upTo: string }): string {
   if (!s || (!s.min && !s.max)) return labels.onRequest;
   const cur = s.currency || 'SRD';
-  if (s.min && s.max) return `${cur} ${s.min.toLocaleString()}-${s.max.toLocaleString()}`;
-  if (s.min) return `${cur} ${s.min.toLocaleString()}+`;
-  return `${cur} ${labels.upTo} ${s.max!.toLocaleString()}`;
+  if (s.min && s.max) return `${cur} ${formatNumber(s.min)}-${formatNumber(s.max)}`;
+  if (s.min) return `${cur} ${formatNumber(s.min)}+`;
+  return `${cur} ${labels.upTo} ${formatNumber(s.max!)}`;
 }
 
 function MatchesContent() {

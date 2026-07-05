@@ -21,6 +21,14 @@ const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
   permanent: 'Vast',
 };
 
+// Deterministische getalnotatie (punt als duizendtalscheiding, zoals in Suriname/NL).
+// Expliciete locale is essentieel: zonder locale formatteert de server (Node, en-US:
+// "500,000") anders dan de browser ("500.000") → hydration-mismatch op SSR-pagina's.
+const NUMBER_FORMAT = new Intl.NumberFormat('nl-SR');
+export function formatNumber(n: number): string {
+  return NUMBER_FORMAT.format(n);
+}
+
 export function normalizeEmploymentType(raw?: string | null): string {
   if (!raw || !raw.trim()) return 'Full-time';
   // Verwijder spaties, koppeltekens en underscores → "FULL_TIME"/"Full-time"/"full time" worden allemaal "fulltime".

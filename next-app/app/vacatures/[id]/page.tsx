@@ -24,7 +24,7 @@ import {
   Sparkles,
   GraduationCap
 } from 'lucide-react';
-import { cn, normalizeEmploymentType } from '@/lib/utils';
+import { cn, formatNumber, normalizeEmploymentType } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
@@ -247,9 +247,9 @@ interface JobDetail {
 function formatSalary(s?: ApiVacancy['salary']): string {
   if (!s || (!s.min && !s.max)) return 'Op aanvraag';
   const cur = s.currency || 'SRD';
-  if (s.min && s.max) return `${cur} ${s.min.toLocaleString()}-${s.max.toLocaleString()}`;
-  if (s.min) return `${cur} ${s.min.toLocaleString()}+`;
-  return `${cur} tot ${s.max!.toLocaleString()}`;
+  if (s.min && s.max) return `${cur} ${formatNumber(s.min)}-${formatNumber(s.max)}`;
+  if (s.min) return `${cur} ${formatNumber(s.min)}+`;
+  return `${cur} tot ${formatNumber(s.max!)}`;
 }
 
 function vacancyToJob(v: ApiVacancy): JobDetail {
@@ -581,8 +581,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   <span className="text-6xl font-black text-blue-600 italic leading-none">{job.match}%</span>
                </div>
                <div className="flex gap-4 w-full lg:w-auto">
-                  <button 
+                  <button
                     onClick={toggleSave}
+                    aria-label={isSaved ? 'Verwijder uit bewaarde vacatures' : 'Bewaar vacature'}
+                    aria-pressed={isSaved}
                     className={cn(
                       "p-5 border-2 transition-all",
                       isSaved ? "bg-red-50 text-red-500 border-red-200" : "bg-white text-black border-white hover:bg-slate-100"

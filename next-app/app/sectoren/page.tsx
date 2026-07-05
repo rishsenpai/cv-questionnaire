@@ -153,7 +153,7 @@ export default function SectorenPage() {
                 desc={sect.desc}
                 icon={meta.icon}
                 accent={meta.accent}
-                onClick={() => router.push(`/vacatures?q=${encodeURIComponent(sect.label)}`)}
+                href={`/vacatures?q=${encodeURIComponent(sect.label)}`}
               />
             );
           })}
@@ -181,14 +181,14 @@ export default function SectorenPage() {
 }
 
 function SectorCard({
-  index, label, desc, icon: Icon, accent, onClick,
+  index, label, desc, icon: Icon, accent, href,
 }: {
   index: number;
   label: string;
   desc: string;
   icon: typeof Code2;
   accent: 'orange' | 'emerald' | 'slate';
-  onClick: () => void;
+  href: string;
 }) {
   const accentClasses = {
     orange: 'bg-orange-50 text-orange-600',
@@ -196,12 +196,12 @@ function SectorCard({
     slate: 'bg-slate-100 text-slate-700',
   }[accent];
   const idx = String(index).padStart(2, '0');
+  // Echte <Link> i.p.v. button+router.push: middenklik/nieuw tabblad werkt,
+  // toetsenbord-navigatie en crawlers zien de sector-pagina's.
   return (
-    <motion.button
-      type="button"
-      whileHover={{ y: -4 }}
-      onClick={onClick}
-      className="bg-slate-50 rounded-2xl p-7 flex flex-col text-left min-h-[280px] hover:bg-white hover:shadow-[8px_8px_0px_0px_rgba(15,23,42,0.06)] transition-all group border border-transparent hover:border-slate-200"
+    <Link
+      href={href}
+      className="bg-slate-50 rounded-2xl p-7 flex flex-col text-left min-h-[280px] hover:bg-white hover:shadow-[8px_8px_0px_0px_rgba(15,23,42,0.06)] hover:-translate-y-1 transition-all group border border-transparent hover:border-slate-200"
     >
       <div className="flex items-start justify-between mb-6">
         <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', accentClasses)}>
@@ -211,6 +211,6 @@ function SectorCard({
       </div>
       <h4 className="text-xl md:text-2xl font-black uppercase tracking-tighter italic leading-tight mb-3">{label}</h4>
       <p className="text-sm font-bold text-slate-500 leading-relaxed mb-auto">{desc}</p>
-    </motion.button>
+    </Link>
   );
 }

@@ -33,7 +33,7 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { cn } from '@/lib/utils';
+import { cn, formatNumber } from '@/lib/utils';
 import { useT } from '@/lib/i18n/LanguageProvider';
 
 const DASHBOARD_T = {
@@ -1014,9 +1014,9 @@ function VacancyRowInner({
     const s = v.salary;
     if (!s || (!s.min && !s.max)) return null;
     const cur = s.currency || 'SRD';
-    if (s.min && s.max) return `${cur} ${s.min.toLocaleString()}-${s.max.toLocaleString()}`;
-    if (s.min) return `${cur} ${s.min.toLocaleString()}+`;
-    return `${cur} ${t.salaryTo} ${s.max!.toLocaleString()}`;
+    if (s.min && s.max) return `${cur} ${formatNumber(s.min)}-${formatNumber(s.max)}`;
+    if (s.min) return `${cur} ${formatNumber(s.min)}+`;
+    return `${cur} ${t.salaryTo} ${formatNumber(s.max!)}`;
   };
   const salary = formatSalary();
   const created = new Date(v.createdAt).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
