@@ -8,6 +8,8 @@ import MatchEvent from '@/models/MatchEvent';
 import { getTransporter } from '@/lib/server/mailer';
 import { ingestCvFromBuffer } from '@/lib/server/cvIngestion';
 import { fetchCvBlob } from '@/lib/server/blobStorage';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { escapeHtml, decodeBase64Limited } from '@/lib/server/security';
 
 export const maxDuration = 60;
 
@@ -25,6 +27,9 @@ interface VacancyEmail {
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'apply-vacancy', limit: 20, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         await connectDB();
         const body = await req.json();
         const {
@@ -35,7 +40,6 @@ export async function POST(req: NextRequest) {
             applicantEmail,
             fileName,
             fileType,
-            fileSize,
             fileData,
         } = body || {};
 
@@ -66,10 +70,15 @@ export async function POST(req: NextRequest) {
         }
 
         if (!resolvedCv && fileData && fileName) {
-            if (fileSize && fileSize > MAX_FILE_BYTES) {
-                return NextResponse.json({ success: false, message: 'CV is te groot (max 10MB)' }, { status: 400 });
+            // Groottelimiet uit de gedecodeerde payload (niet uit het client-fileSize-veld,
+            // dat weggelaten kon worden om de cap te omzeilen).
+            const { buffer, tooLarge } = decodeBase64Limited(fileData, MAX_FILE_BYTES);
+            if (tooLarge) {
+                return NextResponse.json({ success: false, message: 'CV is te groot (max 10MB)' }, { status: 413 });
             }
-            const buffer = Buffer.from(fileData, 'base64');
+            if (!buffer) {
+                return NextResponse.json({ success: false, message: 'Ongeldig CV-bestand' }, { status: 400 });
+            }
             attachmentBuffer = buffer;
             attachmentFileName = fileName;
             attachmentFileType = fileType || 'application/octet-stream';
@@ -78,7 +87,7 @@ export async function POST(req: NextRequest) {
                 buffer,
                 fileName,
                 fileType: fileType || 'application/octet-stream',
-                fileSize,
+                fileSize: buffer.length,
                 isInternal: false,
                 lang: 'nl',
             });
@@ -162,17 +171,17 @@ export async function POST(req: NextRequest) {
     <p>Een kandidaat wil solliciteren op een vacature.</p>
     <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3 style="margin-top: 0;">Kandidaat</h3>
-        <p><strong>Naam:</strong> ${candidateName || '—'}</p>
-        <p><strong>Email:</strong> ${candidateEmail || '—'}</p>
-        ${candidatePhone ? `<p><strong>Telefoon:</strong> ${candidatePhone}</p>` : ''}
-        ${candidateLocation ? `<p><strong>Locatie:</strong> ${candidateLocation}</p>` : ''}
-        ${candidateRole ? `<p><strong>Huidige/Gewenste functie:</strong> ${candidateRole}</p>` : ''}
+        <p><strong>Naam:</strong> ${escapeHtml(candidateName) || '—'}</p>
+        <p><strong>Email:</strong> ${escapeHtml(candidateEmail) || '—'}</p>
+        ${candidatePhone ? `<p><strong>Telefoon:</strong> ${escapeHtml(candidatePhone)}</p>` : ''}
+        ${candidateLocation ? `<p><strong>Locatie:</strong> ${escapeHtml(candidateLocation)}</p>` : ''}
+        ${candidateRole ? `<p><strong>Huidige/Gewenste functie:</strong> ${escapeHtml(candidateRole)}</p>` : ''}
     </div>
     <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; border: 1px solid #90cdf4; margin: 20px 0;">
         <h3 style="margin-top: 0; color: #2b6cb0;">Vacature</h3>
-        <p><strong>Functie:</strong> ${vacancyForEmail.title}</p>
-        ${vacancyForEmail.location ? `<p><strong>Locatie:</strong> ${vacancyForEmail.location}</p>` : ''}
-        ${vacancyForEmail.employmentType ? `<p><strong>Dienstverband:</strong> ${vacancyForEmail.employmentType}</p>` : ''}
+        <p><strong>Functie:</strong> ${escapeHtml(vacancyForEmail.title)}</p>
+        ${vacancyForEmail.location ? `<p><strong>Locatie:</strong> ${escapeHtml(vacancyForEmail.location)}</p>` : ''}
+        ${vacancyForEmail.employmentType ? `<p><strong>Dienstverband:</strong> ${escapeHtml(vacancyForEmail.employmentType)}</p>` : ''}
         ${vacancyForEmail.isRemote ? '<p><strong>Remote:</strong> Ja</p>' : ''}
         ${vacancyForEmail.matchScore ? `<p><strong>Match score:</strong> ${vacancyForEmail.matchScore}%</p>` : ''}
     </div>
@@ -262,11 +271,13 @@ export async function POST(req: NextRequest) {
             console.error('Application email failed:', err instanceof Error ? err.message : err);
         }
 
+        // candidateEmail NIET teruggeven: deze route is onauth en accepteert een
+        // willekeurige cvId. Het echoën van het e-mailadres maakte e-mail-harvesting
+        // mogelijk (publieke search-cvs lekt CV-ids → apply-vacancy gaf het adres terug).
         return NextResponse.json({
             success: true,
             message: 'Sollicitatie verzonden',
             cvId: resolvedCv ? String(resolvedCv._id) : null,
-            candidateEmail,
         });
     } catch (err) {
         console.error('Error applying to vacancy:', err);

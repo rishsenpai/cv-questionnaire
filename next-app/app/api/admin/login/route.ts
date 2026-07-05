@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { connectDB } from '@/lib/db';
 import AdminToken from '@/models/AdminToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
+
+// Constant-time vergelijking zodat de responstijd niets over het wachtwoord
+// prijsgeeft. Lengtes-mismatch valt bewust vóór timingSafeEqual (dat gooit bij
+// ongelijke buffergroottes).
+function safeEqual(a: string, b: string): boolean {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+}
 
 export async function POST(req: NextRequest) {
     try {
+        // Rem online brute-force tegen het statische admin-wachtwoord af.
+        const limited = await enforceRateLimit(req, { name: 'admin-login', limit: 10, windowMs: 15 * 60 * 1000 });
+        if (limited) return limited;
+
         const body = await req.json();
         const { password } = body || {};
         const adminPassword = process.env.ADMIN_PASSWORD;
@@ -16,7 +32,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (password !== adminPassword) {
+        if (typeof password !== 'string' || !safeEqual(password, adminPassword)) {
             console.warn(`[SECURITY] Failed admin login attempt from IP: ${getClientIP(req)}`);
             return NextResponse.json(
                 { success: false, message: 'Invalid password' },

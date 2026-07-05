@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export const maxDuration = 30;
 
@@ -28,6 +29,11 @@ function escapeRegex(str: string): string {
 
 export async function GET(req: NextRequest) {
     try {
+        // Onauth endpoint dat CV-data (geanonimiseerd) teruggeeft → begrens
+        // scraping van de hele kandidatenpool.
+        const limited = await enforceRateLimit(req, { name: 'search-cvs', limit: 40, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const url = new URL(req.url);
         const q = (url.searchParams.get('q') || '').trim();
         const location = (url.searchParams.get('location') || '').trim();

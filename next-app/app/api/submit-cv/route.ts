@@ -17,6 +17,7 @@ import {
     prepareCVText,
 } from '@/lib/server/embeddings';
 import { linkCandidateByCvEmail } from '@/lib/server/candidateCvLink';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export const maxDuration = 60;
 
@@ -37,6 +38,11 @@ async function embedCvAsync(cvId: string): Promise<void> {
 
 export async function POST(req: NextRequest) {
     try {
+        // Onauth endpoint dat DB-records aanmaakt, e-mail stuurt en (async) embeddings
+        // genereert → begrens tegen massale CV-spam.
+        const limited = await enforceRateLimit(req, { name: 'submit-cv', limit: 20, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const formData = await req.json() as CVFormData & { language?: Language };
         const lang: Language = formData.language && ['en', 'nl', 'es'].includes(formData.language)
             ? formData.language

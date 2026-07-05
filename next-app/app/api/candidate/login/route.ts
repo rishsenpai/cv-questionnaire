@@ -4,9 +4,15 @@ import Candidate from '@/models/Candidate';
 import CandidateToken from '@/models/CandidateToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
 import { linkCvsByEmail } from '@/lib/server/candidateCvLink';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export async function POST(req: NextRequest) {
     try {
+        // Per-IP limiet bovenop de per-account lockout: stopt credential-spraying
+        // over veel verschillende e-mailadressen vanaf één bron.
+        const limited = await enforceRateLimit(req, { name: 'candidate-login', limit: 20, windowMs: 15 * 60 * 1000 });
+        if (limited) return limited;
+
         await connectDB();
         const body = await req.json();
         const { email, password } = body || {};

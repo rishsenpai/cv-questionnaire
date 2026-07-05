@@ -12,6 +12,8 @@ import { tokenize } from '@/lib/server/synonyms';
 import { extractText } from '@/lib/server/cvTextExtract';
 import { getTransporter } from '@/lib/server/mailer';
 import { getClientIP } from '@/lib/server/auth';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { escapeHtml, decodeBase64Limited } from '@/lib/server/security';
 
 export const maxDuration = 60;
 
@@ -39,6 +41,11 @@ function topSkillsFrom(skills: string | undefined): string[] {
 
 export async function POST(req: NextRequest) {
     try {
+        // Onauth endpoint dat een TF-IDF over de héle CV-collectie draait (CPU) en
+        // een notificatiemail stuurt → begrens het aantal verzoeken per IP.
+        const limited = await enforceRateLimit(req, { name: 'match-vacancy', limit: 20, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const body = await req.json();
         const {
             vacancyText: rawText,
@@ -49,17 +56,19 @@ export async function POST(req: NextRequest) {
             phone,
             fileName,
             fileType,
-            fileSize,
             fileData,
         } = body || {};
 
         let vacancyText = (rawText || '').toString().trim();
 
         if (!vacancyText && fileData) {
-            if (fileSize && fileSize > MAX_FILE_BYTES) {
-                return NextResponse.json({ success: false, message: 'Bestand te groot (max 10MB)' }, { status: 400 });
+            const { buffer, tooLarge } = decodeBase64Limited(fileData, MAX_FILE_BYTES);
+            if (tooLarge) {
+                return NextResponse.json({ success: false, message: 'Bestand te groot (max 10MB)' }, { status: 413 });
             }
-            const buffer = Buffer.from(fileData, 'base64');
+            if (!buffer) {
+                return NextResponse.json({ success: false, message: 'Ongeldig bestand' }, { status: 400 });
+            }
             const { text, error } = await extractText({ buffer, fileName, fileType });
             if (error) {
                 return NextResponse.json({ success: false, message: `Tekstextractie mislukt: ${error}` }, { status: 400 });
@@ -185,7 +194,7 @@ export async function POST(req: NextRequest) {
         after(async () => {
         try {
             const matchSummary = matches.slice(0, 5)
-                .map((m, i) => `${i + 1}. ${m.jobTitle} - ${m.location} (${m.matchScore}%)`)
+                .map((m, i) => `${i + 1}. ${escapeHtml(m.jobTitle)} - ${escapeHtml(m.location)} (${m.matchScore}%)`)
                 .join('<br>');
             const html = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -193,14 +202,14 @@ export async function POST(req: NextRequest) {
     <p>Een werkgever heeft via de publieke matching tool een vacature ingediend.</p>
     <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3 style="margin-top: 0;">Werkgever</h3>
-        ${companyName ? `<p><strong>Bedrijf:</strong> ${companyName}</p>` : ''}
-        ${contactName ? `<p><strong>Contactpersoon:</strong> ${contactName}</p>` : ''}
-        ${email ? `<p><strong>Email:</strong> ${email}</p>` : ''}
-        ${phone ? `<p><strong>Telefoon:</strong> ${phone}</p>` : ''}
+        ${companyName ? `<p><strong>Bedrijf:</strong> ${escapeHtml(companyName)}</p>` : ''}
+        ${contactName ? `<p><strong>Contactpersoon:</strong> ${escapeHtml(contactName)}</p>` : ''}
+        ${email ? `<p><strong>Email:</strong> ${escapeHtml(email)}</p>` : ''}
+        ${phone ? `<p><strong>Telefoon:</strong> ${escapeHtml(phone)}</p>` : ''}
     </div>
     <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; border: 1px solid #90cdf4; margin: 20px 0;">
         <h3 style="margin-top: 0; color: #2b6cb0;">Vacature</h3>
-        <p><strong>Titel:</strong> ${detectedTitle}</p>
+        <p><strong>Titel:</strong> ${escapeHtml(detectedTitle)}</p>
         <p><strong>Aantal matches:</strong> ${matches.length}</p>
         <p><strong>Top score:</strong> ${matches[0]?.matchScore || 0}%</p>
     </div>

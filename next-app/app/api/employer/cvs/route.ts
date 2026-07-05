@@ -148,6 +148,17 @@ export async function GET(req: NextRequest) {
                 obj.experience = null;
                 obj.summary = null;
                 obj.skills = null;
+                // Zonder deze extra strip lekte de betaalmuur: fullText bevat de
+                // volledige ruwe CV-tekst (naam, e-mail, telefoon, adres) en fileUrl
+                // is een directe download van het originele CV. birthDate/education/
+                // achievements/fileName (vaak "CV_Voornaam_Achternaam.pdf") deanonimiseren
+                // de kandidaat eveneens. Alleen premium/advanced mag deze zien.
+                delete obj.fullText;
+                delete obj.fileUrl;
+                delete obj.birthDate;
+                delete obj.education;
+                delete obj.achievements;
+                delete obj.fileName;
             }
             return obj;
         });

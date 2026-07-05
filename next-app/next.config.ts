@@ -27,6 +27,26 @@ const nextConfig: NextConfig = {
     ],
   },
   transpilePackages: ['motion'],
+  // Basis security-headers voor alle routes. Bewust géén strikte Content-Security-Policy
+  // hier — die vergt nonce-gebaseerde inline-scripts en zou Next's runtime breken;
+  // apart traject. Deze headers zijn veilig en breken niets:
+  // - X-Frame-Options DENY: admin-console niet in een iframe → geen clickjacking.
+  // - nosniff: browser mag content-type niet raden (MIME-confusion).
+  // - Referrer-Policy: lek geen volledige URL's naar externe sites.
+  // - Permissions-Policy: schakel ongebruikte krachtige browser-API's uit.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
+    ];
+  },
   webpack: (config, {dev}) => {
     // File watching can be disabled through DISABLE_HMR during automated edits.
     if (dev && process.env.DISABLE_HMR === 'true') {

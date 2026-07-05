@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import { findJobsForCV } from '@/lib/server/jsearch';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export const maxDuration = 30;
 
@@ -14,6 +15,10 @@ interface Params {
 
 export async function GET(req: NextRequest, { params }: Params) {
     try {
+        // Onauth endpoint dat een betaalde JSearch-API aanroept → begrens verbruik.
+        const limited = await enforceRateLimit(req, { name: 'external-jobs', limit: 60, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const { id } = await params;
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json({ success: false, message: 'Invalid CV id' }, { status: 400 });

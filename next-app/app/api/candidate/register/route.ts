@@ -5,9 +5,13 @@ import Candidate from '@/models/Candidate';
 import CandidateToken from '@/models/CandidateToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
 import { linkCvsByEmail } from '@/lib/server/candidateCvLink';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'candidate-register', limit: 10, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         await connectDB();
         const body = await req.json();
         const { email, password, fullName, phone, location } = body || {};

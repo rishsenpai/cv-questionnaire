@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTransporter } from '@/lib/server/mailer';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { escapeHtml } from '@/lib/server/security';
 
 interface FeedbackData {
     feedbackName?: string;
@@ -10,6 +12,9 @@ interface FeedbackData {
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'submit-feedback', limit: 10, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const data = (await req.json()) as FeedbackData;
 
         if (!data.feedbackMessage) {
@@ -36,10 +41,10 @@ body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width:
 <body>
     <div class="feedback-header"><h2>💬 New Feedback Received</h2><p>CV Questionnaire User Feedback</p></div>
     <div class="feedback-content">
-        ${data.feedbackName ? `<div class="feedback-field"><div class="feedback-label">Name:</div><div class="feedback-value">${data.feedbackName}</div></div>` : ''}
-        ${data.feedbackEmail ? `<div class="feedback-field"><div class="feedback-label">Email:</div><div class="feedback-value">${data.feedbackEmail}</div></div>` : ''}
+        ${data.feedbackName ? `<div class="feedback-field"><div class="feedback-label">Name:</div><div class="feedback-value">${escapeHtml(data.feedbackName)}</div></div>` : ''}
+        ${data.feedbackEmail ? `<div class="feedback-field"><div class="feedback-label">Email:</div><div class="feedback-value">${escapeHtml(data.feedbackEmail)}</div></div>` : ''}
         ${rating > 0 ? `<div class="feedback-field"><div class="feedback-label">Rating:</div><div class="feedback-value"><span class="rating-stars">${stars}</span> (${rating}/5 stars)</div></div>` : ''}
-        <div class="feedback-field"><div class="feedback-label">Feedback Message:</div><div class="feedback-value">${data.feedbackMessage.replace(/\n/g, '<br>')}</div></div>
+        <div class="feedback-field"><div class="feedback-label">Feedback Message:</div><div class="feedback-value">${escapeHtml(data.feedbackMessage).replace(/\n/g, '<br>')}</div></div>
     </div>
     <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #666; text-align: center;">
         <p>Feedback submitted on: ${new Date().toLocaleString()}</p>

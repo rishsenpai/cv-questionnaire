@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
 import { visibleVacancyCountryQuery, isHiddenVacancy } from '@/lib/country';
+import { escapeRegex } from '@/lib/server/security';
 
 export async function GET(req: NextRequest) {
     try {
@@ -20,13 +21,16 @@ export async function GET(req: NextRequest) {
         // nog niet-gelabelde vacatures vangen we hieronder af met isHiddenVacancy().
         const query: Record<string, unknown> = { isActive: true, fulfilledAt: null, ...visibleVacancyCountryQuery() };
         if (search) {
+            // Escapen: rauwe query-params als $regex lieten ReDoS + full-collection
+            // scans toe (bv. ?search=(a+)+$). Cap de lengte tegen extreem lange patronen.
+            const safe = escapeRegex(search.slice(0, 100));
             query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { company: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
+                { title: { $regex: safe, $options: 'i' } },
+                { company: { $regex: safe, $options: 'i' } },
+                { description: { $regex: safe, $options: 'i' } },
             ];
         }
-        if (location) query.location = { $regex: location, $options: 'i' };
+        if (location) query.location = { $regex: escapeRegex(location.slice(0, 100)), $options: 'i' };
         if (source) query.source = source;
 
         const total = await Vacancy.countDocuments(query);
@@ -62,7 +66,8 @@ export async function GET(req: NextRequest) {
             pagination: { page, limit, total, pages: Math.ceil(total / limit) },
         });
     } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error';
-        return NextResponse.json({ success: false, message: msg }, { status: 500 });
+        // Geen err.message naar de client: kan interne Mongoose/infra-details lekken.
+        console.error('vacancies list error:', err instanceof Error ? err.message : err);
+        return NextResponse.json({ success: false, message: 'Vacatures ophalen mislukt' }, { status: 500 });
     }
 }

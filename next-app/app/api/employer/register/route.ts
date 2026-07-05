@@ -5,9 +5,13 @@ import Employer from '@/models/Employer';
 import EmployerToken from '@/models/EmployerToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
 import { isValidPhone } from '@/lib/validation';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'employer-register', limit: 10, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         await connectDB();
         const body = await req.json();
         const { password, companyName, contactEmail, phone, kkfNumber } = body || {};

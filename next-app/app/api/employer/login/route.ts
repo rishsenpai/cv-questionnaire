@@ -3,9 +3,13 @@ import { connectDB } from '@/lib/db';
 import Employer from '@/models/Employer';
 import EmployerToken from '@/models/EmployerToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'employer-login', limit: 20, windowMs: 15 * 60 * 1000 });
+        if (limited) return limited;
+
         await connectDB();
         const body = await req.json();
         const { username, password } = body || {};

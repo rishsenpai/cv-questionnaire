@@ -9,11 +9,19 @@ import {
     isValidNLOrSRPhone,
     formatPhone,
 } from '@/lib/contactExtract';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { decodeBase64Limited } from '@/lib/server/security';
 
 export const maxDuration = 60;
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
     try {
+        // Onauth endpoint dat OpenAI aanroept → rem spam af (kostenbescherming).
+        const limited = await enforceRateLimit(req, { name: 'parse-cv', limit: 15, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const body = await req.json();
         const { fileData, fileType, fileName, language } = body || {};
         const lang: Language = language && ['en', 'nl', 'es'].includes(language) ? language : 'en';
@@ -26,7 +34,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, message: t.aiNotConfigured }, { status: 503 });
         }
 
-        const buffer = Buffer.from(fileData, 'base64');
+        // Harde groottelimiet vóór allocatie (vertrouwt niet op een fileSize-veld).
+        const { buffer, tooLarge } = decodeBase64Limited(fileData, MAX_FILE_BYTES);
+        if (tooLarge) {
+            return NextResponse.json({ success: false, message: 'Bestand te groot (max 10MB)' }, { status: 413 });
+        }
+        if (!buffer) {
+            return NextResponse.json({ success: false, message: t.noFile }, { status: 400 });
+        }
         const { text: extractedText, error: extractErr } = await extractText({ buffer, fileName, fileType });
 
         if (extractErr === 'pdfParserUnavailable') {
@@ -65,8 +80,8 @@ export async function POST(req: NextRequest) {
             extractedTextLength: extractedText.length,
         });
     } catch (err) {
-        console.error('Error in CV parsing:', err);
-        const msg = err instanceof Error ? err.message : 'Error parsing CV';
-        return NextResponse.json({ success: false, message: msg }, { status: 500 });
+        // Geen err.message naar de client: kan interne OpenAI/infra-details lekken.
+        console.error('Error in CV parsing:', err instanceof Error ? err.message : err);
+        return NextResponse.json({ success: false, message: 'Error parsing CV' }, { status: 500 });
     }
 }

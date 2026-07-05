@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import validator from 'validator';
 import { connectDB } from '@/lib/db';
 import BackupContact from '@/models/BackupContact';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'backup-contact', limit: 20, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const body = await req.json();
         const { fullName, email, phone } = body || {};
 

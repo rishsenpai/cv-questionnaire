@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import { getTransporter } from '@/lib/server/mailer';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { escapeHtml } from '@/lib/server/security';
 
 interface Interest {
     title: string;
@@ -11,6 +13,9 @@ interface Interest {
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'send-interests', limit: 20, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const body = await req.json();
         const { cvId, interests } = body || {};
 
@@ -30,8 +35,8 @@ export async function POST(req: NextRequest) {
         const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
         const interestsHtml = (interests as Interest[]).map(i => `
                 <li style="padding: 8px 0; border-bottom: 1px solid #c6f6d5;">
-                    <strong>${i.title}</strong><br>
-                    📍 ${i.location} • ${i.count} vacature${i.count > 1 ? 's' : ''}
+                    <strong>${escapeHtml(i.title)}</strong><br>
+                    📍 ${escapeHtml(i.location)} • ${Number(i.count) || 0} vacature${Number(i.count) > 1 ? 's' : ''}
                 </li>`).join('');
 
         const html = `

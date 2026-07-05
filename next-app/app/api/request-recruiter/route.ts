@@ -3,9 +3,13 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import { getTransporter } from '@/lib/server/mailer';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'request-recruiter', limit: 20, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const body = await req.json();
         const { cvId } = body || {};
 

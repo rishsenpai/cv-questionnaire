@@ -3,12 +3,16 @@ import { connectDB } from '@/lib/db';
 import Employer from '@/models/Employer';
 import { createResetToken, sendPasswordResetEmail, getBaseUrl } from '@/lib/server/passwordReset';
 import { getClientIP } from '@/lib/server/auth';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 // Generieke melding: nooit prijsgeven of een account wel/niet bestaat.
 const GENERIC_MESSAGE = 'Als dit account bij ons bekend is, ontvang je een e-mail met een herstellink.';
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, { name: 'employer-forgot-pw', limit: 10, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         await connectDB();
         const body = await req.json();
         // Werkgever logt in met gebruikersnaam, maar mag hier ook z'n contact-e-mail invullen.

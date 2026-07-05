@@ -14,6 +14,7 @@ import { errorMessages, type Language } from '@/lib/server/i18n';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
 import { compareLocations, applyLocationBonus } from '@/lib/server/locationMatch';
 import { visibleVacancyCountryQuery, isHiddenVacancy } from '@/lib/country';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export const maxDuration = 60;
 
@@ -28,6 +29,11 @@ export async function GET(req: NextRequest, { params }: Params) {
     const t = errorMessages[lang];
 
     try {
+        // Onauth endpoint (anonieme jobseeker-flow) dat OpenAI-embeddings kan
+        // triggeren en fullName per CV-id teruggeeft → begrens massale enumeratie.
+        const limited = await enforceRateLimit(req, { name: 'matching-vacancies', limit: 60, windowMs: 60 * 60 * 1000 });
+        if (limited) return limited;
+
         const { id } = await params;
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json({ success: false, message: t.cvNotFound }, { status: 400 });
