@@ -79,6 +79,11 @@ const CVUPLOAD_T = {
     errParseFail: 'Er ging iets mis bij het analyseren van je CV.',
     errConnection: 'Verbinding mislukt. Probeer het opnieuw.',
     errSaveFail: 'Opslaan mislukt.',
+    consent1: 'Door je CV te uploaden ga je akkoord met de ',
+    consentPrivacy: 'privacyverklaring',
+    consent2: ' en de ',
+    consentTerms: 'algemene voorwaarden',
+    consent3: '.',
   },
   en: {
     badge: 'AI-Powered Parser',
@@ -133,6 +138,11 @@ const CVUPLOAD_T = {
     errParseFail: 'Something went wrong while analyzing your CV.',
     errConnection: 'Connection failed. Please try again.',
     errSaveFail: 'Saving failed.',
+    consent1: 'By uploading your CV you agree to the ',
+    consentPrivacy: 'privacy statement',
+    consent2: ' and the ',
+    consentTerms: 'terms & conditions',
+    consent3: '.',
   },
   es: {
     badge: 'Analizador con IA',
@@ -187,6 +197,11 @@ const CVUPLOAD_T = {
     errParseFail: 'Algo salió mal al analizar tu CV.',
     errConnection: 'Error de conexión. Inténtalo de nuevo.',
     errSaveFail: 'Error al guardar.',
+    consent1: 'Al subir tu CV aceptas la ',
+    consentPrivacy: 'declaración de privacidad',
+    consent2: ' y los ',
+    consentTerms: 'términos y condiciones',
+    consent3: '.',
   },
 };
 
@@ -401,6 +416,14 @@ export default function CvUploadPage() {
                 </p>
               </div>
 
+              <p className="text-[10px] font-bold text-slate-400 italic mt-4 text-center">
+                {t.consent1}
+                <Link href="/privacyverklaring" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentPrivacy}</Link>
+                {t.consent2}
+                <Link href="/algemene-voorwaarden" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentTerms}</Link>
+                {t.consent3}
+              </p>
+
               {errorMsg && (
                 <div className="mt-6 flex items-center gap-3 bg-red-50 border-2 border-red-200 p-4 text-red-700">
                   <AlertCircle className="w-5 h-5 shrink-0" />
@@ -575,6 +598,14 @@ export default function CvUploadPage() {
               >
                 {t.confirmShowMatches} <ArrowRight className="w-5 h-5" />
               </button>
+
+              <p className="text-[10px] font-bold text-slate-400 italic mt-4 text-center">
+                {t.consent1}
+                <Link href="/privacyverklaring" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentPrivacy}</Link>
+                {t.consent2}
+                <Link href="/algemene-voorwaarden" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentTerms}</Link>
+                {t.consent3}
+              </p>
             </motion.div>
             );
           })()}

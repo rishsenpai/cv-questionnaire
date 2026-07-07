@@ -41,6 +41,13 @@ test.describe('Privacyverklaring-pagina', () => {
         await expect(page).toHaveURL(/\/privacyverklaring/);
     });
 
+    test('cv-upload toont direct een akkoord-regel met werkende privacy-link', async ({ page }) => {
+        await page.goto('/cv-upload');
+        await expect(page.getByText(/door je cv te uploaden ga je akkoord/i)).toBeVisible();
+        await page.getByRole('link', { name: 'privacyverklaring', exact: true }).click();
+        await expect(page).toHaveURL(/\/privacyverklaring/);
+    });
+
     test('signup toont akkoord-regel met werkende links naar voorwaarden en privacyverklaring', async ({ page }) => {
         await page.goto('/auth?signup=1');
         const consent = page.getByText(/door een account te creëren ga je akkoord/i);

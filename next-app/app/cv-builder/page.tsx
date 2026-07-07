@@ -173,6 +173,11 @@ const CVBUILDER_T = {
     rvSector: 'Sector',
     // Submit errors
     submitFailed: 'Opslaan mislukt',
+    consent1: 'Door je CV te versturen ga je akkoord met de ',
+    consentPrivacy: 'privacyverklaring',
+    consent2: ' en de ',
+    consentTerms: 'algemene voorwaarden',
+    consent3: '.',
     connectionFailed: 'Verbinding mislukt. Probeer het opnieuw.',
   },
   en: {
@@ -269,6 +274,11 @@ const CVBUILDER_T = {
     rvSalary: 'Salary',
     rvSector: 'Sector',
     submitFailed: 'Saving failed',
+    consent1: 'By submitting your CV you agree to the ',
+    consentPrivacy: 'privacy statement',
+    consent2: ' and the ',
+    consentTerms: 'terms & conditions',
+    consent3: '.',
     connectionFailed: 'Connection failed. Please try again.',
   },
   es: {
@@ -365,6 +375,11 @@ const CVBUILDER_T = {
     rvSalary: 'Salario',
     rvSector: 'Sector',
     submitFailed: 'Error al guardar',
+    consent1: 'Al enviar tu CV aceptas la ',
+    consentPrivacy: 'declaración de privacidad',
+    consent2: ' y los ',
+    consentTerms: 'términos y condiciones',
+    consent3: '.',
     connectionFailed: 'Error de conexión. Inténtalo de nuevo.',
   },
 };
@@ -762,6 +777,14 @@ export default function CvBuilderPage() {
                   )}
                 </button>
               </div>
+
+              <p className="text-[10px] font-bold text-slate-400 italic mt-4 text-center">
+                {t.consent1}
+                <Link href="/privacyverklaring" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentPrivacy}</Link>
+                {t.consent2}
+                <Link href="/algemene-voorwaarden" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentTerms}</Link>
+                {t.consent3}
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
