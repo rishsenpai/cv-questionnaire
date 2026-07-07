@@ -40,4 +40,15 @@ test.describe('Privacyverklaring-pagina', () => {
         await page.getByRole('link', { name: 'PRIVACY', exact: true }).click();
         await expect(page).toHaveURL(/\/privacyverklaring/);
     });
+
+    test('signup toont akkoord-regel met werkende links naar voorwaarden en privacyverklaring', async ({ page }) => {
+        await page.goto('/auth?signup=1');
+        const consent = page.getByText(/door een account te creëren ga je akkoord/i);
+        await expect(consent).toBeVisible();
+        await page.getByRole('link', { name: 'privacyverklaring', exact: true }).click();
+        await expect(page).toHaveURL(/\/privacyverklaring/);
+        await page.goBack();
+        await page.getByRole('link', { name: 'algemene voorwaarden', exact: true }).click();
+        await expect(page).toHaveURL(/\/algemene-voorwaarden/);
+    });
 });

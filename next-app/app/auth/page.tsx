@@ -45,6 +45,11 @@ const AUTH_T = {
     forgotPassword: 'Wachtwoord vergeten?',
     processing: 'Verwerken...', submitLogin: 'Inloggen', submitSignup: 'Account Creëren',
     employerNote: 'Als werkgever krijg je toegang tot een dashboard waar je vacatures kan plaatsen die direct zichtbaar worden voor kandidaten.',
+    consent1: 'Door een account te creëren ga je akkoord met de ',
+    consentTerms: 'algemene voorwaarden',
+    consent2: ' en de ',
+    consentPrivacy: 'privacyverklaring',
+    consent3: '.',
     errEmail: 'Voer een geldig e-mailadres in.',
     errFullName: 'Voer je volledige naam in.',
     errPassword8: 'Gebruik minimaal 8 tekens.',
@@ -75,6 +80,11 @@ const AUTH_T = {
     forgotPassword: 'Forgot password?',
     processing: 'Processing...', submitLogin: 'Log In', submitSignup: 'Create Account',
     employerNote: 'As an employer you get access to a dashboard where you can post vacancies that become instantly visible to candidates.',
+    consent1: 'By creating an account you agree to the ',
+    consentTerms: 'terms & conditions',
+    consent2: ' and the ',
+    consentPrivacy: 'privacy statement',
+    consent3: '.',
     errEmail: 'Enter a valid email address.',
     errFullName: 'Enter your full name.',
     errPassword8: 'Use at least 8 characters.',
@@ -105,6 +115,11 @@ const AUTH_T = {
     forgotPassword: '¿Olvidaste tu contraseña?',
     processing: 'Procesando...', submitLogin: 'Iniciar sesión', submitSignup: 'Crear cuenta',
     employerNote: 'Como empleador obtienes acceso a un panel donde puedes publicar vacantes que se vuelven visibles de inmediato para los candidatos.',
+    consent1: 'Al crear una cuenta aceptas los ',
+    consentTerms: 'términos y condiciones',
+    consent2: ' y la ',
+    consentPrivacy: 'declaración de privacidad',
+    consent3: '.',
     errEmail: 'Introduce una dirección de correo válida.',
     errFullName: 'Introduce tu nombre completo.',
     errPassword8: 'Usa al menos 8 caracteres.',
@@ -393,6 +408,16 @@ function AuthInner() {
                     </>
                   )}
                 </button>
+
+                {!isLogin && (
+                  <p className="text-[10px] font-bold text-slate-400 italic mt-4 text-center">
+                    {t.consent1}
+                    <Link href="/algemene-voorwaarden" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentTerms}</Link>
+                    {t.consent2}
+                    <Link href="/privacyverklaring" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentPrivacy}</Link>
+                    {t.consent3}
+                  </p>
+                )}
 
                 {role === 'employer' && !isLogin && (
                   <p className="text-[10px] font-bold text-slate-400 italic mt-4 text-center">
