@@ -79,7 +79,9 @@ const AVW_T = {
     a8_p2: '. Je krijgt een persoonlijke, niet-exclusieve, niet-overdraagbare licentie om het platform te gebruiken voor de doelen waarvoor het bedoeld is. Je CV/vacaturetekst blijft van jou, maar je geeft ons toestemming om die te verwerken en tonen voor matching.',
 
     a9_title: 'Privacy',
-    a9_p1: 'We gaan zorgvuldig om met persoonsgegevens. CV-gegevens worden alleen gedeeld met een werkgever na een expliciete contactaanvraag en goedkeuring door ons team. Voor het gebruik en de bewaartermijnen geldt onze separate privacyverklaring. Het verzoek tot inzage, correctie of verwijdering kun je sturen naar ',
+    a9_p1a: 'We gaan zorgvuldig om met persoonsgegevens. CV-gegevens worden alleen gedeeld met een werkgever na een expliciete contactaanvraag en goedkeuring door ons team. Voor het gebruik en de bewaartermijnen geldt onze separate ',
+    a9_link: 'privacyverklaring',
+    a9_p1b: '. Het verzoek tot inzage, correctie of verwijdering kun je sturen naar ',
     a9_p2: '.',
 
     a10_title: 'Aansprakelijkheid',
@@ -179,7 +181,9 @@ const AVW_T = {
     a8_p2: '. You receive a personal, non-exclusive, non-transferable licence to use the platform for the purposes for which it is intended. Your CV/vacancy text remains yours, but you grant us permission to process and display it for matching.',
 
     a9_title: 'Privacy',
-    a9_p1: 'We handle personal data with care. CV data is only shared with an employer after an explicit contact request and approval by our team. Our separate privacy statement governs its use and retention periods. You can send any request for access, correction or deletion to ',
+    a9_p1a: 'We handle personal data with care. CV data is only shared with an employer after an explicit contact request and approval by our team. Our separate ',
+    a9_link: 'privacy statement',
+    a9_p1b: ' governs its use and retention periods. You can send any request for access, correction or deletion to ',
     a9_p2: '.',
 
     a10_title: 'Liability',
@@ -279,7 +283,9 @@ const AVW_T = {
     a8_p2: '. Recibes una licencia personal, no exclusiva e intransferible para usar la plataforma con los fines para los que está destinada. Tu CV o texto de vacante sigue siendo tuyo, pero nos das permiso para procesarlo y mostrarlo con fines de emparejamiento.',
 
     a9_title: 'Privacidad',
-    a9_p1: 'Tratamos los datos personales con cuidado. Los datos del CV solo se comparten con un empleador tras una solicitud de contacto explícita y la aprobación de nuestro equipo. Nuestra declaración de privacidad independiente rige su uso y los plazos de conservación. Puedes enviar cualquier solicitud de acceso, corrección o eliminación a ',
+    a9_p1a: 'Tratamos los datos personales con cuidado. Los datos del CV solo se comparten con un empleador tras una solicitud de contacto explícita y la aprobación de nuestro equipo. Nuestra ',
+    a9_link: 'declaración de privacidad',
+    a9_p1b: ' independiente rige su uso y los plazos de conservación. Puedes enviar cualquier solicitud de acceso, corrección o eliminación a ',
     a9_p2: '.',
 
     a10_title: 'Responsabilidad',
@@ -408,7 +414,11 @@ export default function AlgemeneVoorwaardenContent() {
 
           <Article number="9" title={t.a9_title} icon={<ShieldCheck className="w-5 h-5" />}>
             <p>
-              {t.a9_p1}
+              {t.a9_p1a}
+              <Link href="/privacyverklaring" className="text-blue-600 underline font-black">
+                {t.a9_link}
+              </Link>
+              {t.a9_p1b}
               <a href={`mailto:${COMPANY_EMAIL}`} className="text-blue-600 underline font-black">
                 {COMPANY_EMAIL}
               </a>{t.a9_p2}

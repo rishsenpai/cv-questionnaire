@@ -67,6 +67,7 @@ const VACATURES_T = {
     contact: 'Contact',
     overOns: 'Over Ons',
     terms: 'Algemene Voorwaarden',
+    privacy: 'Privacyverklaring',
     rights: '© 2026 Jobparsing. Alle rechten voorbehouden.',
   },
   en: {
@@ -111,6 +112,7 @@ const VACATURES_T = {
     contact: 'Contact',
     overOns: 'About',
     terms: 'Terms & Conditions',
+    privacy: 'Privacy Statement',
     rights: '© 2026 Jobparsing. All rights reserved.',
   },
   es: {
@@ -155,6 +157,7 @@ const VACATURES_T = {
     contact: 'Contacto',
     overOns: 'Sobre Nosotros',
     terms: 'Términos y Condiciones',
+    privacy: 'Declaración de Privacidad',
     rights: '© 2026 Jobparsing. Todos los derechos reservados.',
   },
 };
@@ -749,6 +752,7 @@ function VacaturesContent() {
                 <li><a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-blue-600">{t.contact}</a></li>
                 <li><Link href="/over-ons" className="hover:text-blue-600">{t.overOns}</Link></li>
                 <li><Link href="/algemene-voorwaarden" className="hover:text-blue-600">{t.terms}</Link></li>
+                <li><Link href="/privacyverklaring" className="hover:text-blue-600">{t.privacy}</Link></li>
               </ul>
             </div>
           </div>

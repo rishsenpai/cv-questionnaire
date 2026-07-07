@@ -41,7 +41,7 @@ const HOME_T = {
     footerTagline: 'De meest geavanceerde talent hub van Suriname. Powered by AI-driven insights.',
     districten: 'Districten', proTip: 'Pro Tip', proTipBody: 'Websites in Suriname missen vaak directe communicatie. Wij integreren WhatsApp Direct voor snelle sollicitaties.',
     platform: 'Platform', vacatures: 'Vacatures', cvUploadLink: 'CV Upload', mijnMatches: 'Mijn Matches', overOns: 'Over Ons',
-    help: 'Hulp', faq: 'FAQ', contact: 'Contact', terms: 'Algemene Voorwaarden',
+    help: 'Hulp', faq: 'FAQ', contact: 'Contact', terms: 'Algemene Voorwaarden', privacy: 'Privacyverklaring',
     rights: '© 2026 Jobparsing. Alle rechten voorbehouden.',
   },
   en: {
@@ -62,7 +62,7 @@ const HOME_T = {
     footerTagline: 'The most advanced talent hub in Suriname. Powered by AI-driven insights.',
     districten: 'Districts', proTip: 'Pro Tip', proTipBody: 'Websites in Suriname often lack direct communication. We integrate WhatsApp Direct for fast applications.',
     platform: 'Platform', vacatures: 'Jobs', cvUploadLink: 'CV Upload', mijnMatches: 'My Matches', overOns: 'About',
-    help: 'Help', faq: 'FAQ', contact: 'Contact', terms: 'Terms & Conditions',
+    help: 'Help', faq: 'FAQ', contact: 'Contact', terms: 'Terms & Conditions', privacy: 'Privacy Statement',
     rights: '© 2026 Jobparsing. All rights reserved.',
   },
   es: {
@@ -83,7 +83,7 @@ const HOME_T = {
     footerTagline: 'El hub de talento más avanzado de Surinam. Impulsado por IA.',
     districten: 'Distritos', proTip: 'Consejo', proTipBody: 'Los sitios web en Surinam a menudo carecen de comunicación directa. Integramos WhatsApp Direct para postulaciones rápidas.',
     platform: 'Plataforma', vacatures: 'Vacantes', cvUploadLink: 'Subir CV', mijnMatches: 'Mis Coincidencias', overOns: 'Nosotros',
-    help: 'Ayuda', faq: 'Preguntas frecuentes', contact: 'Contacto', terms: 'Términos y Condiciones',
+    help: 'Ayuda', faq: 'Preguntas frecuentes', contact: 'Contacto', terms: 'Términos y Condiciones', privacy: 'Declaración de Privacidad',
     rights: '© 2026 Jobparsing. Todos los derechos reservados.',
   },
 };
@@ -208,7 +208,7 @@ export default function Home() {
 
               <div className="flex flex-wrap gap-3 items-center text-xs font-bold text-slate-400">
                 <span className="uppercase tracking-widest italic">{t.sectors}</span>
-                {['Mijnbouw', 'Energie & Water', 'Cybersecurity', 'Transport'].map(tag => (
+                {['Finance & Legal', 'Logistics & Maritime', 'Retail & Distributie', 'Energy & Offshore'].map(tag => (
                   <Link
                     key={tag}
                     href={`/vacatures?q=${encodeURIComponent(tag)}`}
@@ -458,6 +458,7 @@ export default function Home() {
                 <li><a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-blue-600 transition-colors">{t.contact}</a></li>
                 <li><Link href="/over-ons" className="hover:text-blue-600 transition-colors">{t.overOns}</Link></li>
                 <li><Link href="/algemene-voorwaarden" className="hover:text-blue-600 transition-colors">{t.terms}</Link></li>
+                <li><Link href="/privacyverklaring" className="hover:text-blue-600 transition-colors">{t.privacy}</Link></li>
               </ul>
             </div>
           </div>

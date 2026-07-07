@@ -267,8 +267,8 @@ function AuthInner() {
           <div className="relative z-10 mt-20 pt-10 border-t border-white/10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
             <span>© 2026 JOBPARSING+</span>
             <div className="flex gap-4">
-              <span>{t.privacy}</span>
-              <span>{t.terms}</span>
+              <Link href="/privacyverklaring" className="hover:text-white transition-colors">{t.privacy}</Link>
+              <Link href="/algemene-voorwaarden" className="hover:text-white transition-colors">{t.terms}</Link>
             </div>
           </div>
 
