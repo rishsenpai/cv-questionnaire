@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Types } from 'mongoose';
 import { connectDB } from '@/lib/db';
 import Vacancy from '@/models/Vacancy';
 import CuratedMatch from '@/models/CuratedMatch';
@@ -20,8 +21,8 @@ export const maxDuration = 60;
 //   admin de lijst kan controleren vóór het onomkeerbare deel.
 
 interface NLSplit {
-    toDelete: Array<{ _id: unknown; title?: string; company?: string; location?: string; source?: string }>;
-    skippedEmployer: Array<{ _id: unknown; title?: string; company?: string; location?: string }>;
+    toDelete: Array<{ _id: Types.ObjectId; title?: string; company?: string; location?: string; source?: string }>;
+    skippedEmployer: Array<{ _id: Types.ObjectId; title?: string; company?: string; location?: string }>;
 }
 
 async function findNLVacancies(): Promise<NLSplit> {
