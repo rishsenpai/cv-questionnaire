@@ -66,6 +66,21 @@ test.describe('Vacatures — feedback fixes', () => {
         await expect(page.getByRole('link', { name: /merchandiser/i })).toBeVisible();
         await expect(page.getByRole('link', { name: /warehouse coordinator/i })).toHaveCount(0);
     });
+
+    test('sidebar toont locatiefilter met actief district na klik vanaf homepage', async ({ page }) => {
+        await mockVacancies(page);
+        await page.goto('/');
+        await page.getByRole('link', { name: 'Nickerie' }).click();
+        await expect(page).toHaveURL(/\/vacatures\?location=Nickerie/);
+        // De locatiefilters blijven zichtbaar in de sidebar, met het gekozen district actief…
+        const locSection = page.locator('aside > div').filter({ hasText: 'Locatie' });
+        await expect(locSection.getByText('Nickerie', { exact: true })).toBeVisible();
+        await expect(locSection.getByText('Paramaribo', { exact: true })).toBeVisible();
+        // …en doorklikken naar een ander district werkt zonder terug naar home te hoeven.
+        await locSection.getByText('Wanica', { exact: true }).click();
+        await expect(page.getByRole('link', { name: /sales manager/i })).toBeVisible();
+        await expect(page.getByRole('link', { name: /merchandiser/i })).toHaveCount(0);
+    });
 });
 
 test.describe('Homepage — feedback fixes', () => {

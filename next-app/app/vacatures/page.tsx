@@ -32,6 +32,7 @@ const VACATURES_T = {
     searchPlaceholder: 'Functie of Bedrijf...',
     search: 'Zoeken',
     typeHeading: 'Type Dienstverband',
+    locationHeading: 'Locatie',
     salaryHeading: 'Salaris Filter',
     salaryHint: 'Filter op maximaal maandsalaris',
     jobAlert: 'Job Alert',
@@ -77,6 +78,7 @@ const VACATURES_T = {
     searchPlaceholder: 'Role or Company...',
     search: 'Search',
     typeHeading: 'Employment Type',
+    locationHeading: 'Location',
     salaryHeading: 'Salary Filter',
     salaryHint: 'Filter by maximum monthly salary',
     jobAlert: 'Job Alert',
@@ -122,6 +124,7 @@ const VACATURES_T = {
     searchPlaceholder: 'Puesto o Empresa...',
     search: 'Buscar',
     typeHeading: 'Tipo de Empleo',
+    locationHeading: 'Ubicación',
     salaryHeading: 'Filtro de Salario',
     salaryHint: 'Filtra por salario mensual máximo',
     jobAlert: 'Alerta de Empleo',
@@ -278,6 +281,7 @@ function VacaturesContent() {
   }, [refreshVacaturesState]);
 
   const types = ['Alle', ...Array.from(new Set(jobs.map(j => j.type).filter(Boolean)))];
+  const LOCATIONS = ['Heel Suriname', 'Paramaribo', 'Wanica', 'Nickerie', 'Commewijne', 'Saramacca', 'Para', 'Marowijne', 'Coronie', 'Brokopondo', 'Sipaliwini'];
 
   const suggestions = searchQuery.length > 1 
     ? Array.from(new Set(
@@ -426,17 +430,7 @@ function VacaturesContent() {
             <div className="w-full md:w-auto flex items-center gap-2 border-l-0 md:border-l-2 border-slate-100 pl-0 md:pl-6 bg-white">
               <MapPin className="text-blue-600 w-5 h-5" />
               <select value={selectedLocation} onChange={(e) => { setSelectedLocation(e.target.value); setCurrentPage(1); }} className="bg-transparent text-black font-black uppercase tracking-widest text-xs outline-none cursor-pointer">
-                <option>Heel Suriname</option>
-                <option>Paramaribo</option>
-                <option>Wanica</option>
-                <option>Nickerie</option>
-                <option>Commewijne</option>
-                <option>Saramacca</option>
-                <option>Para</option>
-                <option>Marowijne</option>
-                <option>Coronie</option>
-                <option>Brokopondo</option>
-                <option>Sipaliwini</option>
+                {LOCATIONS.map(loc => <option key={loc}>{loc}</option>)}
               </select>
             </div>
             <button 
@@ -479,6 +473,37 @@ function VacaturesContent() {
                       activeType === t ? "text-black" : "text-slate-400 group-hover:text-slate-600"
                     )}>
                       {t}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 border-b-2 border-blue-600 pb-2 w-fit">{t.locationHeading}</h3>
+              <div className="flex flex-col gap-2">
+                {LOCATIONS.map(loc => (
+                  <label key={loc} className="flex items-center gap-3 group cursor-pointer">
+                    <div
+                      onClick={() => {
+                        setSelectedLocation(loc);
+                        setCurrentPage(1);
+                      }}
+                      className={cn(
+                        "w-5 h-5 border-2 border-black flex items-center justify-center transition-all",
+                        selectedLocation === loc ? "bg-black text-white" : "bg-white group-hover:bg-slate-50"
+                      )}
+                    >
+                      {selectedLocation === loc && <CheckCircle2 className="w-3 h-3" />}
+                    </div>
+                    <span onClick={() => {
+                      setSelectedLocation(loc);
+                      setCurrentPage(1);
+                    }} className={cn(
+                      "text-[10px] font-black uppercase tracking-widest transition-colors",
+                      selectedLocation === loc ? "text-black" : "text-slate-400 group-hover:text-slate-600"
+                    )}>
+                      {loc}
                     </span>
                   </label>
                 ))}
