@@ -614,15 +614,6 @@ function VacanciesTab({ token }: { token: string }) {
   const [jsQueries, setJsQueries] = useState(JSEARCH_PRESETS_SR);
   const [jsLocation, setJsLocation] = useState('Suriname');
   const [showBulkVacancy, setShowBulkVacancy] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    title: '', company: '', location: 'Paramaribo', description: '', requirements: '',
-    employmentType: 'Full-time', isRemote: false,
-    salaryMin: '', salaryMax: '', salaryCurrency: 'SRD', salaryPeriod: 'month',
-    employerId: '',
-  });
-  const [createBusy, setCreateBusy] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [embeddingBatch, setEmbeddingBatch] = useState(false);
@@ -647,63 +638,6 @@ function VacanciesTab({ token }: { token: string }) {
     percentage: number;
   } | null>(null);
   const [matchBatch, setMatchBatch] = useState(false);
-  const [createParsing, setCreateParsing] = useState(false);
-  const [createParsedFrom, setCreateParsedFrom] = useState<string | null>(null);
-  const [createDragOver, setCreateDragOver] = useState(false);
-  const [employerOptions, setEmployerOptions] = useState<Array<{ _id: string; companyName: string; username: string }>>([]);
-  const createFileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!showCreate) return;
-    fetch('/api/admin/employers', { headers: { 'x-admin-token': token } })
-      .then(r => r.json())
-      .then(data => { if (data.success) setEmployerOptions(data.data); })
-      .catch(() => { /* ignore */ });
-  }, [showCreate, token]);
-
-  const handleCreateFile = async (file: File) => {
-    if (file.size > 4.5 * 1024 * 1024) {
-      setCreateError('Bestand is groter dan 4.5 MB');
-      return;
-    }
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    const isDocx = file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
-    if (!isPdf && !isDocx) {
-      setCreateError('Alleen PDF of Word (.docx)');
-      return;
-    }
-    setCreateError(null);
-    setCreateParsing(true);
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(((r.result as string).split(',')[1] || ''));
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-      const res = await fetch('/api/parse-vacancy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileData: base64, fileType: file.type, fileName: file.name }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setCreateError(data.message || 'AI-analyse mislukt');
-        return;
-      }
-      setCreateForm(f => ({
-        ...f,
-        title: data.data.title || f.title,
-        location: data.data.location || f.location,
-        description: data.data.requirements || f.description,
-      }));
-      setCreateParsedFrom(file.name);
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Verbinding mislukt');
-    } finally {
-      setCreateParsing(false);
-    }
-  };
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -946,33 +880,6 @@ function VacanciesTab({ token }: { token: string }) {
     }
   };
 
-  const submitCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreateError(null);
-    setCreateBusy(true);
-    try {
-      const res = await fetch('/api/admin/vacancies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify(createForm),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        setCreateError(data.message);
-        return;
-      }
-      setShowCreate(false);
-      setCreateForm({
-        title: '', company: '', location: 'Paramaribo', description: '', requirements: '',
-        employmentType: 'Full-time', isRemote: false,
-        salaryMin: '', salaryMax: '', salaryCurrency: 'SRD', salaryPeriod: 'month',
-        employerId: '',
-      });
-      setCreateParsedFrom(null);
-      await reload();
-    } finally { setCreateBusy(false); }
-  };
-
   const runJSearchImport = async () => {
     setJsImporting(true);
     setJsResult(null);
@@ -1003,11 +910,8 @@ function VacanciesTab({ token }: { token: string }) {
         subtitle={`${vacancies.length} actieve vacatures`}
         action={
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => setShowCreate(s => !s)} className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2">
-              <Plus className="w-3 h-3" /> Nieuwe Vacature
-            </button>
-            <button onClick={() => setShowBulkVacancy(s => !s)} className="bg-purple-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
-              <Upload className="w-3 h-3" /> Bulk Upload
+            <button onClick={() => setShowBulkVacancy(s => !s)} className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2">
+              <Upload className="w-3 h-3" /> Upload vacatures
             </button>
             <button onClick={() => setShowJSearch(s => !s)} className="bg-emerald-600 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2">
               <Globe className="w-3 h-3" /> JSearch (SR)
@@ -1126,174 +1030,6 @@ function VacanciesTab({ token }: { token: string }) {
       )}
 
       <AnimatePresence>
-        {showCreate && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <form onSubmit={submitCreate} className="bg-white border-2 border-black p-6 space-y-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-xl font-black uppercase tracking-tighter italic">Nieuwe Vacature</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Handmatig of namens werkgever — drag PDF/Word voor AI auto-fill</p>
-                </div>
-                <button type="button" onClick={() => setShowCreate(false)} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
-              </div>
-
-              {/* Werkgever-koppeling */}
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">
-                  Plaats namens werkgever (optioneel)
-                </label>
-                <select
-                  value={createForm.employerId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    const emp = employerOptions.find(o => o._id === id);
-                    setCreateForm(f => ({
-                      ...f,
-                      employerId: id,
-                      company: emp?.companyName || f.company,
-                    }));
-                  }}
-                  className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm"
-                >
-                  <option value="">— Geen koppeling (admin-vacature) —</option>
-                  {employerOptions.map(o => (
-                    <option key={o._id} value={o._id}>{o.companyName} ({o.username})</option>
-                  ))}
-                </select>
-                {createForm.employerId && (
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-2 flex items-center gap-2">
-                    <Sparkles className="w-3 h-3" /> Auto-match draait na opslaan · suggesties verschijnen direct in deze tab
-                  </p>
-                )}
-              </div>
-
-              {/* AI auto-fill drop zone */}
-              <input
-                ref={createFileRef}
-                type="file"
-                accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleCreateFile(f);
-                  e.target.value = '';
-                }}
-                className="hidden"
-              />
-              <div
-                onDragEnter={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setCreateDragOver(true); } }}
-                onDragOver={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setCreateDragOver(true); } }}
-                onDragLeave={(e) => { if (!(e.currentTarget as Node).contains(e.relatedTarget as Node | null)) setCreateDragOver(false); }}
-                onDrop={(e) => { e.preventDefault(); setCreateDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleCreateFile(f); }}
-                className={cn(
-                  'border-2 border-dashed p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-colors',
-                  createDragOver ? 'bg-blue-50 border-blue-600' : 'bg-slate-50 border-slate-200',
-                )}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">
-                    <Sparkles className="w-3 h-3" /> AI Auto-Fill
-                  </div>
-                  <p className="text-sm font-bold text-slate-700">
-                    {createDragOver ? 'Laat los om te uploaden' : 'Heb je een vacature in een Word- of PDF-bestand?'}
-                  </p>
-                  <p className="text-[11px] font-bold text-slate-400 italic">
-                    Sleep het hierheen of klik op &quot;Upload Bestand&quot;. Velden worden auto-ingevuld.
-                  </p>
-                  {createParsedFrom && (
-                    <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mt-2 flex items-center gap-2">
-                      <CheckCircle2 className="w-3 h-3" /> Ingevuld vanuit: {createParsedFrom}
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => createFileRef.current?.click()}
-                  disabled={createParsing}
-                  className="bg-black text-white px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0"
-                >
-                  {createParsing ? <><Loader2 className="w-3 h-3 animate-spin" /> Analyseren...</> : <><Upload className="w-3 h-3" /> Upload Bestand</>}
-                </button>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Functietitel *</label>
-                  <input required value={createForm.title} onChange={(e) => setCreateForm(f => ({ ...f, title: e.target.value }))} placeholder="Senior Software Developer" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Bedrijf</label>
-                  <input value={createForm.company} onChange={(e) => setCreateForm(f => ({ ...f, company: e.target.value }))} placeholder="Telesur N.V." className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Locatie</label>
-                  <input value={createForm.location} onChange={(e) => setCreateForm(f => ({ ...f, location: e.target.value }))} placeholder="Paramaribo" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Type dienstverband</label>
-                  <select value={createForm.employmentType} onChange={(e) => setCreateForm(f => ({ ...f, employmentType: e.target.value }))} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm">
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Temporary">Tijdelijk</option>
-                    <option value="Internship">Stage</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-3 pt-7">
-                  <input type="checkbox" id="isRemote" checked={createForm.isRemote} onChange={(e) => setCreateForm(f => ({ ...f, isRemote: e.target.checked }))} className="w-4 h-4" />
-                  <label htmlFor="isRemote" className="text-[10px] font-black uppercase tracking-widest text-slate-700">Remote / hybride mogelijk</label>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Beschrijving</label>
-                  <textarea value={createForm.description} onChange={(e) => setCreateForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Wat houdt de functie in? Wie zoeken we?" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Vereisten</label>
-                  <textarea value={createForm.requirements} onChange={(e) => setCreateForm(f => ({ ...f, requirements: e.target.value }))} rows={4} placeholder="Welke ervaring, opleiding, vaardigheden?" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
-                </div>
-
-                <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Salaris min (optioneel)</label>
-                    <input type="number" value={createForm.salaryMin} onChange={(e) => setCreateForm(f => ({ ...f, salaryMin: e.target.value }))} placeholder="3000" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Salaris max (optioneel)</label>
-                    <input type="number" value={createForm.salaryMax} onChange={(e) => setCreateForm(f => ({ ...f, salaryMax: e.target.value }))} placeholder="5000" className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Valuta</label>
-                    <select value={createForm.salaryCurrency} onChange={(e) => setCreateForm(f => ({ ...f, salaryCurrency: e.target.value }))} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm">
-                      <option value="SRD">SRD</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Periode</label>
-                    <select value={createForm.salaryPeriod} onChange={(e) => setCreateForm(f => ({ ...f, salaryPeriod: e.target.value }))} className="w-full p-3 border-2 border-slate-100 outline-none focus:border-black font-bold text-sm">
-                      <option value="month">Per maand</option>
-                      <option value="year">Per jaar</option>
-                      <option value="hour">Per uur</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {createError && <p className="text-[11px] font-bold text-red-600">{createError}</p>}
-
-              <div className="flex gap-3 pt-4 border-t border-slate-100">
-                <button type="submit" disabled={createBusy} className="bg-black text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50">
-                  {createBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Vacature toevoegen
-                </button>
-                <button type="button" onClick={() => setShowCreate(false)} className="border-2 border-black px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white">
-                  Annuleren
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-
         {showJSearch && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -4448,9 +4184,9 @@ function BulkVacancyPanel({
     <div className="bg-white border-2 border-purple-600 p-6 mb-4">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-xl font-black uppercase tracking-tighter italic">Bulk Vacatures Upload</h3>
+          <h3 className="text-xl font-black uppercase tracking-tighter italic">Vacatures Uploaden</h3>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            PDF/Word · max 4.5 MB · concurrency {BULK_VACANCY_CONCURRENCY}
+            PDF/Word · max 4.5 MB per bestand · één of meerdere tegelijk
           </p>
         </div>
         <button onClick={onClose} className="p-2 hover:bg-slate-100"><X className="w-4 h-4" /></button>
@@ -4499,8 +4235,8 @@ function BulkVacancyPanel({
         )}
       >
         <Upload className="w-10 h-10 text-purple-600 mx-auto mb-3" />
-        <p className="text-sm font-black uppercase tracking-widest mb-1">Sleep vacatures hierheen</p>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">PDF · DOCX — meerdere bestanden</p>
+        <p className="text-sm font-black uppercase tracking-widest mb-1">Sleep vacatures hierheen of klik om te kiezen</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">PDF · DOCX — één of meerdere bestanden</p>
       </div>
 
       {items.length > 0 && (

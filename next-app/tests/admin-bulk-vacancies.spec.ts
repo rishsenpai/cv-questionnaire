@@ -117,17 +117,27 @@ async function mockAdminApis(
 async function openBulkPanel(page: Page) {
     await page.goto('/admin');
     await page.getByRole('button', { name: /Vacatures/i }).first().click();
-    await page.getByRole('button', { name: /Bulk Upload/i }).click();
+    // Eén upload-optie sinds 12-7: 'Upload vacatures' (het oude losse
+    // 'Nieuwe Vacature'-formulier is verwijderd).
+    await page.getByRole('button', { name: 'Upload vacatures' }).click();
     // Panel-heading bevestigt dat het paneel open is
-    await expect(page.getByRole('heading', { name: /Bulk Vacatures Upload/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Vacatures Uploaden/i })).toBeVisible();
 }
 
 function fileInput(page: Page) {
-    // De bulk-panel input heeft 'multiple', de single create-form input niet
     return page.locator('input[type="file"][multiple]');
 }
 
 test.describe('Admin → Vacatures → Bulk Upload', () => {
+    test('handmatig aanmaken bestaat niet meer — alleen de upload-optie', async ({ page }) => {
+        await seedAdminSession(page);
+        await mockAdminApis(page, {});
+        await page.goto('/admin');
+        await page.getByRole('button', { name: /Vacatures/i }).first().click();
+        await expect(page.getByRole('button', { name: 'Nieuwe Vacature' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Upload vacatures' })).toBeVisible();
+    });
+
     test('opent paneel en laadt werkgever-dropdown', async ({ page }) => {
         await seedAdminSession(page);
         await mockAdminApis(page, {
