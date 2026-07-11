@@ -20,6 +20,7 @@ import { isValidEmail } from '@/lib/validation';
 import { readJson, writeJson } from '@/lib/storage';
 import { buildWhatsAppUrl, SUPPORT_EMAIL } from '@/lib/config';
 import { useT } from '@/lib/i18n/LanguageProvider';
+import { inferCountry, COUNTRY_LABEL, type Country } from '@/lib/country';
 
 // Bovengrens van de salaris-slider. "Uit" (= alles tonen) zodra de slider hier staat.
 const SALARY_MAX = 500000;
@@ -45,6 +46,10 @@ const VACATURES_T = {
     allWord: 'Alle',
     vacaturesWord: 'Vacatures',
     sortByLabel: 'Sorteer op:',
+    scopeNotice: 'Je ziet alleen vacatures in',
+    scopeAllNotice: 'Je ziet vacatures uit alle landen',
+    scopeShowAll: 'Toon alle landen',
+    scopeShowOnly: 'Toon alleen',
     viaJobParsing: 'Via JobParsing',
     mediatedByUs: 'Bemiddeld door ons',
     viaJobParsingDesc: 'Deze vacature wordt bemiddeld door het JobParsing-team. Wij nemen contact met je op na je sollicitatie.',
@@ -91,6 +96,10 @@ const VACATURES_T = {
     allWord: 'All',
     vacaturesWord: 'Vacancies',
     sortByLabel: 'Sort by:',
+    scopeNotice: 'You are only seeing vacancies in',
+    scopeAllNotice: 'You are seeing vacancies from all countries',
+    scopeShowAll: 'Show all countries',
+    scopeShowOnly: 'Show only',
     viaJobParsing: 'Via JobParsing',
     mediatedByUs: 'Mediated by us',
     viaJobParsingDesc: 'This vacancy is handled by the JobParsing team. We will contact you after you apply.',
@@ -137,6 +146,10 @@ const VACATURES_T = {
     allWord: 'Todas',
     vacaturesWord: 'Vacantes',
     sortByLabel: 'Ordenar por:',
+    scopeNotice: 'Solo estás viendo vacantes en',
+    scopeAllNotice: 'Estás viendo vacantes de todos los países',
+    scopeShowAll: 'Mostrar todos los países',
+    scopeShowOnly: 'Mostrar solo',
     viaJobParsing: 'Via JobParsing',
     mediatedByUs: 'Intermediado por nosotros',
     viaJobParsingDesc: 'Esta vacante es gestionada por el equipo de JobParsing. Te contactaremos después de que apliques.',
@@ -179,6 +192,7 @@ interface JobCard {
   description?: string;
   requirements?: string[];
   postedAt?: string;
+  country?: Country;
 }
 
 interface ApiVacancy {
@@ -194,6 +208,7 @@ interface ApiVacancy {
   viaJobParsing?: boolean;
   postedAt?: string;
   createdAt?: string;
+  country?: Country;
 }
 
 function formatSalary(s?: ApiVacancy['salary']): string {
@@ -223,6 +238,8 @@ function vacancyToCard(v: ApiVacancy): JobCard {
     description: v.description,
     requirements: v.requirements ? [v.requirements] : undefined,
     postedAt: v.postedAt || v.createdAt,
+    // Opgeslagen land, of afgeleid uit locatie/omschrijving (zelfde logica als server).
+    country: v.country || inferCountry(v.location, v.description),
   };
 }
 
@@ -253,6 +270,37 @@ function VacaturesContent() {
   const [jobAlertMessage, setJobAlertMessage] = useState('');
   const [priceRange, setPriceRange] = useState(SALARY_MAX);
   const [jobs, setJobs] = useState<JobCard[]>([]);
+
+  // Landscope: bezoekers uit Suriname/Guyana zien standaard alleen vacatures
+  // uit hun eigen land, met een zichtbare toggle om alles te tonen. Een
+  // handmatige keuze wint van de geo-detectie en wordt onthouden.
+  const [countryScope, setCountryScope] = useState<Country | 'all'>('all');
+  const [geoCountry, setGeoCountry] = useState<Country | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const saved = readJson<Country | 'all' | null>('jp_country_scope', null);
+    if (saved === 'all' || saved === 'suriname' || saved === 'guyana') {
+      setCountryScope(saved);
+    }
+    fetch('/api/geo')
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        const geo: Country | null = d?.countryCode === 'SR' ? 'suriname' : d?.countryCode === 'GY' ? 'guyana' : null;
+        setGeoCountry(geo);
+        // Alleen als de bezoeker nog nooit zelf koos, volgt de scope de geo-detectie.
+        if (geo && saved === null) setCountryScope(geo);
+      })
+      .catch(() => { /* geen geo — alles blijft zichtbaar */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const changeCountryScope = (scope: Country | 'all') => {
+    setCountryScope(scope);
+    setCurrentPage(1);
+    writeJson('jp_country_scope', scope);
+  };
   const [user, setUser] = useState<{ isLoggedIn?: boolean } | null>(() => readJson('suri_user', null));
   const [savedJobs, setSavedJobs] = useState<string[]>(() => readJson<string[]>('suri_saved_jobs', []));
 
@@ -334,6 +382,10 @@ function VacaturesContent() {
     const matchesLocation = selectedLocation === 'Heel Suriname' || String(job.location || '').toLowerCase().includes(selectedLocation.toLowerCase());
     const matchesType = activeType === 'Alle' || job.type === activeType;
 
+    // Landscope: vacatures zonder herkenbaar land blijven altijd zichtbaar —
+    // dat zijn doorgaans interne (Surinaamse) vacatures zonder gelabelde locatie.
+    const matchesCountry = countryScope === 'all' || !job.country || job.country === countryScope;
+
     // Salarisfilter: slider op max = geen bovengrens (alles tonen). Anders filteren op de
     // numerieke SRD-waarde. Vacatures zonder salaris ('Op aanvraag') of in een andere valuta
     // (USD/EUR) blijven zichtbaar — die vergelijken we niet tegen een SRD-drempel.
@@ -343,7 +395,7 @@ function VacaturesContent() {
       job.salaryCurrency !== 'SRD' ||
       job.salaryValue <= priceRange;
 
-    return matchesSearch && matchesPrice && matchesType && matchesLocation;
+    return matchesSearch && matchesPrice && matchesType && matchesLocation && matchesCountry;
   }).sort((a, b) => {
     if (sortBy === 'Salaris') {
       return (b.salaryValue ?? 0) - (a.salaryValue ?? 0);
@@ -573,6 +625,30 @@ function VacaturesContent() {
                 </button>
               </div>
             </div>
+
+            {(countryScope !== 'all' || geoCountry) && (
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-blue-50 border-2 border-blue-600 px-4 py-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 flex items-center gap-2">
+                  <MapPin className="w-3 h-3" />
+                  {countryScope !== 'all' ? `${t.scopeNotice} ${COUNTRY_LABEL[countryScope]}` : t.scopeAllNotice}
+                </span>
+                {countryScope !== 'all' ? (
+                  <button
+                    onClick={() => changeCountryScope('all')}
+                    className="text-[10px] font-black uppercase tracking-widest text-blue-700 underline underline-offset-2 hover:text-black transition-colors"
+                  >
+                    {t.scopeShowAll}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => changeCountryScope(geoCountry!)}
+                    className="text-[10px] font-black uppercase tracking-widest text-blue-700 underline underline-offset-2 hover:text-black transition-colors"
+                  >
+                    {t.scopeShowOnly} {COUNTRY_LABEL[geoCountry!]}
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-between items-center border-b-2 border-slate-100 pb-6">
               <h2 className="text-2xl font-black uppercase tracking-tighter italic">
