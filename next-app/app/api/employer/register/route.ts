@@ -6,6 +6,7 @@ import EmployerToken from '@/models/EmployerToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
 import { isValidPhone } from '@/lib/validation';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { notifySignup } from '@/lib/server/signupNotify';
 
 export async function POST(req: NextRequest) {
     try {
@@ -88,6 +89,15 @@ export async function POST(req: NextRequest) {
         });
 
         console.log(`[SECURITY] Employer self-registered: ${employer.username} (${employer.companyName}) from IP: ${getClientIP(req)}`);
+
+        // Bewust geen await: notificatie mag de registratie niet vertragen.
+        notifySignup({
+            type: 'employer',
+            name: employer.companyName,
+            email: employer.contactEmail || employer.username,
+            phone: employer.phone,
+            companyName: employer.companyName,
+        });
 
         return NextResponse.json({
             success: true,

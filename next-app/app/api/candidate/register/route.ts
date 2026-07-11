@@ -6,6 +6,7 @@ import CandidateToken from '@/models/CandidateToken';
 import { ADMIN_TOKEN_EXPIRY_MS, generateToken, getClientIP } from '@/lib/server/auth';
 import { linkCvsByEmail } from '@/lib/server/candidateCvLink';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { notifySignup } from '@/lib/server/signupNotify';
 
 export async function POST(req: NextRequest) {
     try {
@@ -70,6 +71,15 @@ export async function POST(req: NextRequest) {
         });
 
         console.log(`[SECURITY] Candidate registered: ${candidate.email} from IP: ${getClientIP(req)}`);
+
+        // Bewust geen await: notificatie mag de registratie niet vertragen.
+        notifySignup({
+            type: 'candidate',
+            name: candidate.fullName,
+            email: candidate.email,
+            phone: candidate.phone,
+        });
+
         return NextResponse.json({
             success: true,
             token,
