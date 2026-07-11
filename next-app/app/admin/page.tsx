@@ -898,9 +898,22 @@ function VacanciesTab({ token }: { token: string }) {
   };
 
   const deleteAllNL = async () => {
-    if (!confirm('Alle NEDERLANDSE vacatures definitief verwijderen (incl. gekoppelde matches)? Dit kan niet ongedaan worden gemaakt.')) return;
     setBusy(true);
     try {
+      // Preview eerst: toon exact wat verwijderd gaat worden vóór de onomkeerbare stap.
+      const previewRes = await fetch('/api/admin/vacancies/netherlands', { headers: { 'x-admin-token': token } });
+      const preview = await previewRes.json();
+      if (!preview.success) { alert(preview.message || 'Preview mislukt'); return; }
+      if (preview.count === 0) { alert('Geen Nederlandse vacatures gevonden.'); return; }
+
+      const sample = preview.vacancies.slice(0, 10)
+        .map((v: { title?: string; location?: string }) => `· ${v.title} (${v.location || 'geen locatie'})`)
+        .join('\n');
+      const more = preview.count > 10 ? `\n… en nog ${preview.count - 10} andere` : '';
+      const skippedNote = preview.skippedEmployerCount > 0
+        ? `\n\n(${preview.skippedEmployerCount} werkgever-vacature(s) worden overgeslagen)` : '';
+      if (!confirm(`${preview.count} NEDERLANDSE vacatures definitief verwijderen (incl. gekoppelde matches)? Dit kan niet ongedaan worden gemaakt.\n\n${sample}${more}${skippedNote}`)) return;
+
       const res = await fetch('/api/admin/vacancies/netherlands', { method: 'DELETE', headers: { 'x-admin-token': token } });
       const data = await res.json();
       alert(data.success
