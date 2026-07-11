@@ -57,6 +57,15 @@ export function AICareerScout() {
     }
   }, [messages]);
 
+  // Op mobiel is de chat fullscreen — vergrendel de body-scroll zolang hij
+  // open staat, anders scrolt de pagina eronder mee.
+  useEffect(() => {
+    if (!isOpen || !window.matchMedia('(max-width: 639px)').matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
   const handleSend = async (overrideMessage?: string) => {
     const messageToSend = typeof overrideMessage === 'string' ? overrideMessage : input;
     if (!messageToSend.trim() || isLoading) return;
@@ -84,6 +93,7 @@ export function AICareerScout() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
+        aria-label="Ask AI Scout"
         className="fixed bottom-6 right-6 z-[100] bg-blue-600 text-white p-4 rounded-none border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3 font-black uppercase tracking-widest text-xs"
       >
         <Sparkles className="w-5 h-5" />
@@ -93,7 +103,7 @@ export function AICareerScout() {
       {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 sm:inset-auto sm:bottom-24 sm:right-6 z-[101] w-full sm:w-[450px] sm:max-h-[700px] flex flex-col bg-white border-4 border-black shadow-[16px_16px_0px_0px_rgba(59,130,246,1)] overflow-hidden">
+          <div className="fixed inset-0 h-dvh sm:h-auto sm:inset-auto sm:bottom-24 sm:right-6 z-[101] w-full sm:w-[450px] sm:max-h-[700px] flex flex-col bg-white border-0 sm:border-4 border-black sm:shadow-[16px_16px_0px_0px_rgba(59,130,246,1)] overflow-hidden">
             {/* Header */}
             <div className="bg-black text-white p-4 flex justify-between items-center border-b-4 border-black">
               <div className="flex items-center gap-3">
@@ -110,19 +120,19 @@ export function AICareerScout() {
                   </div>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsOpen(false)}
                 aria-label="Sluit career scout"
-                className="p-1 hover:bg-white/10 transition-colors"
+                className="p-3 -m-1 hover:bg-white/10 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6 sm:w-5 sm:h-5" />
               </button>
             </div>
 
             {/* Messages Area */}
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 min-h-[300px] max-h-[500px]"
+              className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-slate-50 sm:min-h-[300px] sm:max-h-[500px]"
             >
               {messages.length === 0 && (
                 <div className="text-center py-10 px-6">
@@ -194,15 +204,15 @@ export function AICareerScout() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 border-t-4 border-black bg-white">
+            <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t-4 border-black bg-white">
               <div className="flex gap-2">
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="STEL JE VRAAG..."
-                  className="flex-1 bg-slate-50 border-2 border-black p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="Stel je vraag..."
+                  className="flex-1 min-w-0 bg-slate-50 border-2 border-black p-3 text-base sm:text-[10px] font-bold sm:font-black sm:uppercase sm:tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
                 <button 
                   onClick={() => handleSend()}

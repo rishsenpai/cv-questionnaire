@@ -53,6 +53,35 @@ test.describe('Mobiel — vacaturekaarten', () => {
         expect(box!.x + box!.width).toBeLessThanOrEqual(390);
     });
 
+    test('AI Career Scout: fullscreen chat met invoer onderaan het scherm', async ({ page }) => {
+        await mockApis(page);
+        await page.goto('/');
+        await page.getByRole('button', { name: /ask ai scout/i }).click();
+
+        // Chatvenster vult het scherm en de invoerbalk zit onderaan (geen dode
+        // witruimte meer door de oude max-h-cap op het berichtenvak).
+        const inputField = page.getByPlaceholder(/stel je vraag/i);
+        await expect(inputField).toBeVisible();
+        const box = await inputField.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.y + box!.height).toBeGreaterThan(700);
+        await expectNoHorizontalOverflow(page);
+
+        // Invoer heeft 16px tekst zodat iOS niet inzoomt bij focus.
+        const fontSize = await inputField.evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+        expect(fontSize).toBeGreaterThanOrEqual(16);
+
+        // Chatten werkt: hint versturen levert een antwoord van de scout op.
+        await page.getByRole('button', { name: 'Check mijn CV', exact: true }).click();
+        await expect(page.getByText(/cv check/i)).toBeVisible();
+
+        // Body-scroll is vergrendeld zolang de chat open is, en komt daarna terug.
+        expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+        await page.getByRole('button', { name: /sluit career scout/i }).click();
+        await expect(inputField).not.toBeVisible();
+        expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+    });
+
     test('/vacatures: kaarten zonder horizontale overflow', async ({ page }) => {
         await mockApis(page);
         await page.goto('/vacatures');
