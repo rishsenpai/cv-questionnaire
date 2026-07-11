@@ -67,10 +67,14 @@ export function inferCountry(location?: string | null, fallbackText?: string | n
     return undefined;
 }
 
-// Landen die momenteel NIET publiek getoond of gematcht worden. Nederland staat
-// tijdelijk uit zodat Surinaamse kandidaten niet op NL-vacatures solliciteren
-// (besluit Ricky, 4-7-2026). Leegmaken = alle landen weer tonen.
-export const HIDDEN_VACANCY_COUNTRIES: Country[] = ['netherlands'];
+// Landen die NIET publiek getoond worden. Leeg sinds 11-7-2026: NL-vacatures
+// zijn weer zichtbaar voor iedereen die de landscope op 'alle landen' zet
+// (draait het besluit van 4-7 deels terug). De bescherming tegen
+// cross-country solliciteren zit nu in de matching zelf: kandidaten worden
+// alleen gematcht met vacatures uit hun eigen land (zie matching-vacancies
+// en autoMatch), en de geo-scope op /vacatures toont bezoekers standaard
+// hun eigen land.
+export const HIDDEN_VACANCY_COUNTRIES: Country[] = [];
 
 /**
  * Mongo-filterfragment dat verborgen landen uitsluit. Vacatures zonder ingevuld

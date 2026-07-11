@@ -8,6 +8,7 @@ const VACANCIES = [
     { _id: 'v1', title: 'Warehouse Coordinator', location: 'Paramaribo', employmentType: 'Full-time', viaJobParsing: true },
     { _id: 'v2', title: 'Offshore Engineer', location: 'Georgetown, Guyana', employmentType: 'Full-time', viaJobParsing: true },
     { _id: 'v3', title: 'Office Manager', location: '', employmentType: 'Full-time', viaJobParsing: true },
+    { _id: 'v4', title: 'Verzekeringsadviseur', location: 'Rotterdam, Nederland', employmentType: 'Full-time', viaJobParsing: true },
 ];
 
 async function mockApis(page: Page, geoCountryCode: string | null) {
@@ -17,7 +18,7 @@ async function mockApis(page: Page, geoCountryCode: string | null) {
 }
 
 test.describe('Geo landscope op vacatures', () => {
-    test('SR-bezoeker ziet alleen Suriname (en ongelabeld), Guyana verborgen', async ({ page }) => {
+    test('SR-bezoeker ziet alleen Suriname (en ongelabeld), Guyana en NL verborgen', async ({ page }) => {
         await mockApis(page, 'SR');
         await page.goto('/vacatures');
         await expect(page.getByText(/je ziet alleen vacatures in suriname/i)).toBeVisible();
@@ -25,13 +26,15 @@ test.describe('Geo landscope op vacatures', () => {
         // Ongelabelde vacature blijft zichtbaar (interne vacatures zonder locatie).
         await expect(page.getByRole('link', { name: /office manager/i })).toBeVisible();
         await expect(page.getByRole('link', { name: /offshore engineer/i })).toHaveCount(0);
+        await expect(page.getByRole('link', { name: /verzekeringsadviseur/i })).toHaveCount(0);
     });
 
-    test('toggle "Toon alle landen" toont ook Guyana en wordt onthouden', async ({ page }) => {
+    test('toggle "Toon alle landen" toont ook Guyana en NL, en wordt onthouden', async ({ page }) => {
         await mockApis(page, 'SR');
         await page.goto('/vacatures');
         await page.getByRole('button', { name: /toon alle landen/i }).click();
         await expect(page.getByRole('link', { name: /offshore engineer/i })).toBeVisible();
+        await expect(page.getByRole('link', { name: /verzekeringsadviseur/i })).toBeVisible();
         await expect(page.getByText(/je ziet vacatures uit alle landen/i)).toBeVisible();
 
         // Keuze overleeft een reload — geo (SR) mag de handmatige keuze niet overschrijven.
@@ -42,11 +45,12 @@ test.describe('Geo landscope op vacatures', () => {
         await expect(page.getByRole('link', { name: /offshore engineer/i })).toHaveCount(0);
     });
 
-    test('bezoeker buiten SR/GY ziet alles, zonder scope-banner', async ({ page }) => {
-        await mockApis(page, 'US');
+    test('bezoeker buiten SR/GY (bv. NL) ziet alles incl. NL, zonder scope-banner', async ({ page }) => {
+        await mockApis(page, 'NL');
         await page.goto('/vacatures');
         await expect(page.getByRole('link', { name: /warehouse coordinator/i })).toBeVisible();
         await expect(page.getByRole('link', { name: /offshore engineer/i })).toBeVisible();
+        await expect(page.getByRole('link', { name: /verzekeringsadviseur/i })).toBeVisible();
         await expect(page.getByText(/je ziet alleen vacatures in/i)).toHaveCount(0);
     });
 

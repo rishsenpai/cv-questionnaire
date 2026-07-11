@@ -13,7 +13,7 @@ import {
 import { errorMessages, type Language } from '@/lib/server/i18n';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
 import { compareLocations, applyLocationBonus } from '@/lib/server/locationMatch';
-import { visibleVacancyCountryQuery, isHiddenVacancy } from '@/lib/country';
+import { inferCountry } from '@/lib/country';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export const maxDuration = 60;
@@ -64,15 +64,20 @@ export async function GET(req: NextRequest, { params }: Params) {
             console.log(`Generated and cached embedding for CV: ${cv.fullName}`);
         }
 
-        // Sluit verborgen landen (NL) uit: Surinaamse kandidaten mogen niet op
-        // NL-vacatures matchen/solliciteren. isHiddenVacancy() vangt hieronder ook
-        // vacatures af die nog geen gebackfilld country-veld hebben.
+        // Land-op-land matching: een kandidaat matcht alleen met vacatures uit
+        // zijn eigen land (SR-CV ↛ NL-vacature en vice versa). Vacatures zonder
+        // herkenbaar land blijven meedoen — dat zijn doorgaans interne
+        // (Surinaamse) vacatures zonder gelabelde locatie.
+        const cvCountry = cv.country
+            || inferCountry(cv.location, [cv.experience, cv.education, cv.skills].filter(Boolean).join(' ') || undefined);
         const vacancies = (await Vacancy.find({
             isActive: true,
             fulfilledAt: null,
             embedding: { $exists: true, $ne: [] },
-            ...visibleVacancyCountryQuery(),
-        }).select('+embedding -fileData')).filter(v => !isHiddenVacancy(v));
+        }).select('+embedding -fileData')).filter(v => {
+            const vacCountry = v.country || inferCountry(v.location, v.description);
+            return !cvCountry || !vacCountry || vacCountry === cvCountry;
+        });
 
         if (vacancies.length === 0) {
             return NextResponse.json({
