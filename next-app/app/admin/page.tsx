@@ -2758,14 +2758,24 @@ const ANALYTICS_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
 function AnalyticsTab({ token }: { token: string }) {
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(30);
+  const [range, setRange] = useState<number | 'today'>(30);
   const [error, setError] = useState<string | null>(null);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/analytics/summary?days=${days}`, {
+      // 'Vandaag' = vanaf lokale middernacht tot nu; de dagen-knoppen tellen
+      // terug vanaf het huidige moment (bestaand gedrag van ?days=).
+      let query: string;
+      if (range === 'today') {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        query = `from=${encodeURIComponent(startOfDay.toISOString())}&to=${encodeURIComponent(new Date().toISOString())}`;
+      } else {
+        query = `days=${range}`;
+      }
+      const res = await fetch(`/api/analytics/summary?${query}`, {
         headers: { 'x-admin-token': token },
       });
       const json = await res.json();
@@ -2776,7 +2786,7 @@ function AnalyticsTab({ token }: { token: string }) {
     } finally {
       setLoading(false);
     }
-  }, [token, days]);
+  }, [token, range]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -2811,13 +2821,22 @@ function AnalyticsTab({ token }: { token: string }) {
           <h2 className="text-3xl font-black uppercase tracking-tighter italic">Analytics</h2>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setRange('today')}
+            className={cn(
+              'px-4 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-colors',
+              range === 'today' ? 'bg-black text-white border-black' : 'border-slate-200 hover:border-black',
+            )}
+          >
+            Vandaag
+          </button>
           {[7, 30, 90].map(d => (
             <button
               key={d}
-              onClick={() => setDays(d)}
+              onClick={() => setRange(d)}
               className={cn(
                 'px-4 py-2 text-[10px] font-black uppercase tracking-widest border-2 transition-colors',
-                days === d ? 'bg-black text-white border-black' : 'border-slate-200 hover:border-black',
+                range === d ? 'bg-black text-white border-black' : 'border-slate-200 hover:border-black',
               )}
             >
               {d} dagen
@@ -2958,7 +2977,7 @@ function AnalyticsTab({ token }: { token: string }) {
       </div>
 
       <p className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-        Localhost en bots gefilterd. Data per {days}-daagse window.
+        Localhost en bots gefilterd. {range === 'today' ? 'Data van vandaag (vanaf middernacht).' : `Data per ${range}-daagse window.`}
       </p>
     </div>
   );
