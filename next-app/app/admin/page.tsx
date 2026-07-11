@@ -897,6 +897,19 @@ function VacanciesTab({ token }: { token: string }) {
     } finally { setBusy(false); }
   };
 
+  const deleteAllNL = async () => {
+    if (!confirm('Alle NEDERLANDSE vacatures definitief verwijderen (incl. gekoppelde matches)? Dit kan niet ongedaan worden gemaakt.')) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/vacancies/netherlands', { method: 'DELETE', headers: { 'x-admin-token': token } });
+      const data = await res.json();
+      alert(data.success
+        ? `${data.deleted} NL-vacatures verwijderd (${data.curatedMatches} curated matches, ${data.matchEvents} match events opgeruimd)`
+        : (data.message || 'Verwijderen mislukt'));
+      await reload();
+    } finally { setBusy(false); }
+  };
+
   const generateVacancyEmbeddings = async () => {
     if (!confirm('Embedding-generatie starten voor alle vacatures zonder embedding? Loopt op de achtergrond.')) return;
     setEmbeddingBatch(true);
@@ -1044,6 +1057,14 @@ function VacanciesTab({ token }: { token: string }) {
             </button>
             <button onClick={deleteAllAdzuna} disabled={busy} className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors">
               Verwijder Adzuna
+            </button>
+            <button
+              onClick={deleteAllNL}
+              disabled={busy}
+              title="Hard delete: verwijdert alle vacatures met land Nederland (opgeslagen of afgeleid) incl. gekoppelde matches"
+              className="border-2 border-red-600 text-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors"
+            >
+              Verwijder NL-vacatures
             </button>
           </div>
         }
