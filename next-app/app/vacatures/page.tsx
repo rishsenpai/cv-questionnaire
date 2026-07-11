@@ -278,6 +278,16 @@ function VacaturesContent() {
   const [geoCountry, setGeoCountry] = useState<Country | null>(null);
 
   useEffect(() => {
+    // Test-override via URL: ?geo=SR / ?geo=GY / ?geo=all simuleert een
+    // bezoeker uit dat land (bv. vanuit NL de Suriname-ervaring bekijken).
+    // Niet persistent — de onthouden keuze blijft ongemoeid.
+    const override = (searchParams.get('geo') || '').toLowerCase();
+    if (override === 'sr' || override === 'gy' || override === 'all') {
+      const scope: Country | 'all' = override === 'sr' ? 'suriname' : override === 'gy' ? 'guyana' : 'all';
+      setCountryScope(scope);
+      if (scope !== 'all') setGeoCountry(scope);
+      return;
+    }
     let cancelled = false;
     const saved = readJson<Country | 'all' | null>('jp_country_scope', null);
     if (saved === 'all' || saved === 'suriname' || saved === 'guyana') {
@@ -294,7 +304,7 @@ function VacaturesContent() {
       })
       .catch(() => { /* geen geo — alles blijft zichtbaar */ });
     return () => { cancelled = true; };
-  }, []);
+  }, [searchParams]);
 
   const changeCountryScope = (scope: Country | 'all') => {
     setCountryScope(scope);

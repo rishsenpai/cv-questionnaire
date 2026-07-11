@@ -50,6 +50,19 @@ test.describe('Geo landscope op vacatures', () => {
         await expect(page.getByText(/je ziet alleen vacatures in/i)).toHaveCount(0);
     });
 
+    test('?geo=SR override simuleert Surinaamse bezoeker, ook zonder geo-API', async ({ page }) => {
+        // Geo-API zegt US, maar de override wint — zo kun je de SR-ervaring
+        // vanuit elk land handmatig testen.
+        await mockApis(page, 'US');
+        await page.goto('/vacatures?geo=SR');
+        await expect(page.getByText(/je ziet alleen vacatures in suriname/i)).toBeVisible();
+        await expect(page.getByRole('link', { name: /warehouse coordinator/i })).toBeVisible();
+        await expect(page.getByRole('link', { name: /offshore engineer/i })).toHaveCount(0);
+        // Toggle blijft werken vanuit de override.
+        await page.getByRole('button', { name: /toon alle landen/i }).click();
+        await expect(page.getByRole('link', { name: /offshore engineer/i })).toBeVisible();
+    });
+
     test('geo-API kapot → alles zichtbaar (fail-open)', async ({ page }) => {
         await page.route('**/api/analytics/track', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
         await page.route('**/api/vacancies**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, vacancies: VACANCIES }) }));
