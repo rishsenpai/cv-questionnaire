@@ -39,6 +39,11 @@ const WERKGEVERS_T = {
     errConnection: 'Verbinding mislukt',
     errNoVacancy: 'Plak een vacaturetekst of upload een PDF/DOCX',
     errNoContact: 'Vul een e-mail of telefoonnummer in zodat we contact kunnen opnemen',
+    consent1: 'Door je aanvraag te versturen ga je akkoord met de ',
+    consentPrivacy: 'privacyverklaring',
+    consent2: ' en de ',
+    consentTerms: 'algemene voorwaarden',
+    consent3: '.',
     errFileTooLarge: 'Bestand te groot (max 4.5 MB)',
     errMatchFailed: 'Matching mislukt',
     // Hero
@@ -124,6 +129,11 @@ const WERKGEVERS_T = {
     errConnection: 'Connection failed',
     errNoVacancy: 'Paste a vacancy text or upload a PDF/DOCX',
     errNoContact: 'Enter an email or phone number so we can reach you',
+    consent1: 'By submitting your request you agree to the ',
+    consentPrivacy: 'privacy statement',
+    consent2: ' and the ',
+    consentTerms: 'terms & conditions',
+    consent3: '.',
     errFileTooLarge: 'File too large (max 4.5 MB)',
     errMatchFailed: 'Matching failed',
     // Hero
@@ -209,6 +219,11 @@ const WERKGEVERS_T = {
     errConnection: 'La conexión falló',
     errNoVacancy: 'Pega un texto de vacante o sube un PDF/DOCX',
     errNoContact: 'Introduce un correo o número de teléfono para que podamos contactarte',
+    consent1: 'Al enviar tu solicitud aceptas la ',
+    consentPrivacy: 'declaración de privacidad',
+    consent2: ' y los ',
+    consentTerms: 'términos y condiciones',
+    consent3: '.',
     errFileTooLarge: 'Archivo demasiado grande (máx. 4,5 MB)',
     errMatchFailed: 'La coincidencia falló',
     // Hero
@@ -698,6 +713,14 @@ function VoorWerkgeversInner() {
               </button>
             )}
           </div>
+
+          <p className="text-[10px] font-bold text-slate-400 italic text-center">
+            {t.consent1}
+            <Link href="/privacyverklaring" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentPrivacy}</Link>
+            {t.consent2}
+            <Link href="/algemene-voorwaarden" className="text-blue-600 underline underline-offset-2 hover:text-black">{t.consentTerms}</Link>
+            {t.consent3}
+          </p>
         </form>
 
         {/* Results */}
