@@ -677,10 +677,10 @@ function VacaturesContent() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   key={job.id} 
-                  className="bg-white border-2 border-slate-100 p-8 transition-all relative group shadow-[8px_8px_0px_0px_rgba(241,245,249,1)] hover:shadow-[12px_12px_0px_0px_rgba(59,130,246,0.1)] hover:border-blue-600"
+                  className="bg-white border-2 border-slate-100 p-5 sm:p-8 transition-all relative group shadow-[8px_8px_0px_0px_rgba(241,245,249,1)] hover:shadow-[12px_12px_0px_0px_rgba(59,130,246,0.1)] hover:border-blue-600"
                 >
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div className="flex-1">
+                    <div className="flex-1 w-full min-w-0">
                       <div className="flex items-center gap-3 mb-4">
                         {job.viaJobParsing && (
                           <div className="relative group/tooltip">

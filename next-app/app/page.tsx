@@ -334,61 +334,60 @@ export default function Home() {
                   onClick={() => router.push(`/vacatures/${job.id}`)}
                   className="group bg-white border border-slate-200 p-6 hover:border-black transition-colors cursor-pointer relative"
                 >
-                  <div className="flex flex-col md:flex-row gap-6 items-center">
-                    {/* Logo placeholder */}
-                    <div className="w-16 h-16 bg-black text-blue-600 flex-shrink-0 flex items-center justify-center border-2 border-blue-600 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)] group-hover:bg-blue-600 group-hover:text-white transition-all">
-                      <Building2 className="w-7 h-7" />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400">
-                          {t.employerLabel}
-                        </span>
-                        {job.verified && (
-                          <div className="text-[10px] font-black uppercase tracking-tighter text-blue-600 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> {t.verified}
-                          </div>
-                        )}
+                  <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-center">
+                    {/* Logo + content: op mobiel naast elkaar (compact), niet gestapeld/gecentreerd */}
+                    <div className="flex items-start md:items-center gap-4 md:gap-6 flex-1 w-full min-w-0">
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-black text-blue-600 flex-shrink-0 flex items-center justify-center border-2 border-blue-600 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)] group-hover:bg-blue-600 group-hover:text-white transition-all">
+                        <Building2 className="w-5 h-5 md:w-7 md:h-7" />
                       </div>
-                      <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                        {job.title}
-                      </h3>
-                      
-                      <div className="flex flex-wrap items-center gap-x-4 text-xs font-bold text-slate-500 mt-2">
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-blue-600" /> {job.location}</span>
-                        <span className="text-slate-300">•</span>
-                        <span className="flex items-center gap-1"><DollarSign className="w-3 h-3 text-emerald-600" /> {job.salary}</span>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-blue-600 uppercase font-black">{job.type}</span>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400">
+                            {t.employerLabel}
+                          </span>
+                          {job.verified && (
+                            <div className="text-[10px] font-black uppercase tracking-tighter text-blue-600 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> {t.verified}
+                            </div>
+                          )}
+                        </div>
+                        <h3 className="text-lg md:text-xl font-black uppercase tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors break-words">
+                          {job.title}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold text-slate-500 mt-2">
+                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-blue-600 shrink-0" /> {job.location}</span>
+                          <span className="text-slate-300 hidden sm:inline">•</span>
+                          <span className="flex items-center gap-1"><DollarSign className="w-3 h-3 text-emerald-600 shrink-0" /> {job.salary}</span>
+                          <span className="text-slate-300 hidden sm:inline">•</span>
+                          <span className="text-blue-600 uppercase font-black">{job.type}</span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Action */}
-                    <div className="flex flex-row md:flex-col items-center md:items-end gap-6 pt-4 md:pt-0">
-                      <div className="flex items-center gap-3">
-                        {buildWhatsAppUrl(`Hoi, ik heb interesse in de vacature voor ${job.title}`) && (
-                          <a
-                            href={buildWhatsAppUrl(`Hoi, ik heb interesse in de vacature voor ${job.title}`)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-10 h-10 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors cursor-pointer group" title="Solliciteer via WhatsApp"
-                          >
-                            <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                          </a>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/vacatures/${job.id}`);
-                          }}
-                          className="border-2 border-black px-6 py-2 font-black uppercase text-xs hover:bg-black hover:text-white transition-colors"
+                    <div className="flex items-center justify-end gap-3 w-full md:w-auto">
+                      {buildWhatsAppUrl(`Hoi, ik heb interesse in de vacature voor ${job.title}`) && (
+                        <a
+                          href={buildWhatsAppUrl(`Hoi, ik heb interesse in de vacature voor ${job.title}`)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-10 h-10 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors cursor-pointer group shrink-0" title="Solliciteer via WhatsApp"
                         >
-                          {t.details}
-                        </button>
-                      </div>
+                          <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/vacatures/${job.id}`);
+                        }}
+                        className="flex-1 md:flex-none border-2 border-black px-6 py-2.5 font-black uppercase text-xs hover:bg-black hover:text-white transition-colors"
+                      >
+                        {t.details}
+                      </button>
                     </div>
                   </div>
                 </motion.div>
