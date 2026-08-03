@@ -10,7 +10,7 @@ import { getTransporter } from '@/lib/server/mailer';
 
 export const maxDuration = 30;
 
-const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@jobparsing.com';
+const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@beyondjobs.nl';
 
 export async function POST(req: NextRequest) {
     const unauth = await requireAdmin(req);

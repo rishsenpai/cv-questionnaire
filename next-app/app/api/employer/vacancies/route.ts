@@ -7,7 +7,7 @@ import { generateVacancyEmbedding } from '@/lib/server/vacancyEmbedding';
 import { runAutoMatchForVacancy } from '@/lib/server/autoMatch';
 import { getTransporter } from '@/lib/server/mailer';
 
-const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@jobparsing.com';
+const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@beyondjobs.nl';
 
 // Plan-gating verwijderd: alle ingelogde werkgevers (basic/advanced/premium)
 // kunnen vacatures plaatsen. Het is de kerntaak van het werkgeverportal.

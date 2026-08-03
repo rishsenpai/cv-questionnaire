@@ -13,7 +13,7 @@ import CV from '@/models/CV';
 import { requireAdmin } from '@/lib/server/auth';
 import { getTransporter } from '@/lib/server/mailer';
 
-const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@jobparsing.com';
+const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@beyondjobs.nl';
 
 interface Params {
     params: Promise<{ id: string }>;

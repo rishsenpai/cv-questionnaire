@@ -19,7 +19,7 @@ import { visibleCvCountryQuery, isHiddenCv } from '@/lib/country';
 export const maxDuration = 60;
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@jobparsing.com';
+const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@beyondjobs.nl';
 
 interface AnonymousMatch {
     id: string;

@@ -10,7 +10,7 @@ import { getTransporter } from '@/lib/server/mailer';
 
 export const maxDuration = 30;
 
-const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@jobparsing.com';
+const APPLICATIONS_EMAIL = process.env.APPLICATIONS_EMAIL || 'info@beyondjobs.nl';
 
 interface Params {
     params: Promise<{ id: string }>;
