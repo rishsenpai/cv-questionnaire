@@ -13,6 +13,7 @@ import { cosineSimilarity, generateEmbedding, prepareCVText } from './embeddings
 import { rerank, isRerankConfigured } from './rerank';
 import { bm25SearchCVs, hybridFuse, type RankedDoc } from './hybridMatch';
 import { compareLocations, applyLocationBonus } from './locationMatch';
+import { visibleCvCountryQuery } from '@/lib/country';
 
 // Drie-fase pipeline:
 //   1a. Embedding cosine → top-100 (semantic recall)
@@ -91,7 +92,11 @@ export async function runAutoMatchForVacancy(
         embedding: { $exists: true, $ne: [] },
         isInternal: { $ne: true },
     };
+    // Zonder scope: breed matchen, maar CV's uit verborgen landen (NL) niet
+    // als suggestie opvoeren. Een expliciete scope (bv. de NL-adminflow via
+    // countryOverride) wint — die suggesties blijven admin-gated.
     if (scopeCountry) cvQuery.country = scopeCountry;
+    else Object.assign(cvQuery, visibleCvCountryQuery());
     const cvs = await CV.find(cvQuery).select({ embedding: 1, _id: 1 }).lean();
 
     // Fase 1a: cosine over ALLE in-scope CVs, met embedding-threshold.
@@ -119,6 +124,7 @@ export async function runAutoMatchForVacancy(
         _id: { $nin: Array.from(excludeSet).map(id => new Types.ObjectId(id)) },
     };
     if (scopeCountry) bm25Filter.country = scopeCountry;
+    else Object.assign(bm25Filter, visibleCvCountryQuery());
     const bm25Ranking = await bm25SearchCVs(vacancyText, RECALL_SIZE, bm25Filter);
 
     // Fase 2: RRF fusie van beide rankings → top-RERANK_INPUT_SIZE.

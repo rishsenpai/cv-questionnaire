@@ -5,6 +5,7 @@ import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
 import { requireEmployer } from '@/lib/server/auth';
 import { cosineSimilarity, generateEmbedding } from '@/lib/server/embeddings';
+import { visibleCvCountryQuery, isHiddenCv } from '@/lib/country';
 
 export const maxDuration = 60;
 
@@ -46,10 +47,13 @@ export async function GET(req: NextRequest, { params }: Params) {
             console.log(`Generated and cached embedding for vacancy: ${vacancy.title}`);
         }
 
-        const cvs = await CV.find({
+        // NL-CV's zijn verborgen voor werkgevers (zie HIDDEN_CV_COUNTRIES).
+        const cvs = (await CV.find({
             embedding: { $exists: true, $ne: [] },
             isInternal: { $ne: true },
-        }).select('+embedding -fileData');
+            ...visibleCvCountryQuery(),
+        }).select('+embedding -fileData'))
+            .filter(cv => !isHiddenCv(cv));
 
         if (cvs.length === 0) {
             return NextResponse.json({

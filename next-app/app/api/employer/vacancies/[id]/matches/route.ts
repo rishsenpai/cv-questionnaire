@@ -8,6 +8,7 @@ import CV from '@/models/CV';
 import Vacancy from '@/models/Vacancy';
 import { requireEmployer } from '@/lib/server/auth';
 import { tokenize } from '@/lib/server/synonyms';
+import { visibleCvCountryQuery, isHiddenCv } from '@/lib/country';
 
 export const maxDuration = 60;
 
@@ -36,7 +37,9 @@ export async function GET(req: NextRequest, { params }: Params) {
         }
 
         const vacancyText = vacancy.fullText || `${vacancy.title} ${vacancy.description || ''} ${vacancy.requirements || ''}`;
-        const cvs = await CV.find({ isInternal: { $ne: true } }).select('-fileData');
+        // NL-CV's zijn verborgen voor werkgevers (zie HIDDEN_CV_COUNTRIES).
+        const cvs = (await CV.find({ isInternal: { $ne: true }, ...visibleCvCountryQuery() }).select('-fileData'))
+            .filter(cv => !isHiddenCv(cv));
 
         const tfidf = new TfIdf();
         tfidf.addDocument(tokenize(vacancyText, true));

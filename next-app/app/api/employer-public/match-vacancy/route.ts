@@ -14,6 +14,7 @@ import { getTransporter } from '@/lib/server/mailer';
 import { getClientIP } from '@/lib/server/auth';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
 import { escapeHtml, decodeBase64Limited } from '@/lib/server/security';
+import { visibleCvCountryQuery, isHiddenCv } from '@/lib/country';
 
 export const maxDuration = 60;
 
@@ -92,7 +93,11 @@ export async function POST(req: NextRequest) {
 
         await connectDB();
 
-        const cvs = await CV.find({ isInternal: { $ne: true } }).select('-fileData -embedding');
+        // NL-CV's zijn verborgen voor werkgevers: DB-filter op het country-veld,
+        // plus isHiddenCv() als vangnet voor CV's zonder gebackfilld country.
+        const cvs = (await CV.find({ isInternal: { $ne: true }, ...visibleCvCountryQuery() })
+            .select('-fileData -embedding'))
+            .filter(cv => !isHiddenCv(cv));
 
         const tfidf = new TfIdf();
         tfidf.addDocument(tokenize(vacancyText, true));

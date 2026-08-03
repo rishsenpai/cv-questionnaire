@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { visibleCvCountryQuery, isHiddenCv } from '@/lib/country';
 
 export const maxDuration = 30;
 
@@ -44,7 +45,8 @@ export async function GET(req: NextRequest) {
 
         await connectDB();
 
-        const filter: Record<string, unknown> = { isInternal: { $ne: true } };
+        // NL-CV's zijn verborgen voor werkgevers (zie HIDDEN_CV_COUNTRIES).
+        const filter: Record<string, unknown> = { isInternal: { $ne: true }, ...visibleCvCountryQuery() };
         const orConditions: Array<Record<string, unknown>> = [];
         if (q) {
             const safe = escapeRegex(q);
@@ -59,10 +61,12 @@ export async function GET(req: NextRequest) {
             filter.location = new RegExp(escapeRegex(location), 'i');
         }
 
-        const cvs = await CV.find(filter)
-            .select('_id jobTitle location summary skills experience')
+        const cvs = (await CV.find(filter)
+            .select('_id jobTitle location summary skills experience country')
             .limit(50)
-            .lean();
+            .lean())
+            // Vangnet voor CV's zonder gebackfilld country-veld.
+            .filter(cv => !isHiddenCv(cv));
 
         const qLower = q.toLowerCase();
         const qTerms = qLower.split(/\s+/).filter(Boolean);

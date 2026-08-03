@@ -5,6 +5,7 @@ import CV from '@/models/CV';
 import { requireEmployer } from '@/lib/server/auth';
 import { generateWordCVBuffer } from '@/lib/server/cvDocument';
 import { fetchCvBlob } from '@/lib/server/blobStorage';
+import { isHiddenCv } from '@/lib/country';
 
 interface Params {
     params: Promise<{ id: string }>;
@@ -30,7 +31,8 @@ export async function GET(req: NextRequest, { params }: Params) {
         if (!cv) {
             return NextResponse.json({ success: false, message: 'CV not found' }, { status: 404 });
         }
-        if (cv.isInternal) {
+        if (cv.isInternal || isHiddenCv(cv)) {
+            // isHiddenCv: NL-CV's zijn verborgen voor werkgevers, ook via directe id.
             return NextResponse.json({ success: false, message: 'Dit CV is niet beschikbaar' }, { status: 403 });
         }
         if (cv.fileUrl) {

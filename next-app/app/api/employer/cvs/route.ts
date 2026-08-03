@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import CV from '@/models/CV';
 import { requireEmployer } from '@/lib/server/auth';
 import { synonyms, getWordWithSynonyms } from '@/lib/server/synonyms';
+import { visibleCvCountryQuery, isHiddenCv } from '@/lib/country';
 
 export const maxDuration = 30;
 
@@ -77,7 +78,8 @@ export async function GET(req: NextRequest) {
         const jobTitle = url.searchParams.get('jobTitle') || '';
         const location = url.searchParams.get('location') || '';
 
-        const query: Record<string, unknown> = { isInternal: { $ne: true } };
+        // NL-CV's zijn verborgen voor werkgevers (zie HIDDEN_CV_COUNTRIES).
+        const query: Record<string, unknown> = { isInternal: { $ne: true }, ...visibleCvCountryQuery() };
         const andConditions: Array<Record<string, unknown>> = [];
 
         if (search) {
@@ -119,7 +121,9 @@ export async function GET(req: NextRequest) {
             query.$and = andConditions;
         }
 
-        const cvs = await CV.find(query).select('-fileData').sort({ createdAt: -1 });
+        const cvs = (await CV.find(query).select('-fileData').sort({ createdAt: -1 }))
+            // Vangnet voor CV's zonder gebackfilld country-veld.
+            .filter(cv => !isHiddenCv(cv));
         const plan = auth.plan;
         const hasFullAccess = plan === 'advanced' || plan === 'premium';
 

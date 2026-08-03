@@ -10,6 +10,7 @@ import { ingestCvFromBuffer } from '@/lib/server/cvIngestion';
 import { fetchCvBlob } from '@/lib/server/blobStorage';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
 import { escapeHtml, decodeBase64Limited } from '@/lib/server/security';
+import { isHiddenVacancy } from '@/lib/country';
 
 export const maxDuration = 60;
 
@@ -130,7 +131,12 @@ export async function POST(req: NextRequest) {
         let vacancyForEmail: VacancyEmail | null = null;
         let vacancyEmployerId: mongoose.Types.ObjectId | undefined;
         if (vacancyId && mongoose.Types.ObjectId.isValid(vacancyId)) {
-            const v = await Vacancy.findById(vacancyId).select('title location employmentType isRemote employerId');
+            const v = await Vacancy.findById(vacancyId).select('title location employmentType isRemote employerId country description');
+            if (v && isHiddenVacancy(v)) {
+                // Verborgen landen (NL): solliciteren geblokkeerd, zelfde
+                // "niet gevonden" als de detailpagina.
+                return NextResponse.json({ success: false, message: 'Vacature niet gevonden' }, { status: 404 });
+            }
             if (v) {
                 vacancyForEmail = {
                     title: v.title,

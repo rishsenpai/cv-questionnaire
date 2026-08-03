@@ -67,14 +67,14 @@ export function inferCountry(location?: string | null, fallbackText?: string | n
     return undefined;
 }
 
-// Landen die NIET publiek getoond worden. Leeg sinds 11-7-2026: NL-vacatures
-// zijn weer zichtbaar voor iedereen die de landscope op 'alle landen' zet
-// (draait het besluit van 4-7 deels terug). De bescherming tegen
-// cross-country solliciteren zit nu in de matching zelf: kandidaten worden
-// alleen gematcht met vacatures uit hun eigen land (zie matching-vacancies
-// en autoMatch), en de geo-scope op /vacatures toont bezoekers standaard
-// hun eigen land.
-export const HIDDEN_VACANCY_COUNTRIES: Country[] = [];
+// Landen die NIET publiek getoond worden. Sinds 3-8-2026 is NL weer
+// verborgen: NL-vacatures zijn onzichtbaar en niet-solliciteerbaar voor
+// werkzoekenden (lijst, detail, matching, apply). Admin ziet alles.
+export const HIDDEN_VACANCY_COUNTRIES: Country[] = ['netherlands'];
+
+// CV-kant van hetzelfde besluit: NL-CV's worden niet aan werkgevers getoond
+// (publieke matchingtool, auto-match-suggesties). Admin-schermen tonen ze wel.
+export const HIDDEN_CV_COUNTRIES: Country[] = ['netherlands'];
 
 /**
  * Mongo-filterfragment dat verborgen landen uitsluit. Vacatures zonder ingevuld
@@ -93,4 +93,23 @@ export function visibleVacancyCountryQuery(): Record<string, unknown> {
 export function isHiddenVacancy(v: { country?: Country | null; location?: string | null; description?: string | null }): boolean {
     const country = v.country || inferCountry(v.location, v.description);
     return country ? HIDDEN_VACANCY_COUNTRIES.includes(country) : false;
+}
+
+/**
+ * Mongo-filterfragment dat CV's uit verborgen landen uitsluit ($nin laat
+ * CV's zonder country-veld door — die vangt isHiddenCv() alsnog af).
+ */
+export function visibleCvCountryQuery(): Record<string, unknown> {
+    return HIDDEN_CV_COUNTRIES.length ? { country: { $nin: HIDDEN_CV_COUNTRIES } } : {};
+}
+
+/**
+ * True als een CV verborgen moet worden voor werkgevers. Bewust alleen het
+ * opgeslagen country-veld + de woonlocatie als signaal — géén fallback op
+ * werkervaring/vrije tekst, want een Surinaamse kandidaat die ooit in
+ * "Amsterdam" werkte zou anders onterecht als NL gefilterd worden.
+ */
+export function isHiddenCv(cv: { country?: Country | null; location?: string | null }): boolean {
+    const country = cv.country || inferCountry(cv.location);
+    return country ? HIDDEN_CV_COUNTRIES.includes(country) : false;
 }

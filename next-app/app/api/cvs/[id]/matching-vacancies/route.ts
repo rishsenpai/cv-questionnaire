@@ -13,7 +13,7 @@ import {
 import { errorMessages, type Language } from '@/lib/server/i18n';
 import { sanitizeJobText } from '@/lib/server/sanitizeJobText';
 import { compareLocations, applyLocationBonus } from '@/lib/server/locationMatch';
-import { inferCountry } from '@/lib/country';
+import { inferCountry, isHiddenVacancy } from '@/lib/country';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 export const maxDuration = 60;
@@ -75,6 +75,9 @@ export async function GET(req: NextRequest, { params }: Params) {
             fulfilledAt: null,
             embedding: { $exists: true, $ne: [] },
         }).select('+embedding -fileData')).filter(v => {
+            // Verborgen landen (NL) nooit aan werkzoekenden voorstellen —
+            // ook niet aan een kandidaat uit dat land zelf.
+            if (isHiddenVacancy(v)) return false;
             const vacCountry = v.country || inferCountry(v.location, v.description);
             return !cvCountry || !vacCountry || vacCountry === cvCountry;
         });
